@@ -1,0 +1,17 @@
+import { NextRequest,NextResponse } from "next/server";
+import { createUser } from "@/app/lib/user";
+export async function POST(req:Request) {
+  try{
+    const data=await req.json()
+
+  const newUser = await createUser(data.email, data.password, data.name);
+if (newUser) {
+   return NextResponse.json({ message: "User created", user: newUser }, { status: 201 });
+} else {
+   return NextResponse.json({ message: "User already exists" }, { status: 400 });
+}}
+catch(error){
+    console.error("Failed to create user", error);
+    return NextResponse.json({ message: "Failed to create user" }, { status: 500 });
+}
+}
