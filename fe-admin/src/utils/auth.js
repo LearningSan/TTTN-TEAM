@@ -1,11 +1,11 @@
-// Lưu bộ 3 quyền lực vào máy khách
+// Lưu bộ 3 vào máy khách
 export const saveToken = (accessToken, refreshToken, userId) => {
   localStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
   if (userId) localStorage.setItem('userId', userId);
 };
 
-// Xóa sạch sành sanh khi đăng xuất
+// Xóa sạch khi đăng xuất
 export const clearToken = () => {
   localStorage.clear();
 };

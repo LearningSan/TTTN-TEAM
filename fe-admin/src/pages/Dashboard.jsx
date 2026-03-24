@@ -25,7 +25,6 @@ const Dashboard = () => {
   };
 
   return (
-    // Dùng Flex thay cho div
     <Flex justify="space-between" align="center" style={{ padding: '24px', marginBottom: '32px' }}>
       <h1 style={{ margin: 0 }}>Bảng điều khiển Admin</h1>
       <Button type="primary" danger onClick={handleLogout} size="large">
