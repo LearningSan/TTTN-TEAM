@@ -1,4 +1,4 @@
-package com.example.tttnbe.entity;
+package com.example.tttnbe.auth.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,4 +1,4 @@
-package com.example.tttnbe.security;
+package com.example.tttnbe.auth.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,7 +27,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/admin/login", "/auth/admin/logout").permitAll()    //cho phep ai cung goi dc api login nayy
+                        .requestMatchers("/auth/admin/login", "/auth/admin/logout").permitAll()
                         .anyRequest().authenticated()   //cac api khac phai co token moi vao duoc
                 );
 

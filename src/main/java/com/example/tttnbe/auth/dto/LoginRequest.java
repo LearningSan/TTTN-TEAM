@@ -1,4 +1,4 @@
-package com.example.tttnbe.dto;
+package com.example.tttnbe.auth.dto;
 
 public class LoginRequest {
     private String email;

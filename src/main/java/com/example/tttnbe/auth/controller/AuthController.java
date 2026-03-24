@@ -1,9 +1,9 @@
-package com.example.tttnbe.controller;
+package com.example.tttnbe.auth.controller;
 
-import com.example.tttnbe.dto.LoginRequest;
-import com.example.tttnbe.dto.LoginResponse;
-import com.example.tttnbe.dto.LogoutRequest;
-import com.example.tttnbe.service.AuthService;
+import com.example.tttnbe.auth.dto.LoginRequest;
+import com.example.tttnbe.auth.dto.LoginResponse;
+import com.example.tttnbe.auth.dto.LogoutRequest;
+import com.example.tttnbe.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

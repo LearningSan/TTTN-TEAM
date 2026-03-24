@@ -1,6 +1,6 @@
-package com.example.tttnbe.repository;
+package com.example.tttnbe.auth.repository;
 
-import com.example.tttnbe.entity.RefreshToken;
+import com.example.tttnbe.auth.entity.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

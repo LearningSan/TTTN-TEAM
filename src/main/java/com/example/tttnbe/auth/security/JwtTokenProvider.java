@@ -1,4 +1,4 @@
-package com.example.tttnbe.security;
+package com.example.tttnbe.auth.security;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -20,17 +20,17 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
     }
 
-    // Hàm xuất xưởng Access Token
+    //ham phat Access Token
     public String generateAccessToken(UUID userId, String role) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + JWT_EXPIRATION);
 
         return Jwts.builder()
-                .subject(userId.toString()) // Lưu ID của người dùng vào token
-                .claim("role", role)        // Lưu thêm quyền (ADMIN) vào token
-                .issuedAt(now)              // Thời điểm tạo
-                .expiration(expiryDate)     // Thời điểm hết hạn
-                .signWith(getSigningKey())  // Ký bằng chìa khóa bí mật
-                .compact();                 // Đóng gói thành chuỗi String
+                .subject(userId.toString()) //luu id ng dung vao token
+                .claim("role", role)        //luu quyen vao token
+                .issuedAt(now)              //thoi diem tao
+                .expiration(expiryDate)     //thoi diem het han
+                .signWith(getSigningKey())  //ky bang chia khoa bi mat
+                .compact();                 //dong goi thanh chuoi String
     }
 }
