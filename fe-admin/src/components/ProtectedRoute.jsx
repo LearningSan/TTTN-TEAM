@@ -10,7 +10,7 @@ const ProtectedRoute = () => {
 let isAuthorized = false;
   try {
     const decoded = jwtDecode(token);
-    // Kiểm tra role từ payload: { "role": "ADMIN", ... }
+    // Kiểm tra role { "role": "ADMIN", ... }
     if (decoded.role === 'ADMIN') {
       isAuthorized = true;
     }

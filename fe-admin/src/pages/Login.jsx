@@ -11,12 +11,11 @@ const Login = () => {
       // Gửi email/password lên API Admin
       const res = await API.post('/auth/admin/login', values);
       
-      // Backend trả về bộ 3 quyền lực: accessToken, refreshToken, userId
       const { accessToken, refreshToken } = res.data;
       
       if (accessToken) {
         const decoded = jwtDecode(accessToken);
-        console.log("Check Role nè Phục:", decoded.role);
+        console.log("Check Role:", decoded.role);
         // Bóc tách 'sub' làm userId và 'role' để lưu trữ
         saveToken(accessToken, refreshToken, decoded.sub);
         
