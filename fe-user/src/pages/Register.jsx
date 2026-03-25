@@ -1,7 +1,39 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Register = () => {
+  const navigate = useNavigate();
+  // Khai báo state lưu trữ thông tin form
+  const [formData, setFormData] = useState({
+    Name: "",
+    email: "",
+    password: "",
+  });
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    try {
+      // BE yêu cầu: email, password, name
+      const signupData = {
+        email: formData.email,
+        password: formData.password,
+        name: formData.Name,
+      };
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/signup`,
+        signupData,
+      );
+
+      if (response.status === 201) {
+        alert("Đăng ký thành công!");
+        navigate("/login");
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || "Đăng ký thất bại!");
+    }
+  };
   return (
     <div className="min-h-screen flex flex-col bg-[#101114] font-sans">
       {/* Header */}
@@ -39,52 +71,20 @@ const Register = () => {
                 Sign Up
               </h2>
 
-              <form className="space-y-3">
-                {/* First Name */}
+              <form className="space-y-3" onSubmit={handleSignup}>
+                {/*  Name */}
                 <div className="text-left">
                   <label className="block text-[10px] font-bold text-gray-700 mb-1 ml-2">
-                    First Name
+                    Name
                   </label>
                   <input
                     type="text"
                     placeholder="Enter your name"
                     className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
-                  />
-                </div>
-
-                {/* Company */}
-                <div className="text-left">
-                  <label className="block text-[10px] font-bold text-gray-700 mb-1 ml-2">
-                    Company
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Company Name"
-                    className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
-                  />
-                </div>
-
-                {/* Position */}
-                <div className="text-left">
-                  <label className="block text-[10px] font-bold text-gray-700 mb-1 ml-2">
-                    Position
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="CEO"
-                    className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div className="text-left">
-                  <label className="block text-[10px] font-bold text-gray-700 mb-1 ml-2">
-                    Phone
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="+1 800 123-34-45"
-                    className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
+                    value={formData.Name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, Name: e.target.value })
+                    }
                   />
                 </div>
 
@@ -97,12 +97,35 @@ const Register = () => {
                     type="email"
                     placeholder="Enter your email"
                     className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                   />
                 </div>
 
-                {/* Sign Up Button - Gradient từ trên xuống */}
+                {/* Password */}
+                <div className="text-left">
+                  <label className="block text-[10px] font-bold text-gray-700 mb-1 ml-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Enter your password"
+                    className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* Sign Up Button */}
                 <div className="pt-4 px-10">
-                  <button className="w-full py-3 bg-gradient-to-b from-[#AC72A1] to-[#3B1E54] text-white font-medium rounded-full shadow-[0px_4px_10px_rgba(0,0,0,0.4)] hover:brightness-110 transition-all text-xl">
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-gradient-to-b from-[#AC72A1] to-[#3B1E54] text-white font-medium rounded-full shadow-[0px_4px_10px_rgba(0,0,0,0.4)] hover:brightness-110 transition-all text-xl"
+                  >
                     Sign up
                   </button>
                 </div>
@@ -110,7 +133,7 @@ const Register = () => {
                 {/* Footer Links */}
                 <div className="flex justify-between mt-6 px-4 text-xs font-black text-black">
                   <Link to="/login" className="hover:underline">
-                    Create
+                    Login
                   </Link>
                   <a href="#" className="hover:underline">
                     Forget pass ?

@@ -13,10 +13,16 @@ function App() {
             <div className="min-h-screen bg-gray-100 flex items-center justify-center">
               <div className="bg-white p-10 rounded-2xl shadow-2xl text-center">
                 <h1 className="text-4xl font-black text-blue-500 uppercase italic">
-                  Đây là Trang Chủ
+                  Trang Chủ demo
                 </h1>
                 <a href="/login" className="text-blue-600 underline mt-4 block">
                   Đi đến trang Login
+                </a>
+                <a
+                  href="/register"
+                  className="text-blue-600 underline mt-2 block"
+                >
+                  Đi đến trang Register
                 </a>
               </div>
             </div>

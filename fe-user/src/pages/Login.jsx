@@ -11,24 +11,35 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-
+  const [showPassword, setShowPassword] = useState(false);
   // 2. Hàm xử lý khi nhấn nút Login
   const handleLogin = async (e) => {
-    e.preventDefault(); // Ngăn trang web load lại
+    e.preventDefault();
     try {
-      // Thay URL bên dưới bằng URL API của be-user (ví dụ Laravel là http://127.0.0.1:8000/api/login)
-      const response = await axios.post("http://localhost:8000/api/login", {
-        email,
-        password,
-      });
+      // Gọi địa chỉ API của Next.js BE (Port 3000)
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/login`,
+        {
+          email: email, // Lấy từ state
+          password: password, // Lấy từ state
+        },
+      );
 
+      // Nếu BE trả về status 200 (thành công)
       if (response.data.token) {
-        localStorage.setItem("token", response.data.token); // Lưu token đăng nhập
-        alert("Đăng nhập thành công!");
-        navigate("/"); // Chuyển về trang chủ
+        // Lưu token vào localStorage để dùng cho các trang sau
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+
+        alert("Đăng nhập thành công! Chào mừng " + response.data.user.name);
+
+        // Chuyển hướng người dùng về trang chủ
+        navigate("/");
       }
     } catch (error) {
-      alert("Email hoặc mật khẩu không đúng!");
+      // Xử lý lỗi (ví dụ 401: Invalid email or password)
+      const errorMessage = error.response?.data?.message || "Đã có lỗi xảy ra";
+      alert("Thất bại: " + errorMessage);
       console.error("Login Error:", error);
     }
   };
@@ -85,14 +96,17 @@ const Login = () => {
                   <div className="relative">
                     <RiLockPasswordLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="Enter Password"
                       value={password} // Gán giá trị từ state
                       onChange={(e) => setPassword(e.target.value)} // Cập nhật state
                       required
                       className="w-full pl-10 pr-10 py-3 bg-white/70 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#AC72A1]"
                     />
-                    <RiEyeOffLine className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" />
+                    <RiEyeOffLine
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
+                      onClick={() => setShowPassword(!showPassword)}
+                    />
                   </div>
                 </div>
 
@@ -134,7 +148,7 @@ const Login = () => {
                 {/* Footer Links */}
                 <div className="flex justify-between mt-6 text-sm font-bold text-gray-800">
                   <Link to="/register" className="hover:underline">
-                    Create
+                    Register
                   </Link>
                   <a href="#" className="hover:underline">
                     Forget pass ?
