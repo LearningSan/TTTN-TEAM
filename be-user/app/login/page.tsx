@@ -14,10 +14,12 @@ export default function LoginPage() {
     setError("");
 
     try {
+      // 👈 Thêm credentials: "include" để cookie HTTP Only được gửi/nhận
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
 
       const data = await res.json();
@@ -27,19 +29,30 @@ export default function LoginPage() {
         return;
       }
 
-      // Lưu token vào cookie
-      document.cookie = `token=${data.token}; path=/`;
-
-      // Redirect sang dashboard
-      router.push("/dashboard");
-    } catch (err) {
+      console.log("Login successful, redirecting...");
+      // FE redirect sang dashboard
+ window.location.href = "/dashboard";    } catch (err) {
       console.error(err);
       setError("Something went wrong");
     }
   };
 
+  const handleGoogleLogin = () => {
+    // Redirect trực tiếp sang route OAuth Google
+    // Server sẽ handle access + refresh token
+    window.location.href = "/api/auth/google";
+  };
+
   return (
-    <div style={{ maxWidth: "400px", margin: "50px auto", padding: "20px", border: "1px solid #ccc", borderRadius: "8px" }}>
+    <div
+      style={{
+        maxWidth: "400px",
+        margin: "50px auto",
+        padding: "20px",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+      }}
+    >
       <h2 style={{ textAlign: "center" }}>Login</h2>
       {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
       <form onSubmit={handleSubmit}>
@@ -73,11 +86,29 @@ export default function LoginPage() {
             border: "none",
             borderRadius: "5px",
             cursor: "pointer",
+            marginBottom: "10px",
           }}
         >
           Login
         </button>
       </form>
+
+      <hr style={{ margin: "20px 0" }} />
+
+      <button
+        onClick={handleGoogleLogin}
+        style={{
+          width: "100%",
+          padding: "10px",
+          backgroundColor: "#db4437",
+          color: "#fff",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+        }}
+      >
+        Login with Google
+      </button>
     </div>
   );
 }

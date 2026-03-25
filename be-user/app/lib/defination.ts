@@ -15,14 +15,23 @@ export type users = {
 };
 
 export type refresh_token = {
-  token_id: string;                 // token_id
-  user_id: string;            
+  token_id: string;               
   token_hash: string;         
   device_info?: string;       
   ip_address?: string;        
-  status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
   expires_at: string;         
   revoked_at?: string;        
   created_at: string;         
-  updated_at: string;         
+};
+export type social_account = {
+  social_id: string;
+  user_id: string;
+  provider: string;
+  provider_id: string;         
+  provider_email?: string;
+  access_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  linked_at: string;
+ 
 };

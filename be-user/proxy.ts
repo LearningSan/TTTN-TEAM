@@ -1,34 +1,85 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken,refreshToken } from "./app/helper/authenHelper";
-export  default async function middleware(req: NextRequest) {
-  let token = req.cookies.get("token")?.value || req.headers.get("authorization")?.replace("Bearer ", "");
-  let user = token ?await verifyToken(token) : null;
- if (!user && token) {
-    try {
-      const newToken = await refreshToken(token); 
-      if (newToken) {
-        token = newToken;
+import { verifyToken, refreshAccessToken, refreshRefreshToken } from "./app/helper/authenHelper";
 
-        const res = NextResponse.next();
-        res.cookies.set("token", newToken, { httpOnly: true, path: "/" });
-        user = await verifyToken(newToken); 
-        return res;
-      }
+// Helper function xử lý token
+async function handleTokens(accessToken?: string, refreshToken?: string) {
+  let user: any = null;
+  let newAccessToken: string | null = null;
+  let newRefreshToken: string | null = null;
+
+  // 1️⃣ Thử verify access token
+  if (accessToken) {
+    try {
+      user = await verifyToken(accessToken);
+      return { user, newAccessToken, newRefreshToken };
     } catch (err) {
-      console.log("Refresh token failed:", err);
+      console.log("Access token expired:", err);
+      // Access token hết hạn → tiếp tục
     }
   }
-  const onDashboard =await req.nextUrl.pathname.startsWith("/dashboard");
- 
+
+  // 2️⃣ Nếu refresh token còn hạn → tạo access token mới
+  if (refreshToken) {
+    try {
+      newAccessToken = await refreshAccessToken(refreshToken);
+      user = await verifyToken(newAccessToken);
+      return { user, newAccessToken, newRefreshToken }; // chỉ reset access token
+    } catch (errAccess) {
+      console.log("Cannot refresh access token:", errAccess);
+
+      // 3️⃣ Nếu refresh access token fail → thử refresh refresh token
+      try {
+        const tokens = await refreshRefreshToken(refreshToken);
+        newAccessToken = tokens.accessToken;
+        newRefreshToken = tokens.refreshToken;
+        user = await verifyToken(newAccessToken);
+        return { user, newAccessToken, newRefreshToken }; // reset cả access + refresh token
+      } catch (errRefresh) {
+        console.log("Refresh token invalid or expired:", errRefresh);
+        return { user: null, newAccessToken: null, newRefreshToken: null }; // user phải login lại
+      }
+    }
+  }
+
+  // Không có token hợp lệ
+  return { user: null, newAccessToken: null, newRefreshToken: null };
+}
+
+export default async function middleware(req: NextRequest) {
+  const accessToken = req.cookies.get("access_token")?.value;
+  const refreshToken = req.cookies.get("refresh_token")?.value;
+
+  const { user, newAccessToken, newRefreshToken } = await handleTokens(accessToken, refreshToken);
+
+  const res = NextResponse.next();
+
+  // 4️⃣ Set lại cookie nếu có token mới
+  if (newAccessToken) {
+    res.cookies.set("access_token", newAccessToken, {
+      httpOnly: true,
+      path: "/",
+      maxAge: 60 * 60, // 1 giờ
+    });
+  }
+  if (newRefreshToken) {
+    res.cookies.set("refresh_token", newRefreshToken, {
+      httpOnly: true,
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 ngày
+    });
+  }
+
+  const onDashboard = req.nextUrl.pathname.startsWith("/dashboard");
+
   if (onDashboard && !user) {
-    return await NextResponse.redirect(new URL("/login", req.nextUrl));
+    return NextResponse.json({ message: "Chưa đăng nhập" }, { status: 401 });
   }
 
   if (!onDashboard && user) {
-    return await NextResponse.redirect(new URL("/dashboard", req.nextUrl));
+    return NextResponse.json({ message: "Đã đăng nhập" }, { status: 200 });
   }
 
-  return await NextResponse.next();
+  return res;
 }
 
 export const config = {

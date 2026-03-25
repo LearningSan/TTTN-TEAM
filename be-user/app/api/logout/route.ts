@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteToken } from "@/app/helper/authenHelper";
 export async function POST(req: NextRequest) {
-  const {refresh_token} =await req.json();
-  if(refresh_token) 
- deleteToken(refresh_token)
-const res = NextResponse.json({ message: "Logged out" });
+  try {
+  const refreshToken = req.cookies.get("refresh_token")?.value;
 
-  res.cookies.set("token", "", {
-    httpOnly: true,
-    path: "/",
-    maxAge: 0,
-  });
+    if (refreshToken) {
+      await deleteToken(refreshToken); // xóa trong DB
+    }
 
-  return res;
+    const res = NextResponse.json({ message: "Logged out" });
+   res.cookies.set("access_token", "", { path: "/", httpOnly: true, maxAge: 0 });
+    res.cookies.set("refresh_token", "", { path: "/", httpOnly: true, maxAge: 0 });
+    return res;
+  } catch (err) {
+    return NextResponse.json(
+      { message: "Logout failed" },
+      { status: 500 }
+    );
+  }
 }
