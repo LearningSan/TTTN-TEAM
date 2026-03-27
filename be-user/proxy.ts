@@ -72,13 +72,12 @@ export default async function middleware(req: NextRequest) {
   const onDashboard = req.nextUrl.pathname.startsWith("/dashboard");
 
   if (onDashboard && !user) {
-    return NextResponse.json({ message: "Chưa đăng nhập" }, { status: 401 });
-  }
+  return NextResponse.redirect(new URL("/login", req.url));
+}
 
-  if (!onDashboard && user) {
-    return NextResponse.json({ message: "Đã đăng nhập" }, { status: 200 });
-  }
-
+if (!onDashboard && user) {
+  return NextResponse.redirect(new URL("/dashboard", req.url));
+}
   return res;
 }
 

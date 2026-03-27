@@ -11,8 +11,8 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ message: "Invalid email or password" }, { status: 401 });
   }
-
-const tokenData = await createToken(user);
+let {user_id,name}=user
+const tokenData = await createToken({user_id,email,name});
 
 if (!tokenData) {
   return NextResponse.json(
@@ -22,10 +22,9 @@ if (!tokenData) {
 }
 const { accessToken, refreshToken } = tokenData;
  
-  const response = NextResponse.json({
-    message: "Login success",
+  const response = NextResponse.json(
     user,
-  });
+  );
     response.cookies.set("access_token", accessToken, {
     httpOnly: true,
     secure: false, // nên true nếu HTTPS

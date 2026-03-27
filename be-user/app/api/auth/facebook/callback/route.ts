@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleLogin } from "@/app/helper/authenHelper";
+import { FacebookLogin } from "@/app/helper/authenHelper";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
@@ -8,35 +8,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: "No code" }, { status: 400 });
   }
 
-let result;
+  let result;
   try {
-    result = await GoogleLogin(code);
-    console.log("GoogleLogin result:", result);
+    result = await FacebookLogin(code);
+    console.log("FacebookLogin result:", result);
   } catch (err) {
-    console.error("GoogleLogin failed:", err);
+    console.error("FacebookLogin failed:", err);
     return NextResponse.json({ message: "Login failed" }, { status: 500 });
   }
-      const { accessToken, refreshToken,user } = result;
 
-  
- const response = NextResponse.json({
-    user
-  });
+  const { accessToken, refreshToken, user } = result;
 
-     response.cookies.set("access_token", accessToken, {
+  const response = NextResponse.json({ user });
+
+  response.cookies.set("access_token", accessToken, {
     httpOnly: true,
-    secure: false, // nên true nếu HTTPS
+    secure: false, // nên true nếu deploy HTTPS
     sameSite: "strict",
-    maxAge: 60 * 60 // 1 giờ
+    maxAge: 60 * 60, // 1 giờ
   });
+
   response.cookies.set("refresh_token", refreshToken, {
     httpOnly: true,
     secure: false,
     sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 
+    maxAge: 7 * 24 * 60 * 60, // 7 ngày
   });
 
-  return new Response(`
+return new Response(`
   <script>
     if (window.opener) {
       window.opener.postMessage("LOGIN_SUCCESS", "*");

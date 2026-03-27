@@ -1,12 +1,14 @@
 import { NextRequest,NextResponse } from "next/server";
 import { createUser } from "@/app/lib/user";
+import { sanitizeUser } from "@/app/helper/authenHelper";
+
 export async function POST(req:Request) {
   try{
     const data=await req.json()
 
   const newUser = await createUser(data.email, data.password, data.name);
 if (newUser) {
-   return NextResponse.json({ message: "User created", user: newUser }, { status: 201 });
+   return NextResponse.json( sanitizeUser(newUser) );
 } else {
    return NextResponse.json({ message: "User already exists" }, { status: 400 });
 }}
