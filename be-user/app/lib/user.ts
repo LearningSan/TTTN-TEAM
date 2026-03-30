@@ -57,3 +57,16 @@ export async function createUser(
     throw new Error('Failed to create new user');
   }
 }
+
+export async function updatePassword(user_id: string, password_hash: string) {
+  const db = await connectDB();
+
+  return await db.request()
+    .input("user_id", user_id)
+    .input("password_hash", password_hash)
+    .query(`
+      UPDATE users
+      SET password_hash = @password_hash
+      WHERE user_id = @user_id
+    `);
+}

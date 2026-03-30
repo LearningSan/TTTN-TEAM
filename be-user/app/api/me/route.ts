@@ -16,5 +16,5 @@ if(user!=null)
  userFromDb = await getUser(user.email); 
 if (!userFromDb) return NextResponse.json({ user: null });
 
-return NextResponse.json(sanitizeUser(userFromDb));
+return NextResponse.json(await sanitizeUser(userFromDb));
 }

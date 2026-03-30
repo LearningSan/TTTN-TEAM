@@ -8,7 +8,7 @@ export async function POST(req:Request) {
 
   const newUser = await createUser(data.email, data.password, data.name);
 if (newUser) {
-   return NextResponse.json( sanitizeUser(newUser) );
+   return NextResponse.json(await sanitizeUser(newUser) );
 } else {
    return NextResponse.json({ message: "User already exists" }, { status: 400 });
 }}

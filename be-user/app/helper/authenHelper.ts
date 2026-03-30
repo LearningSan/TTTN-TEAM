@@ -5,7 +5,7 @@ import { createVerifytoken,getTokenByUserId,updateVerifyTokenByTokenId,revokeUse
 import { findSocial,createSocial } from "../lib/social_account";
 import { error } from "node:console";
 import { users } from "../lib/defination";
-
+import { NextResponse } from "next/server";
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret"; 
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "supersecret";
 
@@ -16,7 +16,7 @@ export async function authenticateUser(email: string, password: string) {
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) return null;
 
-  return sanitizeUser(user)
+  return await sanitizeUser(user)
 }
 
 export async function createToken(
@@ -75,9 +75,8 @@ export async function GoogleLogin(code: string) {
   });
 
   const user = await userRes.json();
-  const { email, name, user_id: google_id} = user;
-  
-  let social = await findSocial("google", google_id);
+  const { email, name, id} = user;
+  let social = await findSocial("google", id);
   let userId;
 
   if (social) {
@@ -95,7 +94,7 @@ export async function GoogleLogin(code: string) {
       userId = existingUser.user_id;
     }
 
-    await createSocial(userId, "google", google_id);
+    await createSocial(userId, "google", id,email);
   }
  const tokenDataGG = await createToken({
     user_id: userId,
@@ -109,6 +108,8 @@ export async function GoogleLogin(code: string) {
   const {accessToken,refreshToken}= tokenDataGG
   return {accessToken,refreshToken,user}; 
 }
+
+
 export async function FacebookLogin(code: string) {
   const tokenRes = await fetch(
     `https://graph.facebook.com/v18.0/oauth/access_token?` +
@@ -122,20 +123,18 @@ export async function FacebookLogin(code: string) {
 
   const tokenData = await tokenRes.json();
   const access_token = tokenData.access_token;
-
   const userRes = await fetch(
     `https://graph.facebook.com/me?` +
       new URLSearchParams({
-        fields: "user_id,name,email,picture",
+        fields: "id,name,email,picture",
         access_token,
       })
   );
 
   const user = await userRes.json();
-  const { user_id: facebook_id, name, email } = user;
+  const { id, name, email } = user;
 
-  // 🔹 Kiểm tra / tạo user DB
-  let social = await findSocial("facebook", facebook_id);
+  let social = await findSocial("facebook", id);
   let userId;
 
   if (social) {
@@ -150,7 +149,7 @@ export async function FacebookLogin(code: string) {
       userId = existingUser.user_id;
     }
 
-    await createSocial(userId, "facebook", facebook_id);
+    await createSocial(userId, "facebook", id);
   }
 
   const tokenDataFB = await createToken({ user_id: userId, email, name });
@@ -239,7 +238,22 @@ export async function refreshRefreshToken(oldRefreshToken: string) {
     accessToken,
   };
 }
-export function sanitizeUser(user: users) {
+export async function sanitizeUser(user: users) {
   const { password_hash, wallet_address, ...safeUser } = user;
   return safeUser;
+}
+export async function setCookies(response:NextResponse,accessToken:string,refreshToken:string) {
+  
+    response.cookies.set("access_token", accessToken, {
+    httpOnly: true,
+    secure: false, // nên true nếu HTTPS
+    sameSite: "strict",
+    maxAge: 60 * 60 // 1 giờ
+  });
+  response.cookies.set("refresh_token", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 
+  });
 }

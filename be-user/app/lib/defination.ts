@@ -35,3 +35,12 @@ export type social_account = {
   linked_at: string;
  
 };
+
+export type password_resets ={
+  reset_id :string,
+  user_id:string,
+  token:string,
+  expires_at:string,
+  used_at: string,
+  created_at:string
+}

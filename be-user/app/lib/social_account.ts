@@ -25,22 +25,38 @@ export async function findSocial(provider: string, provider_id: string) {
 export async function createSocial(
   user_id: string,
   provider: string,
-  provider_id: string
+  provider_id: string,
+  provider_email?: string,
 ) {
-  try {
+  const db = await connectDB();
+
+  await db.request()
+    .input("user_id", user_id)
+    .input("provider", provider)
+    .input("provider_id", provider_id)
+    .input("provider_email", provider_email)
+    .query(`
+      INSERT INTO social_accounts 
+      (user_id, provider, provider_id, provider_email,  linked_at)
+      VALUES (@user_id, @provider, @provider_id, @provider_email, GETDATE())
+    `);
+}
+export async function findSocialByUserId(user_id:string){
+try {
     const db = await connectDB();
 
-    await db.request()
+    const result = await db.request()
       .input("user_id", user_id)
-      .input("provider", provider)
-      .input("provider_id", provider_id)
       .query(`
-        INSERT INTO social_accounts (user_id, provider, provider_id) 
-        VALUES (@user_id, @provider, @provider_id)
+        SELECT provider
+        FROM social_accounts 
+        WHERE user_id = @user_id
       `);
 
+    return result.recordset[0]?.provider || null;
+
   } catch (err: any) {
-    console.error("createSocial error:", err.message);
+    console.error("findSocial error:", err.message);
     throw err;
   }
 }

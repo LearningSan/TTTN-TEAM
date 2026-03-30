@@ -1,5 +1,5 @@
 import { NextRequest,NextResponse } from "next/server";
-
+import { setCookies } from "@/app/helper/authenHelper";
 import { authenticateUser,createToken } from "@/app/helper/authenHelper";
 
 export async function POST(req: Request) {
@@ -25,18 +25,7 @@ const { accessToken, refreshToken } = tokenData;
   const response = NextResponse.json(
     user,
   );
-    response.cookies.set("access_token", accessToken, {
-    httpOnly: true,
-    secure: false, // nên true nếu HTTPS
-    sameSite: "strict",
-    maxAge: 60 * 60 // 1 giờ
-  });
-  response.cookies.set("refresh_token", refreshToken, {
-    httpOnly: true,
-    secure: false,
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 
-  });
+   await setCookies(response,accessToken,refreshToken)
 
   return response;
 }
