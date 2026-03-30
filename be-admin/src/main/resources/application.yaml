@@ -1,0 +1,20 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: tttnBE
+
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=TicketConcert;encrypt=true;trustServerCertificate=true;
+    username: sa
+    password: courage1530
+    driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+    jpa:
+      hibernate:
+        ddl-auto: none
+      show-sql: true
+      properties:
+        hibernate:
+          format_sql: true
