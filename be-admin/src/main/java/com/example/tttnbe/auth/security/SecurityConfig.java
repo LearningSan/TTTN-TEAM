@@ -1,5 +1,6 @@
 package com.example.tttnbe.auth.security;
-
+import org.springframework.web.cors.CorsConfiguration;
+import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,20 +29,25 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults())
+                // Sửa lỗi 1: Định nghĩa CORS trực tiếp trong Security
+                .cors(cors -> cors.configurationSource(request -> {
+                    CorsConfiguration cfg = new CorsConfiguration();
+                    cfg.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:5174", "https://admin-concert-blockchain-stu-22.vercel.app"));
+                    cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    cfg.setAllowedHeaders(Arrays.asList("*"));
+                    cfg.setAllowCredentials(true);
+                    return cfg;
+                }))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/admin/login", "/auth/admin/logout", "/error",
-                                "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        // Cho phép những ai có thẻ ADMIN mới được đụng vào API /admin/**
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/auth/**", "/error", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Sửa lỗi 3: Dùng hasAuthority để khớp với chữ ADMIN trong Token
+                        .requestMatchers("/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
                         .anyRequest().authenticated()
                 );
 
-        // THÊM DÒNG NÀY: Xếp ông bảo vệ của mình đứng trước bảo vệ mặc định của Spring
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 }
