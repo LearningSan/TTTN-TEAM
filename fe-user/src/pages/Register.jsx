@@ -14,7 +14,6 @@ const Register = () => {
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      // BE yêu cầu: email, password, name
       const signupData = {
         email: formData.email,
         password: formData.password,
@@ -26,14 +25,21 @@ const Register = () => {
         signupData,
       );
 
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         alert("Đăng ký thành công!");
         navigate("/login");
       }
     } catch (error) {
-      alert(error.response?.data?.message || "Đăng ký thất bại!");
+      // Hiển thị lỗi chi tiết hơn từ Backend nếu có
+      const errorMsg =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Đăng ký thất bại!";
+      alert(errorMsg);
+      console.error("Signup Error:", error);
     }
   };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#101114] font-sans">
       {/* Header */}
@@ -46,9 +52,9 @@ const Register = () => {
         <div className="flex flex-col md:flex-row-reverse w-full max-w-5xl bg-[#FBD9FA]/20 backdrop-blur-sm rounded-[50px] overflow-hidden shadow-2xl">
           {/* Right Side: Illustration (Đảo sang phải) */}
           <div className="hidden md:flex md:w-1/2 p-8 items-center justify-center">
-            <div className="rounded-[50px] overflow-hidden shadow-inner bg-[#070E2A]">
+            <div className="w-full h-full rounded-[50px] overflow-hidden shadow-inner bg-[#070E2A]">
               <img
-                src="https://via.placeholder.com/500" // Thay bằng link ảnh chậu cây của bạn
+                src="https://i.pinimg.com/236x/87/6a/a6/876aa6769737ce65aee4fc9fcdf8d513.jpg" // Thay bằng link ảnh chậu cây của bạn
                 alt="Illustration"
                 className="w-full h-full object-cover opacity-90"
               />
@@ -85,6 +91,7 @@ const Register = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, Name: e.target.value })
                     }
+                    required
                   />
                 </div>
 
@@ -101,6 +108,7 @@ const Register = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
+                    required
                   />
                 </div>
 
@@ -117,6 +125,7 @@ const Register = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
                     }
+                    required
                   />
                 </div>
 
