@@ -44,3 +44,63 @@ export type password_resets ={
   used_at: string,
   created_at:string
 }
+
+export type zones = {
+  zone_id: string,          
+  concert_id: string,       
+  zone_name: string,        
+  description: string | null, 
+  price: number,            
+  currency: string,         
+  total_seats: number,      
+  available_seats: number,   
+  sold_seats: number,       
+  color_code: string | null,
+  has_seat_map: boolean,    
+  display_order: number,    
+  status: string,            
+  created_at: string,       
+  updated_at: string        
+};
+export type concerts = {
+  concert_id: string,      
+  organizer_id: string,     
+  venue_id: string,       
+  title: string,          
+  artist: string,          
+  concert_date: string,    
+  end_date: string | null,  
+  description: string | null, 
+  banner_url: string | null, 
+  sale_start_at: string | null, 
+  sale_end_at: string | null,  
+  status: string,          
+  created_at: string,       
+  updated_at: string       
+};
+
+export type venues = {
+  venue_id: string,       
+  name: string,          
+  address: string | null,
+  city: string | null,    
+  district: string | null,
+  country: string,       
+  capacity: number | null,
+  created_at: string,    
+  updated_at: string     
+};
+
+export type seats = {
+  seat_id: string,               
+  zone_id: string,               
+  concert_id: string,            
+  row_label: string,             
+  seat_number: number,           
+  seat_label: string,            
+  status: string,                 
+  locked_at: string | null,      
+  locked_by_user_id: string | null,
+  lock_expires_at: string | null, 
+  created_at: string             
+};
