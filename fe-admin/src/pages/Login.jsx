@@ -2,11 +2,13 @@ import { Form, Input, Button, Card, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/config';
 import { saveToken } from '../utils/auth';
+import { useState } from 'react';
 import { jwtDecode } from "jwt-decode";
 const Login = () => {
   const navigate = useNavigate();
-
+  const [loading, setLoading] = useState(false);
   const onFinish = async (values) => {
+    setLoading(true);
     try {
       // Gửi email/password lên API Admin
       const res = await API.post('/auth/admin/login', values);
@@ -24,6 +26,8 @@ const Login = () => {
       }
     } catch  {
       message.error('Tài khoản hoặc mật khẩu không chính xác!');
+    } finally {
+      setLoading(false); 
     }
   };
 
@@ -47,7 +51,7 @@ const Login = () => {
             <Input.Password size="large" />
           </Form.Item>
 
-          <Button type="primary" htmlType="submit" block size="large" style={{ marginTop: 10 }}>
+          <Button type="primary" htmlType="submit" block size="large" style={{ marginTop: 10 }} loading={loading}>
             Đăng nhập hệ thống
           </Button>
         </Form>
