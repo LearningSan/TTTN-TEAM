@@ -33,6 +33,9 @@ public class ConcertResponse {
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime saleEndAt;
 
+    private UUID organizerId;
     private String organizerName;
+
+    private UUID venueId;
     private String venueName;
 }

@@ -46,8 +46,11 @@ public class ConcertServiceImpl implements ConcertService {
                 .saleStartAt(concert.getSaleStartAt())
                 .saleEndAt(concert.getSaleEndAt())
                 .status(concert.getStatus())
-                // Lấy nhẹ cái tên của Organizer và Venue ra thôi, không lấy cả cục
+
+                // Lấy nhẹ cái id, tên của Organizer và Venue ra thôi, không lấy cả cục
+                .organizerId(concert.getOrganizer().getUserId())
                 .organizerName(concert.getOrganizer().getName())
+                .venueId(concert.getVenue().getVenueId())
                 .venueName(concert.getVenue().getVenueName())
                 .build();
     }
