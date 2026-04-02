@@ -1,3 +1,15 @@
+/**
+ * @swagger
+ * /api/logout:
+ *   post:
+ *     summary: Đăng xuất
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
+
+
 import { NextRequest, NextResponse } from "next/server";
 import { deleteToken } from "@/app/helper/authenHelper";
 export async function POST(req: NextRequest) {

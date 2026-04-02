@@ -1,3 +1,22 @@
+/**
+ * @swagger
+ * /api/reset-password:
+ *   post:
+ *     summary: Đổi mật khẩu
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             email: admin@gmail.com
+ *             otp: 123456
+ *             newPassword: 123456
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
+
 import { NextRequest, NextResponse } from "next/server";
 import { resetPassword } from "@/app/helper/passwordHelper";
 

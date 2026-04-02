@@ -1,3 +1,14 @@
+/**
+ * @swagger
+ * /api/auth/google:
+ *   get:
+ *     summary: Login Google
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
+
 import { NextResponse } from "next/server";
 
 export async function GET() {

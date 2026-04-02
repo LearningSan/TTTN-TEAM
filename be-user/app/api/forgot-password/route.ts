@@ -1,3 +1,19 @@
+/**
+ * @swagger
+ * /api/forgot-password:
+ *   post:
+ *     summary: Gửi OTP về email
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             email: admin@gmail.com
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
 import { NextRequest,NextResponse } from "next/server";
 import { sendMail } from "@/app/helper/passwordHelper";
 export async function POST(req:NextRequest) {

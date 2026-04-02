@@ -1,3 +1,21 @@
+/**
+ * @swagger
+ * /api/signup:
+ *   post:
+ *     summary: Đăng ký tài khoản bằng email + password + name
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             email: admin@gmail.com
+ *             password: 123
+ *             name: tryit
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
 import { NextRequest,NextResponse } from "next/server";
 import { createUser } from "@/app/lib/user";
 import { sanitizeUser } from "@/app/helper/authenHelper";

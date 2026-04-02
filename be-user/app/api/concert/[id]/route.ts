@@ -1,3 +1,19 @@
+/**
+ * @swagger
+ * /api/concert/{id}:
+ *   get:
+ *     summary: Lấy chi tiết concert
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: 1234
+ *     responses:
+ *       200:
+ *         description: OK
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { getDetail } from "@/app/helper/concertHelper";
 

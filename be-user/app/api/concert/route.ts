@@ -1,3 +1,15 @@
+/**
+ * @swagger
+ * /api/concert:
+ *   get:
+ *     summary: Lấy danh sách concert
+ *     parameters:
+ *      
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { getAll } from "@/app/helper/concertHelper";
 

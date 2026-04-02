@@ -1,3 +1,20 @@
+/**
+ * @swagger
+ * /api/login:
+ *   post:
+ *     summary: Đăng nhập bằng email + password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             email: admin@gmail.com
+ *             password: 123456
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
 import { NextRequest,NextResponse } from "next/server";
 import { setCookies } from "@/app/helper/authenHelper";
 import { authenticateUser,createToken } from "@/app/helper/authenHelper";

@@ -1,3 +1,14 @@
+/**
+ * @swagger
+ * /api/me:
+ *   get:
+ *     summary: Lấy thông tin user hiện tại
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
+
 import { NextRequest,NextResponse } from "next/server";
 import { verifyToken } from "@/app/helper/authenHelper";
 import { getUser } from "@/app/lib/user";

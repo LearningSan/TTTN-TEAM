@@ -1,3 +1,12 @@
+/**
+ * @swagger
+ * /api/auth/facebook:
+ *   get:
+ *     summary: Login Facebook
+ *     responses:
+ *       200:
+ *         description: OK
+ */
 import { NextResponse } from "next/server";
 
 export async function GET() {

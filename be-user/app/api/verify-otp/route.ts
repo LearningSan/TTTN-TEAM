@@ -1,3 +1,21 @@
+/**
+ * @swagger
+ * /api/verify-otp:
+ *   post:
+ *     summary: Xác thực OTP
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             email: admin@gmail.com
+ *             otp: 123456
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+
+
 import { NextRequest,NextResponse } from "next/server";
 import { verifyOTP } from "@/app/helper/passwordHelper";
 export async function POST(req: NextRequest) {
