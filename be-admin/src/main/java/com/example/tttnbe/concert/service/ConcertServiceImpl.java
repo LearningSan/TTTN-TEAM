@@ -5,11 +5,16 @@ import com.example.tttnbe.auth.repository.UserRepository;
 import com.example.tttnbe.common.response.PageResponse;
 import com.example.tttnbe.concert.dto.ConcertRequest;
 import com.example.tttnbe.concert.dto.ConcertResponse;
+import com.example.tttnbe.concert.dto.UpdateConcertRequest;
 import com.example.tttnbe.concert.entity.Concert;
 import com.example.tttnbe.concert.repository.ConcertRepository;
 import com.example.tttnbe.common.exception.CustomException;
 import com.example.tttnbe.venue.entity.Venue;
 import com.example.tttnbe.venue.repository.VenueRepository;
+import com.example.tttnbe.zone.dto.ZoneResponse;
+import com.example.tttnbe.zone.entity.Zone;
+import com.example.tttnbe.zone.repository.ZoneRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ConcertServiceImpl implements ConcertService {
@@ -33,8 +39,29 @@ public class ConcertServiceImpl implements ConcertService {
     @Autowired
     private VenueRepository venueRepository;
 
+    @Autowired
+    private ZoneRepository zoneRepository;
+
     //dung chung - bien entity thanh dto
     private ConcertResponse mapToResponse(Concert concert) {
+        //xu ly luu zone
+        List<ZoneResponse> zoneResponses = null;
+        if (concert.getZones() != null && !concert.getZones().isEmpty()) {
+            zoneResponses = concert.getZones().stream().map(zone ->
+                    new ZoneResponse(
+                            zone.getZoneId(),
+                            zone.getZoneName(),
+                            zone.getPrice(),
+                            zone.getCurrency(),
+                            zone.getTotalSeats(),
+                            zone.getAvailableSeats(),
+                            zone.getColorCode(),
+                            zone.isHasSeatMap(),
+                            zone.getDisplayOrder()
+                    )
+            ).collect(Collectors.toList());
+        }
+
         return ConcertResponse.builder()
                 .concertId(concert.getConcertId())
                 .title(concert.getTitle())
@@ -46,13 +73,17 @@ public class ConcertServiceImpl implements ConcertService {
                 .saleStartAt(concert.getSaleStartAt())
                 .saleEndAt(concert.getSaleEndAt())
                 .status(concert.getStatus())
-                // Lấy nhẹ cái tên của Organizer và Venue ra thôi, không lấy cả cục
+                // Lấy nhẹ cái id, tên của Organizer và Venue ra thôi
+                .organizerId(concert.getOrganizer().getUserId())
                 .organizerName(concert.getOrganizer().getName())
+                .venueId(concert.getVenue().getVenueId())
                 .venueName(concert.getVenue().getVenueName())
+                .zones(zoneResponses)
                 .build();
     }
 
     //1 - create
+    @Transactional
     public ConcertResponse createConcert(ConcertRequest concertRequest) {
         Concert concert = new Concert();
 
@@ -64,7 +95,7 @@ public class ConcertServiceImpl implements ConcertService {
         concert.setBannerURL(concertRequest.getBannerURL());
         concert.setSaleStartAt(concertRequest.getSaleStartAt());
         concert.setSaleEndAt(concertRequest.getSaleEndAt());
-        concert.setStatus(concertRequest.getStatus());
+        concert.setStatus("DRAFT");
 
         //tim organizer trong sercurity
         String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -79,6 +110,29 @@ public class ConcertServiceImpl implements ConcertService {
 
         //map thanh dto de tra ve thong tin can thiet
         Concert savedConcert = concertRepository.save(concert);
+
+        //xu ly luu zone
+        if (concertRequest.getZones() != null && !concertRequest.getZones().isEmpty()) {
+            List<Zone> zonesToSave = concertRequest.getZones().stream().map(zReq -> {
+                Zone zone = new Zone();
+                zone.setConcert(savedConcert);
+                zone.setZoneName(zReq.getZoneName());
+                zone.setPrice(zReq.getPrice());
+                zone.setCurrency(zReq.getCurrency());
+                zone.setTotalSeats(zReq.getTotalSeats());
+                zone.setAvailableSeats(zReq.getTotalSeats());
+                zone.setSoldSeats(0);
+                zone.setColorCode(zReq.getColorCode());
+                zone.setHasSeatMap(zReq.getHasSeatMap() != null ? zReq.getHasSeatMap() : false);
+                zone.setDisplayOrder(zReq.getDisplayOrder());
+                zone.setStatus("ACTIVE");
+                return zone;
+            }).collect(Collectors.toList());
+
+            zoneRepository.saveAll(zonesToSave);
+            savedConcert.setZones(zonesToSave);
+        }
+
         return mapToResponse(savedConcert);
     }
 
@@ -101,7 +155,7 @@ public class ConcertServiceImpl implements ConcertService {
     }
 
     //4 - update
-    public ConcertResponse updateConcert(UUID concertId, ConcertRequest concertRequest) {
+    public ConcertResponse updateConcert(UUID concertId, UpdateConcertRequest concertRequest) {
         Concert concert = concertRepository.findById(concertId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
 

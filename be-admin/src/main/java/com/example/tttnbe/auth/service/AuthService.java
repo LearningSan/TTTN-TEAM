@@ -75,8 +75,11 @@ public class AuthService {
 
         refreshTokenRepository.save(tokenEntity);
 
+        //lay name
+        String name = user.getName();
+
         //tra ket qua cho controller
-        return new LoginResponse(accessToken, rawRefreshToken);
+        return new LoginResponse(accessToken, rawRefreshToken, name);
     }
 
     @Transactional
