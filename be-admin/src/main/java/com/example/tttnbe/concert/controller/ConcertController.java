@@ -3,7 +3,7 @@ package com.example.tttnbe.concert.controller;
 import com.example.tttnbe.common.response.PageResponse;
 import com.example.tttnbe.concert.dto.ConcertRequest;
 import com.example.tttnbe.concert.dto.ConcertResponse;
-import com.example.tttnbe.concert.entity.Concert;
+import com.example.tttnbe.concert.dto.UpdateConcertRequest;
 import com.example.tttnbe.concert.service.ConcertService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +40,7 @@ public class ConcertController {
     @PutMapping("/{concertId}")
     public ResponseEntity<ConcertResponse> updateConcert(
             @PathVariable("concertId") UUID concertId,
-            @Valid @RequestBody ConcertRequest concertRequest) {
+            @Valid @RequestBody UpdateConcertRequest concertRequest) {
         return ResponseEntity.ok(concertService.updateConcert(concertId, concertRequest)); //200
     }
 
