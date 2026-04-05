@@ -1,121 +1,168 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Space, message, Popconfirm, Modal, Form, Input, Select, Tag } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Table, Select, Card, Row, Col, message, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import API from '../api/config';
 
-const TicketManagement = () => {
-  // --- STATE QUẢN LÝ DỮ LIỆU ---
-  const [tickets, setTickets] = useState([]); // Lưu danh sách Vé
-  const [loading, setLoading] = useState(false); // Trạng thái tải dữ liệu
-  const [modalState, setModalState] = useState({ open: false, id: null }); // Trạng thái Modal
-  const [form] = Form.useForm();
+const { Title } = Typography;
 
-  // --- HÀM 1: LẤY DANH SÁCH VÉ TỪ BACKEND ---
-  const fetchTickets = async () => {
+const TicketManagement = () => {
+  const [concerts, setConcerts] = useState([]);
+  const [selectedConcertId, setSelectedConcertId] = useState(null);
+  
+  // State lưu 3 con số tổng quan (total, sold, available)
+  const [ticketStats, setTicketStats] = useState({ total: 0, sold: 0, available: 0 });
+  
+  // State lưu danh sách người mua
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // 1. Lấy danh sách Concert để nạp vào Combobox
+  useEffect(() => {
+    const fetchConcerts = async () => {
+      try {
+        // Có thể cần truyền tham số để lấy tất cả, hoặc chỉ những show ON_SALE/COMPLETED
+        const res = await API.get('/admin/concerts?page=0&size=100'); 
+        setConcerts(res.data?.content || res.data || []);
+      } catch (error) {
+        message.error('Lỗi tải danh sách Concert!');
+      }
+    };
+    fetchConcerts();
+  }, []);
+
+  // 2. Lấy dữ liệu Vé khi Admin chọn 1 Concert cụ thể
+  const handleSelectConcert = async (concertId) => {
+    setSelectedConcertId(concertId);
     setLoading(true);
     try {
-      const { data } = await API.get('/admin/tickets');
-      setTickets(data?.content || data?.data?.content || data?.data || data || []);
-    } catch {
-      message.error('Lỗi tải danh sách Vé!');
+      // Gọi song song 2 API: 1 cái lấy thống kê số lượng, 1 cái lấy danh sách người mua
+      const [resStats, resTickets] = await Promise.all([
+        API.get(`/admin/concerts/${concertId}/ticket-stats`), // API này lấy total, sold, available
+        API.get(`/admin/tickets?concertId=${concertId}`)      // API này lấy danh sách user mua
+      ]);
+
+      setTicketStats(resStats.data || { total: 0, sold: 0, available: 0 });
+      setTickets(resTickets.data?.content || resTickets.data || []);
+    } catch (error) {
+      message.error('Lỗi tải dữ liệu vé của Concert này!');
+      // Đưa state về rỗng nếu lỗi
+      setTicketStats({ total: 0, sold: 0, available: 0 });
+      setTickets([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchTickets(); }, []);
-
-  // --- HÀM 2: XÓA VÉ ---
-  const handleDelete = async (id) => {
-    setLoading(true);
-    try {
-      await API.delete(`/admin/tickets/${id}`);
-      message.success('Đã xóa vé thành công!');
-      fetchTickets();
-    } catch {
-      message.error('Lỗi khi xóa!');
-      setLoading(false);
-    }
-  };
-
-  // --- HÀM 3: XỬ LÝ LƯU FORM (THÊM / SỬA) ---
-  const handleFinish = async (values) => {
-    setLoading(true);
-    try {
-      if (modalState.id) await API.put(`/admin/tickets/${modalState.id}`, values);
-      else await API.post('/admin/tickets', values);
-      
-      message.success('Lưu thông tin thành công!');
-      setModalState({ open: false, id: null });
-      fetchTickets();
-    } catch {
-      message.error('Lỗi lưu dữ liệu!');
-      setLoading(false);
-    }
-  };
-
-  // --- HÀM 4: MỞ MODAL ---
-  const openModal = (record = null) => {
-    form.resetFields(); // Xóa trắng form
-    if (record) form.setFieldsValue(record); // Nạp data nếu là chế độ Sửa
-    setModalState({ open: true, id: record?.ticketId || null });
-  };
-
-  // --- CẤU HÌNH CỘT CHO BẢNG ---
+  // Cấu hình cột cho bảng người mua vé
   const columns = [
-    { title: 'Token', dataIndex: 'tokenId', render: (t) => t ? <Tag color="blue">{t.slice(0, 8)}...</Tag> : 'N/A' },
-    { title: 'Đêm diễn', dataIndex: 'concertTitle' },
-    { title: 'Khu vực', dataIndex: 'zoneName' },
-    { title: 'Ghế', dataIndex: 'seatLabel' },
-    { title: 'Ví', dataIndex: 'walletAddress', render: (v) => v ? `${v.slice(0, 8)}...` : '' }, // Cắt bớt độ dài chuỗi ví
-    { title: 'Ngày mua', dataIndex: 'purchaseDate', render: (d) => d && dayjs(d).format('DD/MM/YYYY HH:mm') },
-    { title: 'Trạng thái', dataIndex: 'status', render: (s) => {
-        // Ánh xạ màu sắc cho các trạng thái vé chuẩn từ Database
-        const colors = { MINTING: 'purple', ACTIVE: 'green', USED: 'gray', TRANSFERRED: 'orange', CANCELLED: 'red' };
-        return <Tag color={colors[s] || 'default'}>{s}</Tag>;
-    }},
-    { title: 'Hành động', render: (_, r) => (
-      <Space>
-        <Button icon={<EditOutlined />} onClick={() => openModal(r)}>Sửa</Button>
-        <Popconfirm title="Chắc chắn xóa vé này?" onConfirm={() => handleDelete(r.ticketId)}>
-          <Button danger icon={<DeleteOutlined />}>Xóa</Button>
-        </Popconfirm>
-      </Space>
-    )}
+    {
+      title: 'Khách hàng',
+      key: 'user',
+      render: (_, record) => (
+        <div>
+          <b>{record.name}</b><br/>
+          <span style={{ fontSize: '12px', color: 'gray' }}>{record.email}</span>
+        </div>
+      )
+    },
+    { 
+      title: 'Địa chỉ Ví (Wallet)', 
+      dataIndex: 'walletAddress', 
+      render: (w) => w ? <span style={{ fontFamily: 'monospace' }}>{w.substring(0, 6)}...{w.substring(w.length - 4)}</span> : 'N/A'
+    },
+    { 
+      title: 'Mã vé (Ticket ID)', 
+      dataIndex: 'ticketId',
+      render: (id) => <span style={{ fontSize: '12px', color: '#1890ff' }}>{id?.substring(0, 8)}</span>
+    },
+    { 
+      title: 'Token ID', 
+      dataIndex: 'tokenId',
+      render: (token) => token ? <Tag color="purple">#{token}</Tag> : <Tag>Chưa Mint</Tag>
+    },
+    { 
+      title: 'Ngày mua', 
+      dataIndex: 'purchaseDate', 
+      render: (d) => d ? dayjs(d).format('DD/MM/YYYY HH:mm') : 'N/A'
+    },
+    { 
+      title: 'Trạng thái', 
+      dataIndex: 'status', 
+      render: (s) => {
+        let color = s === 'ACTIVE' ? 'green' : s === 'USED' ? 'gray' : 'red';
+        return <Tag color={color}>{s}</Tag>;
+      }
+    }
   ];
 
-  // --- GIAO DIỆN CHÍNH ---
   return (
-    <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2>Quản lý Vé</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>Tạo Vé Mới</Button>
-      </div>
+    <div style={{ padding: 24 }}>
+      <Title level={3}>Quản lý Vé Concert</Title>
       
-      {/* Khóa chính của bảng là ticketId */}
-      <Table columns={columns} dataSource={tickets} rowKey="ticketId" loading={loading} bordered />
+      {/* BƯỚC 1: Chọn Concert */}
+      <Card style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ fontSize: 16, fontWeight: 500 }}>Chọn sự kiện:</span>
+          <Select
+  showSearch
+  style={{ width: 400 }}
+  placeholder="-- Gõ tên hoặc lướt chọn một Concert --"
+  
+  // Tuyệt chiêu 1: Tắt tự động focus lọc theo giá trị mặc định, chuyển sang lọc theo nhãn (label)
+  optionFilterProp="label"
+  
+  // Tuyệt chiêu 2: Hàm xử lý lọc. Chuyển tất cả về chữ thường (toLowerCase) 
+  // để gõ "vu" hay "Vu" đều tìm ra "Vũ. Khúc Tour"
+  filterOption={(input, option) =>
+    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+  }
+  
+  onChange={handleSelectConcert}
+  
+  // Nạp dữ liệu vào
+  options={concerts.map(c => ({ 
+    value: c.concertId, 
+    label: c.title 
+  }))}
+/>
+        </div>
+      </Card>
 
-      <Modal title={modalState.id ? "Sửa Vé" : "Tạo Vé Cấp Tốc"} open={modalState.open} onCancel={() => setModalState({ open: false, id: null })} footer={null} width={700}>
-        <Form layout="vertical" form={form} onFinish={handleFinish}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <Form.Item name="walletAddress" label="Địa chỉ ví" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="userId" label="User ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="concertId" label="Concert ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="zoneId" label="Zone ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="seatId" label="Seat ID"><Input /></Form.Item>
-            <Form.Item name="orderId" label="Order ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="orderItemId" label="Order Item ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="paymentId" label="Payment ID" rules={[{ required: true }]}><Input /></Form.Item>
-            
-            <Form.Item name="status" label="Trạng thái" rules={[{ required: true }]}>
-              <Select options={['MINTING', 'ACTIVE', 'USED', 'TRANSFERRED', 'CANCELLED'].map(v => ({ value: v, label: v }))} />
-            </Form.Item>
-          </div>
-          <Button type="primary" htmlType="submit" block loading={loading}>Lưu dữ liệu</Button>
-        </Form>
-      </Modal>
-    </>
+      {selectedConcertId && (
+        <>
+          {/* BƯỚC 2: Thẻ thống kê */}
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col span={8}>
+              <Card title="🎫 Tổng số vé phát hành" bordered={false} style={{ background: '#e6f7ff' }}>
+                <Title level={2} style={{ margin: 0, color: '#1890ff' }}>{ticketStats.total}</Title>
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card title="🔥 Số vé đã bán" bordered={false} style={{ background: '#f6ffed' }}>
+                <Title level={2} style={{ margin: 0, color: '#52c41a' }}>{ticketStats.sold}</Title>
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card title="🎟️ Số vé còn lại" bordered={false} style={{ background: '#fffbe6' }}>
+                <Title level={2} style={{ margin: 0, color: '#faad14' }}>{ticketStats.available}</Title>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* BƯỚC 3: Bảng danh sách người mua */}
+          <Card title="📋 Danh sách chi tiết người mua vé">
+            <Table 
+              columns={columns} 
+              dataSource={tickets} 
+              rowKey="ticketId" 
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+              bordered
+            />
+          </Card>
+        </>
+      )}
+    </div>
   );
 };
 
