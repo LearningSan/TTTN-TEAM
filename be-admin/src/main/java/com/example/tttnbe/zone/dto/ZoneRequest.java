@@ -9,8 +9,10 @@ public class ZoneRequest {
     private String zoneName;
     private BigDecimal price;
     private String currency;
-    private Integer totalSeats;
     private String colorCode;
     private Boolean hasSeatMap;
     private Integer displayOrder;
+    private String rowPrefix;
+    private Integer rowCount;
+    private Integer seatsPerRow;
 }

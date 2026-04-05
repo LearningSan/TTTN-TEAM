@@ -9,8 +9,10 @@ import com.example.tttnbe.concert.dto.UpdateConcertRequest;
 import com.example.tttnbe.concert.entity.Concert;
 import com.example.tttnbe.concert.repository.ConcertRepository;
 import com.example.tttnbe.common.exception.CustomException;
+import com.example.tttnbe.seat.entity.Seat;
 import com.example.tttnbe.venue.entity.Venue;
 import com.example.tttnbe.venue.repository.VenueRepository;
+import com.example.tttnbe.zone.dto.ZoneRequest;
 import com.example.tttnbe.zone.dto.ZoneResponse;
 import com.example.tttnbe.zone.entity.Zone;
 import com.example.tttnbe.zone.repository.ZoneRepository;
@@ -24,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -113,23 +116,53 @@ public class ConcertServiceImpl implements ConcertService {
 
         //xu ly luu zone
         if (concertRequest.getZones() != null && !concertRequest.getZones().isEmpty()) {
-            List<Zone> zonesToSave = concertRequest.getZones().stream().map(zReq -> {
+            List<Zone> zonesToSave = new ArrayList<>();
+            List<Seat> allSeatsToSave = new ArrayList<>();
+
+            for (ZoneRequest zReq : concertRequest.getZones()) {
                 Zone zone = new Zone();
+
+                // 1. SET TẤT CẢ THÔNG TIN CƠ BẢN CỦA ZONE TRƯỚC
                 zone.setConcert(savedConcert);
                 zone.setZoneName(zReq.getZoneName());
                 zone.setPrice(zReq.getPrice());
                 zone.setCurrency(zReq.getCurrency());
-                zone.setTotalSeats(zReq.getTotalSeats());
-                zone.setAvailableSeats(zReq.getTotalSeats());
-                zone.setSoldSeats(0);
                 zone.setColorCode(zReq.getColorCode());
                 zone.setHasSeatMap(zReq.getHasSeatMap() != null ? zReq.getHasSeatMap() : false);
                 zone.setDisplayOrder(zReq.getDisplayOrder());
                 zone.setStatus("ACTIVE");
-                return zone;
-            }).collect(Collectors.toList());
+                zone.setSoldSeats(0);
 
-            zoneRepository.saveAll(zonesToSave);
+                // 2. XỬ LÝ SỐ LƯỢNG VÉ VÀ SINH GHẾ
+                if (zone.isHasSeatMap()) {
+                    // Tinh total_seats (so hang ghe * so ghe moi hang)
+                    int totalSeats = zReq.getRowCount() * zReq.getSeatsPerRow();
+                    zone.setTotalSeats(totalSeats);
+                    zone.setAvailableSeats(totalSeats);
+
+                    // Bây giờ Zone ĐÃ ĐẦY ĐỦ THÔNG TIN -> Mới được save xuống DB để lấy ID
+                    Zone savedZone = zoneRepository.save(zone);
+                    zonesToSave.add(savedZone);
+
+                    // Sinh ghế
+                    char startRow = zReq.getRowPrefix().toUpperCase().charAt(0);
+                    for (int i = 0; i < zReq.getRowCount(); i++) {
+                        String currentRow = String.valueOf((char) (startRow + i));
+
+                        for (int j = 1; j <= zReq.getSeatsPerRow(); j++) {
+                            Seat seat = new Seat();
+                            seat.setZone(savedZone);
+                            seat.setConcert(savedConcert);
+                            seat.setRowLabel(currentRow);
+                            seat.setSeatNumber(j);
+                            seat.setSeatLabel(currentRow + j);
+                            seat.setStatus("AVAILABLE");
+                            allSeatsToSave.add(seat);
+                        }
+                    }
+                }
+            }
+
             savedConcert.setZones(zonesToSave);
         }
 
