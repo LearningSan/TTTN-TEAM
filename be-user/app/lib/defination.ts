@@ -104,3 +104,27 @@ export type seats = {
   lock_expires_at: string | null, 
   created_at: string             
 };
+export type order = {
+  order_id: string,
+  user_id: string,
+  concert_id: string,
+  total_amount: number,
+  currency: string,
+  order_status: string,
+  wallet_address: string | null,
+  payment_id: string | null,
+  note: string | null,
+  created_at: string,
+  expires_at: string,
+  paid_at: string | null,
+  updated_at: string
+};
+export type order_item = {
+  order_item_id: string,
+  order_id: string,
+  zone_id: string,
+  seat_id: string | null,
+  quantity: number,
+  unit_price: number,
+  subtotal: number
+};

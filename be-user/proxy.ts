@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, refreshAccessToken, refreshRefreshToken } from "./app/helper/authenHelper";
 
-// Helper function xử lý token
 async function handleTokens(accessToken?: string, refreshToken?: string) {
   let user: any = null;
   let newAccessToken: string | null = null;
   let newRefreshToken: string | null = null;
 
-  // 1️⃣ Thử verify access token
   if (accessToken) {
     try {
       user = await verifyToken(accessToken);
       return { user, newAccessToken, newRefreshToken };
     } catch (err) {
       console.log("Access token expired:", err);
-      // Access token hết hạn → tiếp tục
     }
   }
 
-  // 2️⃣ Nếu refresh token còn hạn → tạo access token mới
   if (refreshToken) {
     try {
       newAccessToken = await refreshAccessToken(refreshToken);
@@ -27,7 +23,6 @@ async function handleTokens(accessToken?: string, refreshToken?: string) {
     } catch (errAccess) {
       console.log("Cannot refresh access token:", errAccess);
 
-      // 3️⃣ Nếu refresh access token fail → thử refresh refresh token
       try {
         const tokens = await refreshRefreshToken(refreshToken);
         newAccessToken = tokens.accessToken;
@@ -41,19 +36,32 @@ async function handleTokens(accessToken?: string, refreshToken?: string) {
     }
   }
 
-  // Không có token hợp lệ
   return { user: null, newAccessToken: null, newRefreshToken: null };
 }
 
 export default async function middleware(req: NextRequest) {
+  if (req.method === "OPTIONS") {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "http://localhost:1573",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Credentials": "true",
+      },
+    });
+  }
   const accessToken = req.cookies.get("access_token")?.value;
   const refreshToken = req.cookies.get("refresh_token")?.value;
 
   const { user, newAccessToken, newRefreshToken } = await handleTokens(accessToken, refreshToken);
 
   const res = NextResponse.next();
+ res.headers.set("Access-Control-Allow-Origin", "http://localhost:1573");
+  res.headers.set("Access-Control-Allow-Credentials", "true");
+  res.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.headers.set("Access-Control-Allow-Headers", "Content-Type");
 
-  // 4️⃣ Set lại cookie nếu có token mới
   if (newAccessToken) {
     res.cookies.set("access_token", newAccessToken, {
       httpOnly: true,

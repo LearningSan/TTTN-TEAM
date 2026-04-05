@@ -3,7 +3,7 @@
  * /api/concert:
  *   get:
  *     summary: Lấy danh sách concert
- *     parameters:
+ * 
  *      
  *     responses:
  *       200:
