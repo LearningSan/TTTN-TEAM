@@ -23,7 +23,7 @@ const TicketManagement = () => {
         // Có thể cần truyền tham số để lấy tất cả, hoặc chỉ những show ON_SALE/COMPLETED
         const res = await API.get('/admin/concerts?page=0&size=100'); 
         setConcerts(res.data?.content || res.data || []);
-      } catch (error) {
+      } catch  {
         message.error('Lỗi tải danh sách Concert!');
       }
     };
@@ -43,7 +43,7 @@ const TicketManagement = () => {
 
       setTicketStats(resStats.data || { total: 0, sold: 0, available: 0 });
       setTickets(resTickets.data?.content || resTickets.data || []);
-    } catch (error) {
+    } catch  {
       message.error('Lỗi tải dữ liệu vé của Concert này!');
       // Đưa state về rỗng nếu lỗi
       setTicketStats({ total: 0, sold: 0, available: 0 });
