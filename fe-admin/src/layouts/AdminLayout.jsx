@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Layout, Menu, Button, theme } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { DashboardOutlined, CustomerServiceOutlined, TagsOutlined, LogoutOutlined } from '@ant-design/icons';
-import { clearToken, getUserId, getRefreshToken } from '../utils/auth';
+import { DashboardOutlined, CustomerServiceOutlined, TagsOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { clearToken, getUserId, getRefreshToken, getOrganizerName } from '../utils/auth';
 import API from '../api/config';
-
+import { Avatar, Space, Typography } from 'antd';
+const { Text } = Typography;
 const { Header, Sider, Content } = Layout;
 
 const AdminLayout = () => {
@@ -54,7 +55,26 @@ const AdminLayout = () => {
       <Layout>
         <Header style={{ padding: '0 24px', background: colorBgContainer, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ margin: 0 }}>Hệ thống Quản trị</h2>
-            <Button type="primary" danger icon={<LogoutOutlined />} onClick={handleLogout} loading={logoutLoading}>Đăng xuất</Button>
+            <Space size="middle">
+      {/* Hiển thị lời chào và tên Admin */}
+      <Space>
+        <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+          <span style={{ fontSize: '12px', color: '#8c8c8c' }}>Xin chào,</span>
+          <Text strong>{getOrganizerName() || 'Admin'}</Text>
+        </div>
+      </Space>
+
+      <Button 
+        type="primary" 
+        danger 
+        icon={<LogoutOutlined />} 
+        onClick={handleLogout} 
+        loading={logoutLoading}
+      >
+        Đăng xuất
+      </Button>
+    </Space>
         </Header>
         
         <Content style={{ margin: '16px' }}>
