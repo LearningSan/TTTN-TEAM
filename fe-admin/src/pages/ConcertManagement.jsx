@@ -135,17 +135,29 @@ const ConcertManagement = () => {
   };
 
   // MỞ FORM SỬA (TỰ ĐỘNG ĐIỀN DATA CŨ)
-  const handleOpenEdit = (record) => {
-    form.resetFields();
-    form.setFieldsValue({
-      ...record,
-      concertDate: parseApiDate(record.concertDate),
-      endDate: parseApiDate(record.endDate),
-      saleStartAt: parseApiDate(record.saleStartAt),
-      saleEndAt: parseApiDate(record.saleEndAt),
-      zones: record.zones || []
-    });
-    setModalState({ open: true, id: record.concertId || record.id });
+  const handleOpenEdit = async (record) => {
+    setLoading(true);
+    try {
+      // Gọi API chi tiết để lấy đủ rowPrefix, rowCount, seatsPerRow
+      const res = await API.get(`/admin/concerts/${record.concertId || record.id}`);
+      const fullData = res.data;
+
+      form.resetFields();
+      form.setFieldsValue({
+        ...fullData,
+        concertDate: parseApiDate(fullData.concertDate),
+        endDate: parseApiDate(fullData.endDate),
+        saleStartAt: parseApiDate(fullData.saleStartAt),
+        saleEndAt: parseApiDate(fullData.saleEndAt),
+        // Giờ đã có dữ liệu thật từ BE, không lo bị trống nữa[cite: 8]
+        zones: fullData.zones || []
+      });
+      setModalState({ open: true, id: fullData.concertId || fullData.id });
+    } catch (error) {
+      message.error("Không thể lấy dữ liệu chi tiết để sửa!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const columns = [
@@ -254,7 +266,7 @@ const ConcertManagement = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: '12px' }}>
                       <Form.Item {...restField} name={[name, 'zoneName']} label="Tên Khu vực" rules={[{ required: true }]}><Input /></Form.Item>
                       <Form.Item {...restField} name={[name, 'price']} label="Giá vé" rules={[{ required: true }]}><InputNumber min={0} style={{width:'100%'}} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
-                      <Form.Item {...restField} name={[name, 'currency']} label="Tiền tệ" rules={[{ required: true }]}><Select options={[{value: 'VND', label: 'VND'}, {value: 'USDT', label: 'USDT'}]} /></Form.Item>
+                      <Form.Item {...restField} name={[name, 'currency']} label="Tiền tệ" rules={[{ required: true }]}><Select options={[ {value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'},{value: 'BNB', label: 'BNB'}]} /></Form.Item>
                       
                       <Form.Item {...restField} name={[name, 'colorCode']} label="Màu Sơ đồ" rules={[{ required: true }]}>
                         <Select options={[

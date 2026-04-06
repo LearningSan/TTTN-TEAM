@@ -11,17 +11,17 @@ const Dashboard = () => {
       <Row gutter={16}>
         <Col span={8}>
           <Card bordered={false}>
-            <Statistic title="Tổng số Concert"  prefix={<CustomerServiceOutlined />} />
+            {/* <Statistic title="Tổng số Concert"  prefix={<CustomerServiceOutlined />} /> */}
           </Card>
         </Col>
         <Col span={8}>
           <Card bordered={false}>
-            <Statistic title="Vé đã bán"  prefix={<TagsOutlined />} />
+            {/* <Statistic title="Vé đã bán"  prefix={<TagsOutlined />} /> */}
           </Card>
         </Col>
         <Col span={8}>
           <Card bordered={false}>
-            <Statistic title="Doanh thu dự kiến"  prefix={<DollarOutlined />} suffix="VNĐ" />
+            {/* <Statistic title="Doanh thu dự kiến"  prefix={<DollarOutlined />} suffix="VNĐ" /> */}
           </Card>
         </Col>
       </Row>
