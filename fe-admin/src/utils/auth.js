@@ -1,9 +1,8 @@
 // Lưu bộ 3 vào máy khách
-export const saveToken = (accessToken, refreshToken, userId, organizerName) => {
+export const saveToken = (accessToken, refreshToken, userId) => {
   localStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
   if (userId) localStorage.setItem('userId', userId);
-  if (organizerName) localStorage.setItem('organizerName', organizerName);
 };
 
 // Xóa sạch khi đăng xuất
@@ -15,4 +14,3 @@ export const clearToken = () => {
 export const getAccessToken = () => localStorage.getItem('accessToken');
 export const getRefreshToken = () => localStorage.getItem('refreshToken');
 export const getUserId = () => localStorage.getItem('userId');
-export const getOrganizerName = () => localStorage.getItem('organizerName');

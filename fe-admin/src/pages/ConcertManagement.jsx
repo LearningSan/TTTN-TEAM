@@ -12,6 +12,7 @@ import API from '../api/config';
 
 dayjs.extend(customParseFormat);
 
+// Định dạng chuẩn khớp với @JsonFormat trên Backend[cite: 9, 12]
 const BE_DATE_FORMAT = "DD/MM/YYYY HH:mm:ss";
 
 const ConcertManagement = () => {
@@ -19,10 +20,11 @@ const ConcertManagement = () => {
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalState, setModalState] = useState({ open: false, id: null });
-  const [detailModal, setDetailModal] = useState({ open: false, data: null, loading: false });
+  const [detailModal, setDetailModal] = useState({ open: false, data: null });
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
+  // 1. Load danh sách concert & địa điểm[cite: 8]
   const fetchData = async (page = 1, pageSize = 10) => {
     setLoading(true);
     try {
@@ -31,7 +33,7 @@ const ConcertManagement = () => {
         API.get('/admin/venues')
       ]);
       const concertData = resConcerts.data;
-      setConcerts(concertData.content || []);
+      setConcerts(concertData.content || (Array.isArray(concertData) ? concertData : []));
       setVenues(Array.isArray(resVenues.data) ? resVenues.data : []);
       if (concertData.totalElements !== undefined) {
         setPagination(prev => ({ ...prev, current: page, total: concertData.totalElements }));
@@ -43,18 +45,7 @@ const ConcertManagement = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  // API lấy chi tiết thay vì dùng data local để đảm bảo dữ liệu ghế (availableSeats) là mới nhất
-  const handleViewDetail = async (id) => {
-    setDetailModal(prev => ({ ...prev, open: true, loading: true }));
-    try {
-      const res = await API.get(`/admin/concerts/${id}`);
-      setDetailModal(prev => ({ ...prev, data: res.data, loading: false }));
-    } catch (error) {
-      message.error("Không thể lấy thông tin chi tiết!");
-      setDetailModal(prev => ({ ...prev, open: false, loading: false }));
-    }
-  };
-
+  // 2. Logic UX: Tự động tính toán Row Prefix tiếp theo cho Zone[cite: 17]
   const calculateNextPrefix = (zones) => {
     if (!zones || zones.length === 0) return 'A';
     const lastZone = zones[zones.length - 1];
@@ -65,6 +56,7 @@ const ConcertManagement = () => {
     return prefix.slice(0, -1) + String.fromCharCode(nextCharCode);
   };
 
+  // 3. Xử lý Thêm / Sửa concert[cite: 8, 11]
   const handleFinish = async (values) => {
     setLoading(true);
     try {
@@ -129,7 +121,7 @@ const ConcertManagement = () => {
       render: (_, r) => (
         <Space>
           <Tooltip title="Xem chi tiết">
-            <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(r.concertId)} />
+            <Button size="small" icon={<EyeOutlined />} onClick={() => setDetailModal({ open: true, data: r })} />
           </Tooltip>
           <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => {
             form.setFieldsValue({
@@ -156,7 +148,7 @@ const ConcertManagement = () => {
         <Table columns={columns} dataSource={concerts} rowKey="concertId" loading={loading} pagination={pagination} onChange={(p) => fetchData(p.current, p.pageSize)} bordered />
       </Card>
 
-      {/* MODAL THÊM / SỬA */}
+      {/* MODAL THÊM / SỬA[cite: 16] */}
       <Modal title={modalState.id ? "SỬA CONCERT" : "TẠO CONCERT"} open={modalState.open} onCancel={() => setModalState({ open: false, id: null })} footer={null} width={1000} destroyOnClose>
         <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={{ zones: [{ rowPrefix: 'A', rowCount: 1, seatsPerRow: 10, currency: 'ETH' }] }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px' }}>
@@ -208,15 +200,8 @@ const ConcertManagement = () => {
         </Form>
       </Modal>
 
-      {/* MODAL CHI TIẾT ĐẦY ĐỦ */}
-      <Modal 
-        title={<b style={{fontSize: 20}}>CHI TIẾT: {detailModal.data?.title}</b>} 
-        open={detailModal.open} 
-        onCancel={() => setDetailModal({ open: false, data: null, loading: false })} 
-        footer={null} 
-        width={850}
-        loading={detailModal.loading}
-      >
+      {/* MODAL CHI TIẾT ĐẦY ĐỦ[cite: 16] */}
+      <Modal title={<b style={{fontSize: 20}}>CHI TIẾT: {detailModal.data?.title}</b>} open={detailModal.open} onCancel={() => setDetailModal({ open: false, data: null })} footer={null} width={850}>
         {detailModal.data && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <Descriptions bordered column={2} size="small">
@@ -229,32 +214,13 @@ const ConcertManagement = () => {
               <Descriptions.Item label="Đóng bán vé">{dayjs(detailModal.data.saleEndAt).format('DD/MM/YYYY HH:mm')}</Descriptions.Item>
               <Descriptions.Item label="Mô tả" span={2}>{detailModal.data.description}</Descriptions.Item>
             </Descriptions>
-            
-            <Divider orientation="left">Thông tin các Zone (Dữ liệu từ API chi tiết)</Divider>
-            <Table 
-              dataSource={detailModal.data.zones} 
-              rowKey="zoneId" 
-              pagination={false} 
-              size="small" 
-              columns={[
-                { title: 'Tên Zone', dataIndex: 'zoneName' },
-                { title: 'Giá', dataIndex: 'price', render: (p, r) => `${p} ${r.currency}` },
-                { 
-                  title: 'Số lượng ghế', 
-                  render: (_, r) => (
-                    <Space direction="vertical" size={0}>
-                      <small>Tổng: {r.totalSeats}</small>
-                      <small style={{ color: r.availableSeats > 0 ? 'green' : 'red' }}>Còn trống: {r.availableSeats}</small>
-                    </Space>
-                  ) 
-                },
-                { 
-                  title: 'Sơ đồ', 
-                  dataIndex: 'hasSeatMap', 
-                  render: (val) => val ? <Badge status="success" text="Có" /> : <Badge status="default" text="Không" /> 
-                },
-              ]} 
-            />
+            <Divider orientation="left">Danh sách Zone ({detailModal.data.zones?.length || 0})</Divider>
+            <Table dataSource={detailModal.data.zones} rowKey="zoneId" pagination={false} size="small" columns={[
+              { title: 'Tên Zone', dataIndex: 'zoneName' },
+              { title: 'Giá', dataIndex: 'price', render: (p, r) => `${p} ${r.currency}` },
+              { title: 'Tổng ghế', dataIndex: 'totalSeats' },
+              { title: 'Còn lại', dataIndex: 'availableSeats' },
+            ]} />
           </div>
         )}
       </Modal>

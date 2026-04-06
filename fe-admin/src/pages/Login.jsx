@@ -13,14 +13,15 @@ const Login = () => {
       // Gửi email/password lên API Admin
       const res = await API.post('/auth/admin/login', values);
       
-      const { accessToken, refreshToken,organizerName } = res.data;
+      const { accessToken, refreshToken } = res.data;
       
       if (accessToken) {
         const decoded = jwtDecode(accessToken);
         console.log("Check Role:", decoded.role);
         // Bóc tách 'sub' làm userId và 'role' để lưu trữ
-        saveToken(accessToken, refreshToken, decoded.sub,organizerName);
-        message.success(`Chào ${organizerName}! Đăng nhập thành công.`);
+        saveToken(accessToken, refreshToken, decoded.sub);
+        
+        message.success('Chào Admin! Đăng nhập thành công.');
         navigate('/dashboard');
       }
     } catch  {
