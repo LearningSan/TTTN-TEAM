@@ -4,6 +4,7 @@ import com.example.tttnbe.common.response.PageResponse;
 import com.example.tttnbe.concert.dto.ConcertRequest;
 import com.example.tttnbe.concert.dto.ConcertResponse;
 import com.example.tttnbe.concert.dto.UpdateConcertRequest;
+import com.example.tttnbe.concert.dto.UpdateStatusRequest;
 import com.example.tttnbe.concert.service.ConcertService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,5 +49,14 @@ public class ConcertController {
     public ResponseEntity<Void> deleteConcert(@PathVariable("concertId") UUID concertId) {
         concertService.deleteConcert(concertId);
         return ResponseEntity.noContent().build(); //204: thanh cong, khong message
+    }
+
+    @PatchMapping("/{concertId}/status")
+    public ResponseEntity<ConcertResponse> updateConcertStatus(
+            @PathVariable UUID concertId,
+            @RequestBody UpdateStatusRequest request) {
+
+        ConcertResponse response = concertService.updateConcertStatus(concertId, request);
+        return ResponseEntity.ok(response); //200
     }
 }
