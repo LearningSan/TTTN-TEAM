@@ -10,6 +10,7 @@ import com.example.tttnbe.concert.entity.Concert;
 import com.example.tttnbe.concert.repository.ConcertRepository;
 import com.example.tttnbe.common.exception.CustomException;
 import com.example.tttnbe.seat.entity.Seat;
+import com.example.tttnbe.seat.repository.SeatRepository;
 import com.example.tttnbe.venue.entity.Venue;
 import com.example.tttnbe.venue.repository.VenueRepository;
 import com.example.tttnbe.zone.dto.ZoneRequest;
@@ -44,6 +45,9 @@ public class ConcertServiceImpl implements ConcertService {
 
     @Autowired
     private ZoneRepository zoneRepository;
+
+    @Autowired
+    private SeatRepository seatRepository;
 
     //dung chung - bien entity thanh dto
     private ConcertResponse mapToResponse(Concert concert) {
@@ -159,6 +163,10 @@ public class ConcertServiceImpl implements ConcertService {
                             seat.setStatus("AVAILABLE");
                             allSeatsToSave.add(seat);
                         }
+                    }
+
+                    if (!allSeatsToSave.isEmpty()) {
+                        seatRepository.saveAll(allSeatsToSave);
                     }
                 }
             }
