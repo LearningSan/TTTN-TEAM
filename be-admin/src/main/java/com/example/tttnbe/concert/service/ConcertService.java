@@ -5,6 +5,7 @@ import com.example.tttnbe.concert.dto.ConcertRequest;
 import com.example.tttnbe.concert.dto.ConcertResponse;
 import com.example.tttnbe.concert.dto.UpdateConcertRequest;
 import com.example.tttnbe.concert.dto.UpdateStatusRequest;
+import com.example.tttnbe.ticket.dto.TicketListItemResponse;
 
 import java.util.UUID;
 
@@ -20,4 +21,6 @@ public interface ConcertService {
     public void deleteConcert(UUID concertId);
 
     public ConcertResponse updateConcertStatus(UUID concertId, UpdateStatusRequest request);
+
+    PageResponse<TicketListItemResponse> getTicketsByConcertId(UUID concertId, int page, int size);
 }

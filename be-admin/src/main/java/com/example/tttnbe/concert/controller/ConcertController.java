@@ -6,6 +6,7 @@ import com.example.tttnbe.concert.dto.ConcertResponse;
 import com.example.tttnbe.concert.dto.UpdateConcertRequest;
 import com.example.tttnbe.concert.dto.UpdateStatusRequest;
 import com.example.tttnbe.concert.service.ConcertService;
+import com.example.tttnbe.ticket.dto.TicketListItemResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -58,5 +59,15 @@ public class ConcertController {
 
         ConcertResponse response = concertService.updateConcertStatus(concertId, request);
         return ResponseEntity.ok(response); //200
+    }
+
+    @GetMapping("/{concertId}/tickets")
+    public ResponseEntity<PageResponse<TicketListItemResponse>> getTicketsByConcertId(
+            @PathVariable UUID concertId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        PageResponse<TicketListItemResponse> response = concertService.getTicketsByConcertId(concertId, page, size);
+        return ResponseEntity.ok(response);
     }
 }
