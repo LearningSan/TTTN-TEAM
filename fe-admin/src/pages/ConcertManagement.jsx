@@ -70,7 +70,7 @@ const ConcertManagement = () => {
     try {
       const res = await API.get(`/admin/concerts/${id}`);
       setDetailModal({ open: true, data: res.data?.data || res.data, loading: false });
-    } catch (error) {
+    } catch  {
       message.error("Không thể lấy thông tin chi tiết!");
       setDetailModal({ open: false, data: null, loading: false });
     }
@@ -153,7 +153,7 @@ const ConcertManagement = () => {
         zones: fullData.zones || []
       });
       setModalState({ open: true, id: fullData.concertId || fullData.id });
-    } catch (error) {
+    } catch  {
       message.error("Không thể lấy dữ liệu chi tiết để sửa!");
     } finally {
       setLoading(false);
