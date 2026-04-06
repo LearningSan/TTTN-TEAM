@@ -54,19 +54,33 @@ public class ConcertServiceImpl implements ConcertService {
         //xu ly luu zone
         List<ZoneResponse> zoneResponses = null;
         if (concert.getZones() != null && !concert.getZones().isEmpty()) {
-            zoneResponses = concert.getZones().stream().map(zone ->
-                    new ZoneResponse(
-                            zone.getZoneId(),
-                            zone.getZoneName(),
-                            zone.getPrice(),
-                            zone.getCurrency(),
-                            zone.getTotalSeats(),
-                            zone.getAvailableSeats(),
-                            zone.getColorCode(),
-                            zone.isHasSeatMap(),
-                            zone.getDisplayOrder()
-                    )
-            ).collect(Collectors.toList());
+            zoneResponses = concert.getZones().stream().map(zone -> {
+                String rowPrefix = null;
+                Integer rowCount = null;
+                Integer seatsPerRow = null;
+
+                if (zone.isHasSeatMap()) {
+                    rowPrefix = seatRepository.findFirstRowLabelByZoneId(zone.getZoneId());
+                    rowCount = seatRepository.countRowsByZoneId(zone.getZoneId());
+                    seatsPerRow = seatRepository.findMaxSeatNumberByZoneId(zone.getZoneId());
+                }
+
+
+                return new ZoneResponse(
+                        zone.getZoneId(),
+                        zone.getZoneName(),
+                        zone.getPrice(),
+                        zone.getCurrency(),
+                        zone.getTotalSeats(),
+                        zone.getAvailableSeats(),
+                        zone.getColorCode(),
+                        zone.isHasSeatMap(),
+                        zone.getDisplayOrder(),
+                        rowPrefix,
+                        rowCount,
+                        seatsPerRow
+                );
+            }).collect(Collectors.toList());
         }
 
         return ConcertResponse.builder()

@@ -22,4 +22,7 @@ public class ZoneResponse {
     private String colorCode;
     private Boolean hasSeatMap;
     private Integer displayOrder;
+    private String rowPrefix;
+    private Integer rowCount;
+    private Integer seatsPerRow;
 }
