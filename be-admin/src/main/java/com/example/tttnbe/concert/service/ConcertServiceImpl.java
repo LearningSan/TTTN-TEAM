@@ -12,6 +12,8 @@ import com.example.tttnbe.concert.repository.ConcertRepository;
 import com.example.tttnbe.common.exception.CustomException;
 import com.example.tttnbe.seat.entity.Seat;
 import com.example.tttnbe.seat.repository.SeatRepository;
+import com.example.tttnbe.ticket.dto.TicketListItemResponse;
+import com.example.tttnbe.ticket.repository.TicketRepository;
 import com.example.tttnbe.venue.entity.Venue;
 import com.example.tttnbe.venue.repository.VenueRepository;
 import com.example.tttnbe.zone.dto.ZoneRequest;
@@ -49,6 +51,9 @@ public class ConcertServiceImpl implements ConcertService {
 
     @Autowired
     private SeatRepository seatRepository;
+
+    @Autowired
+    private TicketRepository ticketRepository;
 
     //dung chung - bien entity thanh dto
     private ConcertResponse mapToResponse(Concert concert) {
@@ -268,5 +273,21 @@ public class ConcertServiceImpl implements ConcertService {
         Concert savedConcert = concertRepository.save(concert);
 
         return mapToResponse(savedConcert);
+    }
+
+    @Override
+    public PageResponse<TicketListItemResponse> getTicketsByConcertId(UUID concertId, int page, int size) {
+        // 1. Kiểm tra xem Concert có tồn tại không
+        concertRepository.findById(concertId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
+
+        // 2. Tạo cấu hình phân trang (chú ý: Spring Boot đếm trang từ 0)
+        Pageable pageable = PageRequest.of(page, size);
+
+        // 3. Móc dữ liệu từ Database lên (trả về Page của Spring)
+        Page<TicketListItemResponse> ticketPage = ticketRepository.findTicketsByConcertId(concertId, pageable);
+
+        // 4. Dùng class PageResponse của bạn để "biến hình" cục data trả về JSON đẹp mắt
+        return PageResponse.from(ticketPage);
     }
 }
