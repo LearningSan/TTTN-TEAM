@@ -4,7 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './layouts/AdminLayout';
 import Dashboard from './pages/Dashboard';
 import ConcertManagement from './pages/ConcertManagement';
-
+import TicketManagement from './pages/TicketManagement';
 function App() {
   return (
     <Routes>
@@ -19,7 +19,7 @@ function App() {
         <Route element={<AdminLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/concerts" element={<ConcertManagement />} />
-          <Route path="/dashboard/tickets" element={<div>Trang quản lý vé</div>} />
+          <Route path="/dashboard/tickets" element={<TicketManagement />} />
         </Route>
       </Route>
 

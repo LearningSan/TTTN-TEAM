@@ -1,121 +1,181 @@
-import { useState, useEffect } from 'react';
-import { Table, Button, Space, message, Popconfirm, Modal, Form, Input, Select, Tag } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  Card, Col, Row, Statistic, Table, Select, 
+  Tag, Space, Typography, Badge, Empty, message 
+} from 'antd';
+import { 
+  UserOutlined, TagOutlined, BarChartOutlined, LoadingOutlined, IdcardOutlined
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import API from '../api/config';
 
+const { Title, Text } = Typography;
+
 const TicketManagement = () => {
-  // --- STATE QUẢN LÝ DỮ LIỆU ---
-  const [tickets, setTickets] = useState([]); // Lưu danh sách Vé
-  const [loading, setLoading] = useState(false); // Trạng thái tải dữ liệu
-  const [modalState, setModalState] = useState({ open: false, id: null }); // Trạng thái Modal
-  const [form] = Form.useForm();
+  const [concerts, setConcerts] = useState([]);
+  const [selectedConcertId, setSelectedConcertId] = useState(null);
+  const [concertDetail, setConcertDetail] = useState(null);
+  const [tickets, setTickets] = useState([]);
+  
+  const [loadingList, setLoadingList] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  
+  const [ticketPagination, setTicketPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
-  // --- HÀM 1: LẤY DANH SÁCH VÉ TỪ BACKEND ---
-  const fetchTickets = async () => {
-    setLoading(true);
+  useEffect(() => {
+    const fetchConcertList = async () => {
+      setLoadingList(true);
+      try {
+        const res = await API.get('/admin/concerts?size=100');
+        setConcerts(res.data?.content || []);
+      } catch (error) {
+        message.error("Không thể tải danh sách concert");
+      } finally {
+        setLoadingList(false);
+      }
+    };
+    fetchConcertList();
+  }, []);
+
+  // Hàm lấy danh sách vé đã mua
+  const fetchTickets = useCallback(async (concertId, page = 0, size = 10) => {
+    setLoadingTickets(true);
     try {
-      const { data } = await API.get('/admin/tickets');
-      setTickets(data?.content || data?.data?.content || data?.data || data || []);
-    } catch {
-      message.error('Lỗi tải danh sách Vé!');
+      const res = await API.get(`/admin/concerts/${concertId}/tickets`, {
+        params: { page, size }
+      });
+      // Backend trả về content: [] thì lấy mảng rỗng, không báo lỗi
+      const ticketData = res.data?.content || [];
+      setTickets(ticketData);
+      setTicketPagination(prev => ({
+        ...prev,
+        current: page + 1,
+        total: res.data?.totalElements || 0
+      }));
+    } catch (error) {
+      console.error("Ticket API Error:", error);
+      // Chỉ báo lỗi nếu status khác 200
+      message.error("Không thể kết nối máy chủ để lấy danh sách vé!");
     } finally {
-      setLoading(false);
+      setLoadingTickets(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchTickets(); }, []);
-
-  // --- HÀM 2: XÓA VÉ ---
-  const handleDelete = async (id) => {
-    setLoading(true);
+  // Hàm lấy thống kê từ Concert Detail
+  const fetchConcertDetail = async (id) => {
+    setLoadingStats(true);
     try {
-      await API.delete(`/admin/tickets/${id}`);
-      message.success('Đã xóa vé thành công!');
-      fetchTickets();
-    } catch {
-      message.error('Lỗi khi xóa!');
-      setLoading(false);
+      const res = await API.get(`/admin/concerts/${id}`);
+      // Lưu ý: Cấu trúc response phải khớp với ConcertResponse trong apidocs
+      setConcertDetail(res.data); 
+    } catch (error) {
+      console.error("Detail API Error:", error);
+      message.error("Lỗi khi lấy thông tin thống kê phát hành!");
+    } finally {
+      setLoadingStats(false);
     }
   };
 
-  // --- HÀM 3: XỬ LÝ LƯU FORM (THÊM / SỬA) ---
-  const handleFinish = async (values) => {
-    setLoading(true);
-    try {
-      if (modalState.id) await API.put(`/admin/tickets/${modalState.id}`, values);
-      else await API.post('/admin/tickets', values);
-      
-      message.success('Lưu thông tin thành công!');
-      setModalState({ open: false, id: null });
-      fetchTickets();
-    } catch {
-      message.error('Lỗi lưu dữ liệu!');
-      setLoading(false);
-    }
+  const handleSelectConcert = (id) => {
+    setSelectedConcertId(id);
+    setConcertDetail(null); 
+    setTickets([]);
+    fetchConcertDetail(id);
+    fetchTickets(id, 0, ticketPagination.pageSize);
   };
 
-  // --- HÀM 4: MỞ MODAL ---
-  const openModal = (record = null) => {
-    form.resetFields(); // Xóa trắng form
-    if (record) form.setFieldsValue(record); // Nạp data nếu là chế độ Sửa
-    setModalState({ open: true, id: record?.ticketId || null });
+  // Tính toán số liệu từ mảng zones
+  const getTicketStats = () => {
+    if (!concertDetail?.zones) return { total: 0, available: 0, sold: 0 };
+    return concertDetail.zones.reduce((acc, zone) => {
+      const total = zone.totalSeats || 0;
+      const available = zone.availableSeats || 0;
+      return {
+        total: acc.total + total,
+        available: acc.available + available,
+        sold: acc.sold + (total - available)
+      };
+    }, { total: 0, available: 0, sold: 0 });
   };
 
-  // --- CẤU HÌNH CỘT CHO BẢNG ---
+  const stats = getTicketStats();
+
   const columns = [
-    { title: 'Token', dataIndex: 'tokenId', render: (t) => t ? <Tag color="blue">{t.slice(0, 8)}...</Tag> : 'N/A' },
-    { title: 'Đêm diễn', dataIndex: 'concertTitle' },
-    { title: 'Khu vực', dataIndex: 'zoneName' },
-    { title: 'Ghế', dataIndex: 'seatLabel' },
-    { title: 'Ví', dataIndex: 'walletAddress', render: (v) => v ? `${v.slice(0, 8)}...` : '' }, // Cắt bớt độ dài chuỗi ví
-    { title: 'Ngày mua', dataIndex: 'purchaseDate', render: (d) => d && dayjs(d).format('DD/MM/YYYY HH:mm') },
-    { title: 'Trạng thái', dataIndex: 'status', render: (s) => {
-        // Ánh xạ màu sắc cho các trạng thái vé chuẩn từ Database
-        const colors = { MINTING: 'purple', ACTIVE: 'green', USED: 'gray', TRANSFERRED: 'orange', CANCELLED: 'red' };
-        return <Tag color={colors[s] || 'default'}>{s}</Tag>;
-    }},
-    { title: 'Hành động', render: (_, r) => (
-      <Space>
-        <Button icon={<EditOutlined />} onClick={() => openModal(r)}>Sửa</Button>
-        <Popconfirm title="Chắc chắn xóa vé này?" onConfirm={() => handleDelete(r.ticketId)}>
-          <Button danger icon={<DeleteOutlined />}>Xóa</Button>
-        </Popconfirm>
-      </Space>
-    )}
+    { 
+      title: 'Khách hàng', 
+      render: (_, r) => (
+        <Space direction="vertical" size={0}>
+          <Text strong>{r.buyerName || 'Khách ẩn danh'}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>{r.email}</Text>
+        </Space>
+      )
+    },
+    { title: 'Địa chỉ Ví (Wallet)', dataIndex: 'walletAddress', render: (w) => <Text copyable style={{fontSize: 12}}>{w || 'N/A'}</Text> },
+    { title: 'Vị trí', render: (_, r) => <Tag color="blue">{r.zoneName} - {r.seatLabel}</Tag> },
+    { title: 'Ngày mua', dataIndex: 'purchaseDate', render: (d) => d ? dayjs(d).format('DD/MM/YYYY HH:mm') : '-' },
+    { 
+      title: 'Trạng thái', 
+      dataIndex: 'status',
+      render: (s) => <Badge status={s === 'ACTIVE' ? 'success' : 'processing'} text={s} />
+    }
   ];
 
-  // --- GIAO DIỆN CHÍNH ---
   return (
-    <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2>Quản lý Vé</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>Tạo Vé Mới</Button>
-      </div>
-      
-      {/* Khóa chính của bảng là ticketId */}
-      <Table columns={columns} dataSource={tickets} rowKey="ticketId" loading={loading} bordered />
+    <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
+      <Card bordered={false} style={{ marginBottom: 24 }}>
+        <Row align="middle" gutter={24}>
+          <Col span={4}><Title level={4} style={{ margin: 0 }}>Quản lý Vé</Title></Col>
+          <Col span={20}>
+            <Select
+              showSearch
+              placeholder="🔍 Chọn sự kiện để xem báo cáo..."
+              style={{ width: '100%' }}
+              size="large"
+              onChange={handleSelectConcert}
+              options={concerts.map(c => ({ value: c.concertId, label: c.title }))}
+              optionFilterProp="label"
+            />
+          </Col>
+        </Row>
+      </Card>
 
-      <Modal title={modalState.id ? "Sửa Vé" : "Tạo Vé Cấp Tốc"} open={modalState.open} onCancel={() => setModalState({ open: false, id: null })} footer={null} width={700}>
-        <Form layout="vertical" form={form} onFinish={handleFinish}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <Form.Item name="walletAddress" label="Địa chỉ ví" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="userId" label="User ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="concertId" label="Concert ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="zoneId" label="Zone ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="seatId" label="Seat ID"><Input /></Form.Item>
-            <Form.Item name="orderId" label="Order ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="orderItemId" label="Order Item ID" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="paymentId" label="Payment ID" rules={[{ required: true }]}><Input /></Form.Item>
-            
-            <Form.Item name="status" label="Trạng thái" rules={[{ required: true }]}>
-              <Select options={['MINTING', 'ACTIVE', 'USED', 'TRANSFERRED', 'CANCELLED'].map(v => ({ value: v, label: v }))} />
-            </Form.Item>
-          </div>
-          <Button type="primary" htmlType="submit" block loading={loading}>Lưu dữ liệu</Button>
-        </Form>
-      </Modal>
-    </>
+      {!selectedConcertId ? (
+        <Empty description="Vui lòng chọn concert" style={{ marginTop: 100 }} />
+      ) : (
+        <>
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col span={8}>
+              <Card bordered={false} style={{ borderLeft: '4px solid #1890ff' }}>
+                <Statistic title="🎫 Tổng số vé phát hành" value={stats.total} loading={loadingStats} />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card bordered={false} style={{ borderLeft: '4px solid #52c41a' }}>
+                <Statistic title="🔥 Số vé đã bán" value={stats.sold} loading={loadingStats} />
+              </Card>
+            </Col>
+            <Col span={8}>
+              <Card bordered={false} style={{ borderLeft: '4px solid #faad14' }}>
+                <Statistic title="🎟️ Số vé còn lại" value={stats.available} loading={loadingStats} />
+              </Card>
+            </Col>
+          </Row>
+
+          <Card title={<><IdcardOutlined /> Danh sách chi tiết người mua vé</>} bordered={false}>
+            <Table 
+              columns={columns} 
+              dataSource={tickets} 
+              rowKey="ticketId" 
+              loading={loadingTickets}
+              pagination={ticketPagination}
+              onChange={(p) => fetchTickets(selectedConcertId, p.current - 1, p.pageSize)}
+              locale={{ emptyText: "Sự kiện này hiện chưa có người mua vé" }}
+            />
+          </Card>
+        </>
+      )}
+    </div>
   );
 };
 
