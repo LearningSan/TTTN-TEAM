@@ -3,6 +3,8 @@
  * /api/reset-password:
  *   post:
  *     summary: Đổi mật khẩu
+ *     tags:
+ *       - ForgotPassword
  *     requestBody:
  *       required: true
  *       content:

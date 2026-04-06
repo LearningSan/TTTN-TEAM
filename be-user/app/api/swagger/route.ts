@@ -8,6 +8,14 @@ export async function GET() {
         title: "API",
         version: "1.0.0",
       },
+      tags:[
+      {name: "ForgotPassword", description: "API liên quan đến quên mật khẩu"},
+      {name: "Payment", description: "API liên quan đến thanh toán"},
+      {name: "Order", description: "API liên quan đến đơn hàng"},
+      {name:"Login", description: "API liên quan đến đăng nhập và xác thực"},
+      {name:"Concert", description: "API liên quan đến concert"}
+
+      ]
     },
     apis: ["./app/api/**/*.ts"],
   };

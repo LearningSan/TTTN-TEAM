@@ -3,6 +3,8 @@
  * /api/seat:
  *   post:
  *     summary: Lấy danh sách ghế theo concert_id và zone_id
+ *     tags:
+ *       - Order
  *     requestBody:
  *       required: true
  *       content:

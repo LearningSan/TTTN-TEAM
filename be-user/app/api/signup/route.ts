@@ -3,6 +3,8 @@
  * /api/signup:
  *   post:
  *     summary: Đăng ký tài khoản bằng email + password + name
+  *     tags:
+ *       - Login
  *     requestBody:
  *       required: true
  *       content:

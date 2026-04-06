@@ -3,6 +3,8 @@
  * /api/forgot-password:
  *   post:
  *     summary: Gửi OTP về email
+ *     tags:
+ *       - ForgotPassword
  *     requestBody:
  *       required: true
  *       content:

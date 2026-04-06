@@ -3,11 +3,70 @@
  * /api/concert:
  *   get:
  *     summary: Lấy danh sách concert
- * 
- *      
+ *     description: API hỗ trợ tìm kiếm theo artist, status và phân trang
+ *     tags:
+ *       - Concert
+ *     parameters:
+ *       - in: query
+ *         name: artist
+ *         required: false
+ *         description: Tìm theo tên nghệ sĩ
+ *         schema:
+ *           type: string
+ *           example: "Sơn Tùng"
+ *       - in: query
+ *         name: status
+ *         required: false
+ *         description: Trạng thái concert (ACTIVE, INACTIVE,...)
+ *         schema:
+ *           type: string
+ *           example: "ACTIVE"
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         description: Trang hiện tại
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *       - in: query
+ *         name: pageSize
+ *         required: false
+ *         description: Số lượng item mỗi trang
+ *         schema:
+ *           type: integer
+ *           example: 10
  *     responses:
  *       200:
- *         description: OK
+ *         description: Lấy danh sách concert thành công
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - concert_id: "abc"
+ *                   title: "Live Concert"
+ *                   artist: "Sơn Tùng M-TP"
+ *                   concert_date: "2026-05-01T20:00:00Z"
+ *                   end_date: "2026-05-01T23:00:00Z"
+ *                   sale_start_at: "2026-04-01T00:00:00Z"
+ *                   sale_end_at: "2026-04-30T23:59:59Z"
+ *                   is_on_sale: true
+ *                   zone_id: "zone1"
+ *                   zone_name: "VIP"
+ *                   price: 1500000
+ *                   total_seats: 100
+ *                   available_seats: 50
+ *                   sold_seats: 50
+ *                   venue_id: "venue1"
+ *                   venue_name: "Sân vận động Mỹ Đình"
+ *                   address: "Hà Nội"
+ *                   district: "Nam Từ Liêm"
+ *                   city: "Hà Nội"
+ *                   country: "Việt Nam"
+ *       400:
+ *         description: Tham số không hợp lệ
+ *       500:
+ *         description: Lỗi server
  */
 
 import { NextRequest, NextResponse } from "next/server";

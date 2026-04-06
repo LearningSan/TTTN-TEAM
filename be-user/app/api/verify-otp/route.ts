@@ -3,6 +3,8 @@
  * /api/verify-otp:
  *   post:
  *     summary: Xác thực OTP
+ *     tags:
+ *       - ForgotPassword
  *     requestBody:
  *       required: true
  *       content:

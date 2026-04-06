@@ -15,13 +15,14 @@ export type users = {
 };
 
 export type refresh_token = {
-  token_id: string;               
-  token_hash: string;         
-  device_info?: string;       
-  ip_address?: string;        
-  expires_at: string;         
-  revoked_at?: string;        
-  created_at: string;         
+  token_id: string;
+  user_id: string; 
+  token_hash: string;
+  device_info?: string;
+  ip_address?: string;
+  expires_at: string;
+  revoked_at?: string;
+  created_at: string;
 };
 export type social_account = {
   social_id: string;
@@ -35,16 +36,22 @@ export type social_account = {
   linked_at: string;
  
 };
-
-export type password_resets ={
-  reset_id :string,
-  user_id:string,
-  token:string,
-  expires_at:string,
-  used_at: string,
-  created_at:string
-}
-
+export type password_resets = {
+  reset_id: string;
+  user_id: string;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+};
+export type email_verifications = {
+  verify_id: string;
+  user_id: string;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+};
 export type zones = {
   zone_id: string,          
   concert_id: string,       
@@ -120,11 +127,76 @@ export type order = {
   updated_at: string
 };
 export type order_item = {
-  order_item_id: string,
-  order_id: string,
-  zone_id: string,
-  seat_id: string | null,
-  quantity: number,
-  unit_price: number,
-  subtotal: number
+  order_item_id: string;
+  order_id: string;
+  zone_id: string;
+  seat_id: string | null;
+  quantity: number;
+  unit_price: number;
+  subtotal: number; // quantity * unit_price
+};
+export type tickets = {
+  ticket_id: string;
+  order_id: string;
+  order_item_id: string;
+  user_id: string;
+  concert_id: string;
+  zone_id: string;
+  seat_id: string | null;
+  payment_id: string;
+  token_id: string | null;
+  wallet_address: string
+  mint_tx_hash: string | null;
+  contract_address: string | null;
+  qr_code: string | null;
+  qr_url: string | null;
+  status: string;
+  purchase_date: string;
+  used_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type payment_transactions = {
+  payment_id: string;
+  order_id: string;
+  user_id: string;
+  concert_id: string;
+  amount: number;
+  currency: string;
+  from_wallet: string;
+  to_wallet: string;
+  transaction_hash: string | null;
+  block_number: number | null;
+  payment_status: string;
+  failure_reason: string | null;
+  confirmed_at: string | null;
+  retry_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type transfer_transactions = {
+  transfer_id: string;
+  ticket_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  from_wallet: string;
+  to_wallet: string;
+  transaction_hash: string | null;
+  transfer_status: string;
+  transfer_date: string;
+  confirmed_at: string | null;
+};
+export type withdraw_transactions = {
+  withdraw_id: string;
+  admin_id: string;
+  amount: number;
+  currency: string;
+  from_wallet: string;
+  to_wallet: string;
+  transaction_hash: string | null;
+  withdraw_status: string;
+  note: string | null;
+  created_at: string;
+  confirmed_at: string | null;
 };

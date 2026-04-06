@@ -3,6 +3,8 @@
  * /api/auth/facebook:
  *   get:
  *     summary: Login Facebook
+ *     tags:
+ *       - Login
  *     responses:
  *       200:
  *         description: OK

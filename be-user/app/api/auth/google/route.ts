@@ -3,6 +3,8 @@
  * /api/auth/google:
  *   get:
  *     summary: Login Google
+ *     tags:
+ *       - Login
  *     responses:
  *       200:
  *         description: OK

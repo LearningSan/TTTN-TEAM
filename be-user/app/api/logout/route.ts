@@ -3,6 +3,8 @@
  * /api/logout:
  *   post:
  *     summary: Đăng xuất
+ *     tags:
+ *       - Login
  *     responses:
  *       200:
  *         description: OK

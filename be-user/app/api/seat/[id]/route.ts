@@ -1,8 +1,10 @@
 /**
  * @swagger
- * /api/seats/[id]:
+ * /api/seats/{id}:
  *   post:
  *     summary: Lấy thông tin chi tiết ghế theo seat_id
+ *     tags:
+ *       - Order
  *     requestBody:
  *       required: true
  *       content:

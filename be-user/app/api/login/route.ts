@@ -3,6 +3,8 @@
  * /api/login:
  *   post:
  *     summary: Đăng nhập bằng email + password
+ *     tags:
+ *       - Login
  *     requestBody:
  *       required: true
  *       content:
