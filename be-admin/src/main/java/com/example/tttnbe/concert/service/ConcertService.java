@@ -4,6 +4,7 @@ import com.example.tttnbe.common.response.PageResponse;
 import com.example.tttnbe.concert.dto.ConcertRequest;
 import com.example.tttnbe.concert.dto.ConcertResponse;
 import com.example.tttnbe.concert.dto.UpdateConcertRequest;
+import com.example.tttnbe.concert.dto.UpdateStatusRequest;
 
 import java.util.UUID;
 
@@ -17,4 +18,6 @@ public interface ConcertService {
     public ConcertResponse updateConcert(UUID concertId, UpdateConcertRequest concertRequest);
 
     public void deleteConcert(UUID concertId);
+
+    public ConcertResponse updateConcertStatus(UUID concertId, UpdateStatusRequest request);
 }
