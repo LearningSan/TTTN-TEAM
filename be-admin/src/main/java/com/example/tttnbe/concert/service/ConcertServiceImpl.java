@@ -6,11 +6,14 @@ import com.example.tttnbe.common.response.PageResponse;
 import com.example.tttnbe.concert.dto.ConcertRequest;
 import com.example.tttnbe.concert.dto.ConcertResponse;
 import com.example.tttnbe.concert.dto.UpdateConcertRequest;
+import com.example.tttnbe.concert.dto.UpdateStatusRequest;
 import com.example.tttnbe.concert.entity.Concert;
 import com.example.tttnbe.concert.repository.ConcertRepository;
 import com.example.tttnbe.common.exception.CustomException;
 import com.example.tttnbe.seat.entity.Seat;
 import com.example.tttnbe.seat.repository.SeatRepository;
+import com.example.tttnbe.ticket.dto.TicketListItemResponse;
+import com.example.tttnbe.ticket.repository.TicketRepository;
 import com.example.tttnbe.venue.entity.Venue;
 import com.example.tttnbe.venue.repository.VenueRepository;
 import com.example.tttnbe.zone.dto.ZoneRequest;
@@ -48,6 +51,9 @@ public class ConcertServiceImpl implements ConcertService {
 
     @Autowired
     private SeatRepository seatRepository;
+
+    @Autowired
+    private TicketRepository ticketRepository;
 
     //dung chung - bien entity thanh dto
     private ConcertResponse mapToResponse(Concert concert) {
@@ -116,7 +122,7 @@ public class ConcertServiceImpl implements ConcertService {
         concert.setBannerURL(concertRequest.getBannerURL());
         concert.setSaleStartAt(concertRequest.getSaleStartAt());
         concert.setSaleEndAt(concertRequest.getSaleEndAt());
-        concert.setStatus("DRAFT");
+        concert.setStatus(concertRequest.getStatus());
 
         //tim organizer trong sercurity
         String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -255,5 +261,33 @@ public class ConcertServiceImpl implements ConcertService {
          * Tại đây, sau khi lưu DB thành công, bạn có thể gọi thêm API/Service của Smart Contract
          * để vô hiệu hóa (revoke) hàng loạt các vé NFT thuộc về Concert này nếu cần.
          */
+    }
+
+    //6 - update status thanh "ON_SALE" khi admin nhan "Mo ban"
+    @Transactional
+    public ConcertResponse updateConcertStatus(UUID concertId, UpdateStatusRequest request) {
+        Concert concert = concertRepository.findById(concertId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
+
+        concert.setStatus(request.getStatus());
+        Concert savedConcert = concertRepository.save(concert);
+
+        return mapToResponse(savedConcert);
+    }
+
+    @Override
+    public PageResponse<TicketListItemResponse> getTicketsByConcertId(UUID concertId, int page, int size) {
+        // 1. Kiểm tra xem Concert có tồn tại không
+        concertRepository.findById(concertId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
+
+        // 2. Tạo cấu hình phân trang (chú ý: Spring Boot đếm trang từ 0)
+        Pageable pageable = PageRequest.of(page, size);
+
+        // 3. Móc dữ liệu từ Database lên (trả về Page của Spring)
+        Page<TicketListItemResponse> ticketPage = ticketRepository.findTicketsByConcertId(concertId, pageable);
+
+        // 4. Dùng class PageResponse của bạn để "biến hình" cục data trả về JSON đẹp mắt
+        return PageResponse.from(ticketPage);
     }
 }
