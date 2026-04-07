@@ -230,7 +230,7 @@ const ConcertManagement = () => {
         width={1050} 
         destroyOnClose
       >
-        <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={{ status: 'DRAFT', zones: [{ rowPrefix: 'A', rowCount: 1, seatsPerRow: 20, currency: 'VND', colorCode: '#FF0000' }] }}>
+        <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={{ status: 'DRAFT', zones: [{ rowPrefix: 'A', rowCount: 1, seatsPerRow: 20, currency: 'USDT', colorCode: '#FF0000' }] }}>
           <Divider orientation="left">1. Thông tin chung</Divider>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px' }}>
             <Form.Item name="title" label="Tên chương trình" rules={[{ required: true }]}><Input size="large" /></Form.Item>
@@ -286,7 +286,7 @@ const ConcertManagement = () => {
                     </div>
                   </Card>
                 ))}
-                <Button type="dashed" onClick={() => add({ rowPrefix: calculateNextPrefix(form.getFieldValue('zones')), rowCount: 1, seatsPerRow: 20, currency: 'VND', colorCode: '#1890FF' })} block icon={<PlusOutlined />} style={{ height: 40 }}>
+                <Button type="dashed" onClick={() => add({ rowPrefix: calculateNextPrefix(form.getFieldValue('zones')), rowCount: 1, seatsPerRow: 20, currency: 'USDT', colorCode: '#1890FF' })} block icon={<PlusOutlined />} style={{ height: 40 }}>
                   Thêm Khu Vực Mới (Tự động nối ký tự)
                 </Button>
               </>
