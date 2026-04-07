@@ -128,13 +128,20 @@ const TicketManagement = () => {
           <Col span={4}><Title level={4} style={{ margin: 0 }}>Quản lý Vé</Title></Col>
           <Col span={20}>
             <Select
-              showSearch
+              showSearch={{
+    // Chuyển logic tìm kiếm vào đây để fix lỗi Deprecated
+    filterOption: (input, option) =>
+      (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+  }}
               placeholder="🔍 Chọn concert để quản lý vé..."
               style={{ width: '100%' }}
               size="large"
               onChange={handleSelectConcert}
+              loading={loadingList} 
+              disabled={loadingList}
+              
               options={concerts.map(c => ({ value: c.concertId, label: c.title }))}
-              optionFilterProp="label"
+              // optionFilterProp="label"
             />
           </Col>
         </Row>
