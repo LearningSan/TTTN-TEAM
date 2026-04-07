@@ -9,37 +9,40 @@ const SeatSelection = () => {
   const [seats, setSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [concertDetail, setConcertDetail] = useState(null);
 
   useEffect(() => {
-    const fetchSeats = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-
-        // 1. Chuyển sang phương thức POST
-        // 2. Sửa endpoint thành /api/seat (không có 's')
-        // 3. Truyền dữ liệu vào body thay vì params
-        const response = await axios.post(
+        // 1. Lấy sơ đồ ghế (Giữ nguyên code cũ của bạn)
+        const seatRes = await axios.post(
           `${import.meta.env.VITE_API_URL}/seat`,
           {
             concert_id: concertId,
             zone_id: zoneId,
           },
         );
-
-        if (response.data?.success) {
-          // Đảm bảo dữ liệu là một mảng để map() hoạt động
-          const data = response.data.data;
+        if (seatRes.data?.success) {
+          const data = seatRes.data.data;
           setSeats(Array.isArray(data) ? data : [data]);
         }
+
+        // 2. LẤY THÔNG TIN CONCERT ĐỂ TRUYỀN SANG CHECKOUT
+        const concertRes = await axios.get(
+          `${import.meta.env.VITE_API_URL}/concert/${concertId}`,
+        );
+        if (concertRes.data?.success) {
+          setConcertDetail(concertRes.data.data[0]);
+        }
       } catch (error) {
-        console.error("Lỗi lấy danh sách ghế:", error.response);
-        setSeats([]);
+        console.error("Lỗi fetch data:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchSeats();
-  }, [zoneId]);
+    fetchData();
+  }, [concertId, zoneId]);
 
   // Xử lý chọn/bỏ chọn ghế
   const toggleSeat = (seat) => {
@@ -52,52 +55,77 @@ const SeatSelection = () => {
     );
   };
 
-  // Tạo đơn hàng
-  const handleBooking = async () => {
+  const handleBooking = () => {
     if (selectedSeats.length === 0)
       return alert("Vui lòng chọn ít nhất một ghế!");
 
-    try {
-      const orderData = {
-        concert_id: concertId,
-        currency: "USDT",
-        note: "Đặt vé qua web",
-        items: selectedSeats.map((s) => ({
-          zone_id: zoneId,
-          seat_id: s.seat_id,
-          quantity: 1,
+    // KHÔNG gọi API ở đây nữa, chỉ navigate thôi
+    navigate(`/checkout`, {
+      state: {
+        // Truyền concertId và các thông tin cần thiết để trang Checkout gọi API sau
+        concertId: concertId,
+        zoneId: zoneId,
+        selectedSeats: selectedSeats.map((s) => ({
+          ...s,
+          zone_name: s.zone_name || zoneId,
+          price: s.price || 100,
         })),
-      };
-
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/order`,
-        orderData,
-        { withCredentials: true },
-      );
-      if (response.data?.success) {
-        alert("Tạo đơn hàng thành công!");
-        //Chuyển sang Checkout
-        navigate(`/checkout`, {
-          state: {
-            orderId: response.data.data.order.order_id,
-            selectedSeats: selectedSeats.map((s) => ({
-              ...s,
-              // Đảm bảo có zone_name và price để Checkout hiển thị
-              zone_name: s.zone_name || "VIP",
-              price: s.price || 0,
-            })),
-            concert: {
-              title: "Tên buổi hòa nhạc của bạn", // Bạn có thể lấy từ dữ liệu concert hiện tại
-              location: "Địa điểm tổ chức",
-              date: "Thời gian diễn ra",
-            },
-          },
-        });
-      }
-    } catch (error) {
-      alert("Lỗi khi tạo đơn hàng. Vui lòng thử lại!");
-    }
+        concert: {
+          title: concertDetail?.title || "Tên buổi hòa nhạc",
+          location: concertDetail?.venue_name || "Địa điểm tổ chức",
+          date: concertDetail?.concert_date
+            ? new Date(concertDetail.concert_date).toLocaleString("vi-VN")
+            : "Thời gian diễn ra",
+        },
+      },
+    });
   };
+  // Tạo đơn hàng
+  // const handleBooking = async () => {
+  //   if (selectedSeats.length === 0)
+  //     return alert("Vui lòng chọn ít nhất một ghế!");
+
+  //   try {
+  //     const orderData = {
+  //       concert_id: concertId,
+  //       currency: "USDT",
+  //       note: "Đặt vé qua web",
+  //       items: selectedSeats.map((s) => ({
+  //         zone_id: zoneId,
+  //         seat_id: s.seat_id,
+  //         quantity: 1,
+  //       })),
+  //     };
+
+  //     const response = await axios.post(
+  //       `${import.meta.env.VITE_API_URL}/order`,
+  //       orderData,
+  //       { withCredentials: true },
+  //     );
+  //     if (response.data?.success) {
+  //       navigate(`/checkout`, {
+  //         state: {
+  //           orderId: response.data.data.order.order_id,
+  //           selectedSeats: selectedSeats.map((s) => ({
+  //             ...s,
+  //             zone_name: s.zone_name || zoneId,
+  //             price: s.price || 100, // Sử dụng giá thực tế từ ghế
+  //           })),
+  //           // TRUYỀN DỮ LIỆU THẬT Ở ĐÂY
+  //           concert: {
+  //             title: concertDetail?.title || "Tên buổi hòa nhạc",
+  //             location: concertDetail?.venue_name || "Địa điểm tổ chức",
+  //             date: concertDetail?.concert_date
+  //               ? new Date(concertDetail.concert_date).toLocaleString("vi-VN")
+  //               : "Thời gian diễn ra",
+  //           },
+  //         },
+  //       });
+  //     }
+  //   } catch (error) {
+  //     alert("Lỗi khi tạo đơn hàng. Vui lòng thử lại!");
+  //   }
+  // };
 
   if (loading)
     return (
@@ -187,7 +215,9 @@ const SeatSelection = () => {
                   <p className="font-bold">Ghế: {s.seat_label}</p>
                   <p className="text-xs text-gray-400">Hàng: {s.row_label}</p>
                 </div>
-                <span className="text-green-500 font-bold">Free</span>
+                <span className="text-green-500 font-bold">
+                  {s.price ? `${s.price.toLocaleString()} đ` : "100 đ"}
+                </span>
               </div>
             ))
           ) : (

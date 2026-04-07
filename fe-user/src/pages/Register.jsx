@@ -17,6 +17,11 @@ const Register = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+
+    if (formData.password.length < 6) {
+      alert("Mật khẩu phải có ít nhất 6 ký tự!");
+      return; // Dừng hàm lại, không gọi API nữa
+    }
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/signup`,
@@ -39,38 +44,6 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans">
-      {/* Header đồng bộ */}
-      <header className="bg-white text-[#4A5568] py-4 px-12 flex items-center justify-between border-b border-gray-100 shadow-sm z-20">
-        <div className="flex items-center">
-          <Link to="/" className="hover:opacity-80 transition-opacity">
-            <h1 className="text-3xl font-black tracking-tighter text-[#8D1B1B]">
-              TICKETX
-            </h1>
-          </Link>
-        </div>
-        <nav className="flex items-center gap-10 text-sm font-medium">
-          <a href="#" className="hover:text-black">
-            Help
-          </a>
-          <a href="#" className="hover:text-black">
-            Contact us
-          </a>
-          <div className="flex items-center gap-1 cursor-pointer hover:text-black">
-            <span>English</span>
-            <HiOutlineChevronDown size={16} />
-          </div>
-          <Link
-            to="/login"
-            className="ml-4 hover:text-black border-l pl-10 border-gray-300"
-          >
-            Sign In
-          </Link>
-          <Link to="/" className="text-[#2D3748] hover:text-black">
-            <AiFillHome size={22} />
-          </Link>
-        </nav>
-      </header>
-
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center p-6 relative overflow-hidden">
         {/* Hiệu ứng nền đỏ mờ phía dưới */}
@@ -137,6 +110,7 @@ const Register = () => {
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••"
+                  minLength={6}
                   className="w-full px-5 py-3 border border-[#8D1B1B]/40 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-red-100"
                   value={formData.password}
                   onChange={(e) =>
@@ -144,6 +118,9 @@ const Register = () => {
                   }
                   required
                 />
+                <p className="text-[10px] text-red-500 mt-1 ml-4 italic">
+                  * Mật khẩu phải từ 6 ký tự trở lên
+                </p>
                 <div
                   className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
                   onClick={() => setShowPassword(!showPassword)}

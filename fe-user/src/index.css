@@ -1,2 +1,51 @@
 @import "tailwindcss";
+/* Phải có dấu nháy đơn/kép quanh tên font */
 @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap");
+
+.ticket-container {
+  position: relative;
+  background: #000;
+}
+/* 1. Khoét 4 góc vé */
+.ticket-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background-image:
+  /* Khoét góc trên trái */
+    radial-gradient(circle at 0 0, #fff 45px, transparent 23px),
+    /* Khoét góc trên phải */
+    radial-gradient(circle at 100% 0, #fff 45px, transparent 23px),
+    /* Khoét góc dưới trái */
+    radial-gradient(circle at 0 100%, #fff 45px, transparent 23px),
+    /* Khoét góc dưới phải */
+    radial-gradient(circle at 100% 100%, #fff 45px, transparent 23px);
+  z-index: 20;
+}
+
+/* 2. Khoét TRÊN và DƯỚI (Vị trí răng cưa) */
+.ticket-notch-vertical::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* Thông số 41.2% giúp lỗ khoét đè chính xác lên đường kẻ đứt của bạn */
+  background-image:
+  /* Khoét trên */
+    radial-gradient(circle at 44% 0, #fff 40px, transparent 19px),
+    /* Khoét dưới */
+    radial-gradient(circle at 44% 100%, #fff 40px, transparent 19px);
+  z-index: 20;
+}
+
+/* Định nghĩa class font */
+.font-bebas {
+  font-family: "Bebas Neue", sans-serif !important;
+}

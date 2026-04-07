@@ -5,14 +5,18 @@ import {
   Route,
   useLocation,
 } from "react-router-dom";
-import Login from "./pages/Login"; // Đảm bảo đường dẫn này đúng với file Login của bạn
-import Register from "./pages/Register";
+import MainLayout from "./components/MainLayout"; // Đảm bảo đường dẫn này đúng
+
+// Import các trang của bạn
 import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgetPassword";
 import ConcertDetail from "./pages/ConcertDetail";
 import SeatSelection from "./pages/SeatSelection";
 import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
+import MyTicket from "./pages/MyTicket";
 
 import LoginButton from "./pages/nhap";
 
@@ -21,31 +25,29 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Trang Nhap */}
-        <Route path="/nhap" element={<LoginButton />} />
-        {/* Trang Home */}
-        <Route path="/" element={<Home />} />
-        {/* Trang Login */}
-        <Route path="/login" element={<Login />} />
-        {/* Trang Register */}
-        <Route path="/register" element={<Register />} />
-        {/* Trang Forgot Password */}
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        {/* Trang Concert Detail */}
-        <Route path="/concert/:id" element={<ConcertDetail />} />
-        {/* Trang Seat Selection */}
+        {/* NHÓM 1: Các trang dùng Header chung */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/concert/:id" element={<ConcertDetail />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+          <Route path="/my-tickets" element={<MyTicket />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+        </Route>
+
+        {/* NHÓM 2: Các trang KHÔNG dùng Header (Login/Register/Quên mật khẩu) */}
         <Route
           path="/concert/:concertId/zone/:zoneId"
           element={<SeatSelection />}
         />
-        {/* Trang Checkout */}
-        <Route path="/checkout" element={<Checkout />} />
-        {/* Trang Order Success */}
-        <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+        <Route path="/nhap" element={<LoginButton />} />
       </Routes>
     </AnimatePresence>
   );
 }
+
 function App() {
   return (
     <Router>

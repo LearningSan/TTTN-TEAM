@@ -113,48 +113,6 @@ const Login = () => {
       transition={{ duration: 0.3 }}
       className="min-h-screen flex flex-col bg-[#101114] font-sans"
     >
-      <header className="bg-white text-[#4A5568] py-4 px-12 flex items-center justify-between border-b border-gray-100 shadow-sm">
-        {/* Logo phía bên trái */}
-        <div className="flex items-center">
-          <Link to="/">
-            <h1 className="text-3xl font-black tracking-tighter text-[#8D1B1B]">
-              TICKETX
-            </h1>
-          </Link>
-        </div>
-
-        {/* Menu phía bên phải */}
-        <nav className="flex items-center gap-10 text-sm font-medium">
-          <a href="#" className="hover:text-black transition-colors">
-            Help
-          </a>
-          <a href="#" className="hover:text-black transition-colors">
-            Contact us
-          </a>
-
-          {/* Dropdown English */}
-          {/* <div className="flex items-center gap-1 cursor-pointer hover:text-black transition-colors">
-            <span>English</span>
-            <HiOutlineChevronDown size={16} />
-          </div> */}
-
-          {/* Sign Up link */}
-          <Link
-            to="/register"
-            className="ml-4 hover:text-black transition-colors border-l pl-10 border-gray-300"
-          >
-            Sign Up
-          </Link>
-
-          {/* Icon Home */}
-          <Link
-            to="/"
-            className="text-[#2D3748] hover:text-black transition-all"
-          >
-            <AiFillHome size={22} />
-          </Link>
-        </nav>
-      </header>
       <main className="flex-1 flex items-center justify-center bg-white p-4 relative overflow-hidden">
         {/* Hiệu ứng nền đỏ mờ ở phía dưới như trong ảnh */}
         <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-[#8D1B1B] to-transparent opacity-80" />

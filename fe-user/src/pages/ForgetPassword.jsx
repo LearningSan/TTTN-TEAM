@@ -52,42 +52,6 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      {/* HEADER GIỐNG TRANG LOGIN */}
-      <header className="bg-white text-[#4A5568] py-4 px-12 flex items-center justify-between border-b border-gray-100 shadow-sm z-20">
-        <div className="flex items-center">
-          <Link to="/" className="hover:opacity-80 transition-opacity">
-            <h1 className="text-3xl font-black tracking-tighter text-[#8D1B1B]">
-              TICKETX
-            </h1>
-          </Link>
-        </div>
-
-        <nav className="flex items-center gap-10 text-sm font-medium">
-          <a href="#" className="hover:text-black transition-colors">
-            Help
-          </a>
-          <a href="#" className="hover:text-black transition-colors">
-            Contact us
-          </a>
-          {/* <div className="flex items-center gap-1 cursor-pointer hover:text-black transition-colors">
-            <span>English</span>
-            <HiOutlineChevronDown size={16} />
-          </div> */}
-          <Link
-            to="/register"
-            className="ml-4 hover:text-black transition-colors border-l pl-10 border-gray-300"
-          >
-            Sign Up
-          </Link>
-          <Link
-            to="/"
-            className="text-[#2D3748] hover:text-black transition-all"
-          >
-            <AiFillHome size={22} />
-          </Link>
-        </nav>
-      </header>
-
       {/* NỘI DUNG CHÍNH */}
       <main className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
         {/* Hiệu ứng nền đỏ mờ phía dưới */}

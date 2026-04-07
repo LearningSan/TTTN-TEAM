@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   HiOutlineLocationMarker,
@@ -11,6 +11,7 @@ import { AiFillHome } from "react-icons/ai";
 const ConcertDetail = () => {
   const { id } = useParams(); // Lấy ID concert từ URL
   const navigate = useNavigate();
+  const location = useLocation();
   const [concert, setConcert] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,6 +34,16 @@ const ConcertDetail = () => {
     fetchConcertDetail();
   }, [id]);
 
+  // Hàm hỗ trợ format ngày an toàn
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "Sắp diễn ra";
+    try {
+      return new Date(dateStr).toLocaleDateString("vi-VN");
+    } catch (err) {
+      return dateStr;
+    }
+  };
+
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center font-bold">
@@ -48,24 +59,6 @@ const ConcertDetail = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans">
-      {/* Header đồng bộ các trang khác */}
-      <header className="bg-white py-4 px-12 flex items-center justify-between border-b border-gray-100">
-        <Link
-          to="/"
-          className="text-3xl font-black tracking-tighter text-[#8D1B1B]"
-        >
-          TICKETX
-        </Link>
-        <div className="flex items-center gap-10 text-sm font-medium text-gray-700">
-          <Link to="/login" className="hover:text-[#8D1B1B]">
-            Sign in
-          </Link>
-          <Link to="/">
-            <AiFillHome size={22} />
-          </Link>
-        </div>
-      </header>
-
       <nav className="bg-[#8D1B1B] py-3 text-white">
         <div className="max-w-7xl mx-auto flex justify-center gap-10 text-[13px] font-black uppercase tracking-tight">
           <a href="#">Theatre & Arts</a>
@@ -75,70 +68,105 @@ const ConcertDetail = () => {
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto py-10 px-4">
+      <main className="max-w-6xl mx-auto py-10 px-4">
         {/* SECTION 1: TICKET PASS */}
-        <div className="relative bg-black rounded-[30px] overflow-hidden flex flex-col md:flex-row shadow-2xl border border-gray-800">
-          {/* Left Side: Info */}
-          <div className="flex-1 p-8 text-white border-r border-dashed border-gray-600 relative">
-            {/* Rãnh cắt của vé */}
-            <div className="absolute -top-4 -right-4 w-8 h-8 bg-white rounded-full"></div>
-            <div className="absolute -bottom-4 -right-4 w-8 h-8 bg-white rounded-full"></div>
+        <div className="relative group px-2">
+          {/* Đổ bóng đỏ phát sáng */}
+          <div
+            className="absolute inset-0 bg-red-600/40 blur-[120px] rounded-full pointer-events-none"
+            style={{
+              zIndex: 0,
+              width: "90%", // Thu hẹp chiều ngang bóng để tập trung ánh sáng
+              height: "70%", // Thu hẹp chiều cao
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+          ></div>
+          {/* KHỐI VÉ CHÍNH */}
+          <div
+            className="ticket-container ticket-notch-vertical shadow-[0_0_50px_rgba(255,0,0,0.2)] relative"
+            style={{ zIndex: 10 }}
+          >
+            <div className="flex flex-col md:flex-row relative bg-black">
+              {/* LEFT SIDE */}
+              <div className="flex-[0.7] p-8 md:p-12 flex flex-col justify-between border-r-2 border-dashed border-gray-700/50 relative bg-black">
+                <div className="absolute right-[-2px] top-0 bottom-0 border-r-2 border-dashed border-gray-600"></div>
+                <div>
+                  <h2 className="text-6xl font-bebas text-white tracking-widest leading-none mb-10">
+                    {concert.title || "NAME SHOW"}
+                  </h2>
 
-            <h2 className="text-2xl font-black uppercase mb-4">
-              {concert.title}
-            </h2>
-            <div className="space-y-3 text-sm text-gray-300">
-              <p className="flex items-center gap-2">
-                <HiOutlineLocationMarker className="text-[#8D1B1B]" />{" "}
-                {concert.venue_name}
-              </p>
-              <p className="flex items-center gap-2">
-                <HiOutlineCalendar className="text-[#8D1B1B]" />{" "}
-                {new Date(concert.concert_date).toLocaleString()}
-              </p>
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 text-gray-400">
+                      <HiOutlineLocationMarker
+                        size={32}
+                        className="text-white border border-gray-700 p-1.5 rounded-xl"
+                      />
+                      <span className="text-[14px] font-bold uppercase tracking-wider text-gray-300">
+                        {concert.venue_name || "Địa điểm đang cập nhật"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-gray-400">
+                      <HiOutlineCalendar
+                        size={32}
+                        className="text-white border border-gray-700 p-1.5 rounded-xl"
+                      />
+                      <span className="text-[14px] font-bold uppercase tracking-wider text-gray-300">
+                        {formatDate(concert.concert_date)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() =>
+                    navigate(`/concert/${id}/zone/${concert.zone_id}`)
+                  }
+                  className="mt-10 bg-[#222] text-white font-black px-10 py-3 rounded-md text-[13px] uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all border border-gray-700"
+                >
+                  Buy Now
+                </button>
+              </div>
+
+              {/* RIGHT SIDE */}
+              <div className="flex-1 p-8 flex flex-col justify-between bg-[#0a0a0a]">
+                <div className="w-full h-[280px] rounded-[40px] overflow-hidden border border-gray-800 shadow-2xl">
+                  <img
+                    src={
+                      concert.banner_url ||
+                      "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1000"
+                    }
+                    className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-500"
+                    alt="banner"
+                  />
+                </div>
+
+                <div className="flex items-center justify-center w-full mt-4">
+                  <div className="flex items-center gap-3 px-6 py-2   shadow-inner">
+                    {/* Icon đô la */}
+                    <div className="flex items-center justify-center border-[1.5px] border-gray-500 rounded-sm px-1 py-0.5 min-w-[24px]">
+                      <span className="text-[6px] text-gray-500 mr-1">•</span>
+                      <span className="text-[10px] font-bold text-gray-400">
+                        $
+                      </span>
+                      <span className="text-[6px] text-gray-500 ml-1">•</span>
+                    </div>
+
+                    {/* Số tiền với font Bebas Neue */}
+                    <span className="text-3xl font-bebas text-white tracking-tighter">
+                      {concert.price?.toLocaleString() || "1.000.000"} đ
+                    </span>
+
+                    {/* Mũi tên chỉ hướng
+                    <span className="text-white text-xl font-light ml-1">
+                      →
+                    </span> */}
+                  </div>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => navigate(`/concert/${id}/zone/${concert.zone_id}`)}
-              className="mt-8 bg-white text-black font-black px-8 py-2 rounded-lg text-sm hover:bg-[#8D1B1B] hover:text-white transition-all uppercase"
-            >
-              Buy Now
-            </button>
-          </div>
-
-          {/* Right Side: Image & Price */}
-          <div className="w-full md:w-1/3 bg-gray-900 flex flex-col p-6 items-center justify-center text-white">
-            <div className="w-full h-40 rounded-xl overflow-hidden mb-4">
-              <img
-                src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=500"
-                alt="banner"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <p className="text-xl font-black">
-              {concert.price?.toLocaleString()} đ ~
-            </p>
-          </div>
-        </div>
-
-        {/* SECTION 2: CONCERT INTRODUCTION */}
-        <div className="mt-12 bg-black rounded-3xl p-8 shadow-xl">
-          <h3 className="text-white font-black uppercase mb-6 border-b border-gray-800 pb-2">
-            Concert Introduction
-          </h3>
-          <div className="text-gray-300 text-sm leading-relaxed mb-6">
-            <p className="font-bold text-white mb-2">{concert.title}</p>
-            <p>
-              Địa điểm: {concert.venue_name} - {concert.address},{" "}
-              {concert.district}, {concert.city}
-            </p>
-          </div>
-          {/* Sơ đồ khu vực (Ảnh minh họa) */}
-          <div className="rounded-2xl overflow-hidden border border-gray-800 shadow-inner">
-            <img
-              src="https://st.ticketbox.vn/static/images/seat-map-default.png"
-              alt="Sơ đồ sân vận động"
-              className="w-full opacity-80"
-            />
           </div>
         </div>
 
@@ -181,7 +209,7 @@ const ConcertDetail = () => {
 
       <footer className="bg-[#F5F5F5] py-10 text-center border-t border-gray-200">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-          © 2026 TICKETX. All Rights Reserved.
+          © 2026 TICKETX.
         </p>
       </footer>
     </div>

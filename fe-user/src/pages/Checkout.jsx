@@ -3,57 +3,84 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { HiOutlineLocationMarker, HiOutlineCalendar } from "react-icons/hi";
 import { AiFillHome } from "react-icons/ai";
 import { GiTicket } from "react-icons/gi";
+import axios from "axios";
 
 const Checkout = () => {
   const { state } = useLocation(); // Nhận dữ liệu concert và selectedSeats từ trang trước
   const navigate = useNavigate();
   const orderId = state?.orderId;
+  // Lấy dữ liệu concert từ state, nếu không có mới dùng object rỗng để tránh lỗi giao diện
+  const concert = state?.concert || {
+    title: "Đang tải thông tin...",
+    location: "",
+    date: "",
+  };
 
+  // Lấy danh sách ghế từ state
+  const selectedSeats = state?.selectedSeats || [];
+
+  const subtotal = selectedSeats.reduce(
+    (sum, seat) => sum + (seat.price || 0),
+    0,
+  );
   const [customerInfo, setCustomerInfo] = useState({
     fullName: "",
     email: "",
     phone: "",
   });
 
-  // Dữ liệu mẫu nếu state trống (Dinh hãy truyền data thật từ SeatSelection qua nhé)
-  const concert = state?.concert || {
-    title: 'ANH TRAI "SAY HI" CONCERT - DAY 2',
-    location: "Khu Đô Thị Vạn Phúc City, Thủ Đức, TP. HCM",
-    date: "12:00 - 23:00, 18 tháng 04, 2026",
-  };
-  const selectedSeats = state?.selectedSeats || [
-    { seat_label: "H-12", zone_name: "VIP", price: 2900000 },
-  ];
-
-  const subtotal = selectedSeats.reduce((sum, seat) => sum + seat.price, 0);
-
-  const handleContinue = () => {
-    if (!customerInfo.fullName || !customerInfo.email || !customerInfo.phone) {
+  // Trong Checkout.jsx - Cập nhật hàm handleContinue
+  const handleContinue = async () => {
+    const { fullName, email, phone } = customerInfo;
+    if (!fullName || !email || !phone) {
       alert("Vui lòng nhập đầy đủ thông tin!");
       return;
     }
-    // Chuyển sang trang thanh toán hoặc thông báo thành công
-    navigate(`/order-success/${orderId}`);
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(phone)) {
+      alert(
+        "Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số (bắt đầu bằng số 0).",
+      );
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert("Định dạng Email không hợp lệ!");
+      return;
+    }
+
+    try {
+      // CHUYỂN VIỆC TẠO ĐƠN HÀNG SANG ĐÂY
+      const orderData = {
+        concert_id: state?.concertId, // Lấy từ state truyền qua
+        currency: "USDT",
+        note: `Khách hàng: ${customerInfo.fullName} - SĐT: ${customerInfo.phone}`,
+        items: selectedSeats.map((s) => ({
+          zone_id: state?.zoneId,
+          seat_id: s.seat_id,
+          quantity: 1,
+        })),
+      };
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/order`,
+        orderData,
+        { withCredentials: true },
+      );
+
+      if (response.data?.success) {
+        alert("Đặt vé thành công!");
+        // Sau khi tạo đơn thành công mới chuyển sang trang thành công
+        navigate(`/order-success/${response.data.data.order.order_id}`);
+      }
+    } catch (error) {
+      console.error("Lỗi tạo đơn hàng:", error);
+      alert("Lỗi khi tạo đơn hàng. Vui lòng thử lại!");
+    }
   };
 
   return (
     <div className="min-h-screen bg-white font-sans pb-20">
-      {/* Header đồng bộ */}
-      <header className="bg-white py-4 px-12 flex items-center justify-between border-b border-gray-100">
-        <h1 className="text-3xl font-black tracking-tighter text-[#8D1B1B]">
-          TICKETX
-        </h1>
-        <div className="flex items-center gap-6 text-[13px] font-bold text-gray-700 uppercase">
-          <button className="border border-gray-400 px-4 py-1 rounded">
-            Create Event
-          </button>
-          <span className="flex items-center gap-1">
-            <GiTicket size={18} /> My ticket
-          </span>
-          <span>Sign in</span>
-        </div>
-      </header>
-
       <main className="max-w-5xl mx-auto mt-10 px-4">
         {/* Banner thông tin Concert */}
         <div className="bg-[#D39696] rounded-3xl p-8 shadow-2xl mb-10 text-white relative">
@@ -75,64 +102,74 @@ const Checkout = () => {
             <h3 className="text-white font-black text-xl mb-6 italic uppercase">
               Information Form
             </h3>
-            <div className="bg-white rounded-[30px] p-8 space-y-6">
-              <div className="bg-gray-400 text-black font-black py-3 px-8 rounded-full inline-block mb-4">
+            <div className="bg-white rounded-[30px] overflow-hidden pb-8 space-y-6">
+              <div className="bg-[#9CA3AF] text-black font-black py-4 px-10 w-full mb-6 text-lg uppercase tracking-wider">
                 Ticket Type
               </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-black mb-2 ml-2">
-                    Full name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="deniel123@gmail.com"
-                    className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
-                    onChange={(e) =>
-                      setCustomerInfo({
-                        ...customerInfo,
-                        fullName: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-black mb-2 ml-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="deniel123@gmail.com"
-                    className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
-                    onChange={(e) =>
-                      setCustomerInfo({
-                        ...customerInfo,
-                        email: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-black mb-2 ml-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="deniel123@gmail.com"
-                    className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
-                    onChange={(e) =>
-                      setCustomerInfo({
-                        ...customerInfo,
-                        phone: e.target.value,
-                      })
-                    }
-                  />
+              <div className="px-8 space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-black mb-2 ml-2">
+                      Full name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="deniel123@gmail.com"
+                      className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
+                      onChange={(e) =>
+                        setCustomerInfo({
+                          ...customerInfo,
+                          fullName: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black mb-2 ml-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="deniel123@gmail.com"
+                      className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
+                      onChange={(e) =>
+                        setCustomerInfo({
+                          ...customerInfo,
+                          email: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black mb-2 ml-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={10} // Giới hạn tối đa 10 ký tự
+                      placeholder="0901234567" // Sửa placeholder cho đúng ví dụ SĐT
+                      className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
+                      onKeyPress={(e) => {
+                        // Chỉ cho phép nhập số
+                        if (!/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) =>
+                        setCustomerInfo({
+                          ...customerInfo,
+                          phone: e.target.value,
+                        })
+                      }
+                    />
+                    {/* <p className="text-[10px] text-red-500 mt-1 ml-2 italic">
+                    * Số điện thoại gồm 10 chữ số.
+                  </p> */}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-
           {/* Cột phải: Ticket Information */}
           <div className="w-full md:w-80">
             <div className="bg-white rounded-[30px] border-4 border-[#31A1EE] p-6 flex flex-col h-full shadow-lg">
@@ -146,20 +183,44 @@ const Checkout = () => {
               </div>
 
               {/* Danh sách ghế đã chọn */}
-              <div className="flex-1 space-y-4 mb-6">
+              {/* Danh sách ghế đã chọn - Đã tối ưu layout */}
+              <div className="flex-1 space-y-6 mb-6">
                 {selectedSeats.map((seat, index) => (
-                  <div key={index} className="text-center">
-                    <p className="text-gray-500 font-bold">{seat.zone_name}</p>
-                    <div className="flex justify-between font-black text-sm mt-1">
-                      <span>{seat.price.toLocaleString()} đ</span>
-                      <span>01</span>
+                  <div
+                    key={index}
+                    className="border-b border-gray-100 pb-4 last:border-0"
+                  >
+                    {/* Hàng 1: Loại vé và Số lượng */}
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-gray-800 uppercase">
+                          {/* Nếu có tên Zone thì hiện, không thì để mặc định */}
+                          {seat.zone_name && seat.zone_name.length < 20
+                            ? seat.zone_name
+                            : "VIP"}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-black">01</span>
+                      </div>
                     </div>
-                    <p className="text-gray-500 font-bold mt-1">
-                      {seat.seat_label}
-                    </p>
-                    <p className="text-right font-black text-sm">
-                      {seat.price.toLocaleString()} đ
-                    </p>
+
+                    {/* Hàng 2: Vị trí ghế và Giá tiền */}
+                    <div className="flex justify-between items-end mt-2">
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider block">
+                          Seat
+                        </span>
+                        <span className="inline-block bg-gray-100 px-2 py-0.5 rounded text-[12px] font-black border border-gray-200">
+                          {seat.seat_label}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-black text-[#8D1B1B]">
+                          {seat.price.toLocaleString()} đ
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

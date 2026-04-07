@@ -26,7 +26,6 @@ const Home = () => {
   const sliderImages = [
     "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?q=80&w=1000",
     "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1000",
-    "https://images.unsplash.com/photo-1459749411177-042180ce673c?q=80&w=1000",
     "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=1000",
     "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1000",
   ];
@@ -39,7 +38,13 @@ const Home = () => {
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/concert`,
         );
-        if (response.data?.success) setEvents(response.data.data);
+        if (response.data?.success) {
+          const uniqueEvents = response.data.data.filter(
+            (v, i, a) =>
+              a.findIndex((t) => t.concert_id === v.concert_id) === i,
+          );
+          setEvents(uniqueEvents);
+        }
       } catch (error) {
         console.error("Lỗi:", error);
       } finally {
@@ -51,45 +56,39 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans">
-      {/* 1. Header & Nav giữ nguyên màu sắc thương hiệu */}
-      <header className="bg-white py-4 px-12 flex items-center justify-between border-b border-gray-100">
-        <h1 className="text-3xl font-black tracking-tighter text-[#8D1B1B]">
-          TICKETX
-        </h1>
-        <div className="flex items-center gap-6 text-[13px] font-bold text-gray-700">
-          <button className="border-2 border-[#8D1B1B] px-4 py-1 text-[#8D1B1B] rounded-md hover:bg-[#8D1B1B] hover:text-white transition-all">
-            Create Event
-          </button>
-          <Link
-            to="/my-tickets"
-            className="flex items-center gap-1 hover:text-[#8D1B1B]"
+      {/* Lớp nền đỏ nhạt lan tỏa ở dưới cùng */}
+      <div
+        className="fixed bottom-0 left-0 w-full h-[60%] pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(141, 27, 27, 0.4) 0%, rgba(255, 255, 255, 0) 100%)",
+          zIndex: 0,
+        }}
+      />
+      <nav className="bg-white py-3 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto flex justify-start gap-16 text-[16px] font-black uppercase tracking-tight px-12">
+          <a
+            href="#"
+            className="text-[#8D1B1B] hover:opacity-70 transition-opacity"
           >
-            <GiTicket size={18} /> My ticket
-          </Link>
-          <Link
-            to="/login"
-            className="flex items-center gap-1 hover:text-[#8D1B1B]"
-          >
-            <FaUserCircle size={18} /> Sign in
-          </Link>
-          <Link to="/">
-            <AiFillHome size={20} />
-          </Link>
-        </div>
-      </header>
-
-      <nav className="bg-[#8D1B1B] py-3 text-white shadow-md">
-        <div className="max-w-7xl mx-auto flex justify-center gap-12 text-[13px] font-black uppercase tracking-widest whitespace-nowrap px-4">
-          <a href="#" className="hover:opacity-70 transition-opacity">
             Theatre & Arts
           </a>
-          <a href="#" className="hover:opacity-70 transition-opacity">
+          <a
+            href="#"
+            className="text-[#8D1B1B] hover:opacity-70 transition-opacity"
+          >
             Sports
           </a>
-          <a href="#" className="hover:opacity-70 transition-opacity">
+          <a
+            href="#"
+            className="text-[#8D1B1B] hover:opacity-70 transition-opacity"
+          >
             Seminars & Workshops
           </a>
-          <a href="#" className="hover:opacity-70 transition-opacity">
+          <a
+            href="#"
+            className="text-[#8D1B1B] hover:opacity-70 transition-opacity"
+          >
             Resale ticket
           </a>
         </div>
@@ -178,7 +177,9 @@ const Home = () => {
               {/* Ảnh Concert */}
               <div className="w-full md:w-80 h-52 rounded-xl overflow-hidden shrink-0 shadow-lg">
                 <img
-                  src={event.banner_url || "https://via.placeholder.com/300"}
+                  src={
+                    event.banner_url || "https://placehold.co/600x400?text=Ảnh"
+                  }
                   className="w-full h-full object-cover"
                   alt={event.title}
                 />
