@@ -29,7 +29,7 @@ const TicketManagement = () => {
       try {
         const res = await API.get('/admin/concerts?size=100');
         setConcerts(res.data?.content || []);
-      } catch (error) {
+      } catch  {
         message.error("Không thể tải danh sách concert");
       } finally {
         setLoadingList(false);
@@ -122,7 +122,7 @@ const TicketManagement = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
       <Card bordered={false} style={{ marginBottom: 24 }}>
         <Row align="middle" gutter={24}>
           <Col span={4}><Title level={4} style={{ margin: 0 }}>Quản lý Vé</Title></Col>

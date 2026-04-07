@@ -206,7 +206,7 @@ const ConcertManagement = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
       <Card 
         title={<h2 style={{ margin: 0 }}>Quản lý Concert</h2>} 
         extra={
