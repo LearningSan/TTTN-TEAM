@@ -129,7 +129,7 @@ const TicketManagement = () => {
           <Col span={20}>
             <Select
               showSearch
-              placeholder="🔍 Chọn sự kiện để xem báo cáo..."
+              placeholder="🔍 Chọn concert để quản lý vé..."
               style={{ width: '100%' }}
               size="large"
               onChange={handleSelectConcert}
