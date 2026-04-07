@@ -168,10 +168,17 @@ public class ConcertServiceImpl implements ConcertService {
                     Zone savedZone = zoneRepository.save(zone);
                     zonesToSave.add(savedZone);
 
-                    // Sinh ghế
-                    char startRow = zReq.getRowPrefix().toUpperCase().charAt(0);
+                    // 🌟 LOGIC SINH GHẾ CHUẨN EXCEL 🌟
+                    // Lấy tiền tố người dùng nhập (mặc định là A nếu để trống)
+                    String prefix = (zReq.getRowPrefix() != null && !zReq.getRowPrefix().isBlank())
+                            ? zReq.getRowPrefix().toUpperCase() : "A";
+
+                    // Chuyển tiền tố thành số (VD: "Y" -> 25)
+                    int startIndex = rowLabelToNumber(prefix);
+
                     for (int i = 0; i < zReq.getRowCount(); i++) {
-                        String currentRow = String.valueOf((char) (startRow + i));
+                        // Tính toán và chuyển ngược lại thành chữ (VD: 25 + 0 -> "Y", 25 + 1 -> "Z", 25 + 2 -> "AA")
+                        String currentRow = numberToRowLabel(startIndex + i);
 
                         for (int j = 1; j <= zReq.getSeatsPerRow(); j++) {
                             Seat seat = new Seat();
@@ -179,8 +186,9 @@ public class ConcertServiceImpl implements ConcertService {
                             seat.setConcert(savedConcert);
                             seat.setRowLabel(currentRow);
                             seat.setSeatNumber(j);
-                            seat.setSeatLabel(currentRow + j);
+                            seat.setSeatLabel(currentRow + j); // Ghép lại thành Y1, Z1, AA1...
                             seat.setStatus("AVAILABLE");
+
                             allSeatsToSave.add(seat);
                         }
                     }
@@ -289,5 +297,25 @@ public class ConcertServiceImpl implements ConcertService {
 
         // 4. Dùng class PageResponse của bạn để "biến hình" cục data trả về JSON đẹp mắt
         return PageResponse.from(ticketPage);
+    }
+
+    // Hàm 1: Chuyển ký tự hàng thành số (A -> 1, Z -> 26, AA -> 27)
+    private int rowLabelToNumber(String label) {
+        int result = 0;
+        for (int i = 0; i < label.length(); i++) {
+            result = result * 26 + (label.charAt(i) - 'A' + 1);
+        }
+        return result;
+    }
+
+    // Hàm 2: Chuyển số thành ký tự hàng chuẩn Excel (1 -> A, 27 -> AA)
+    private String numberToRowLabel(int number) {
+        StringBuilder label = new StringBuilder();
+        while (number > 0) {
+            number--; // Lùi về 1 đơn vị để khớp với hệ cơ số 0
+            label.append((char) ('A' + (number % 26)));
+            number /= 26;
+        }
+        return label.reverse().toString();
     }
 }

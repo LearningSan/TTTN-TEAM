@@ -1,6 +1,8 @@
 package com.example.tttnbe.ticket.controller;
 
 import com.example.tttnbe.common.response.PageResponse;
+import com.example.tttnbe.concert.service.ConcertService;
+import com.example.tttnbe.ticket.dto.TicketDetailResponse;
 import com.example.tttnbe.ticket.dto.TicketRequest;
 import com.example.tttnbe.ticket.dto.TicketResponse;
 import com.example.tttnbe.ticket.dto.TicketUpdateRequest;
@@ -33,12 +35,6 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getAllTickets(page, size)); //200
     }
 
-    @GetMapping("/{ticketId}")
-    public ResponseEntity<TicketResponse> getTicket(@PathVariable UUID ticketId) {
-        TicketResponse ticket = ticketService.getTicket(ticketId);
-        return ResponseEntity.ok(ticket); //200
-    }
-
     @PutMapping("/{ticketId}")
     public ResponseEntity<TicketResponse> updateTicket(
             @PathVariable UUID ticketId,
@@ -52,5 +48,11 @@ public class TicketController {
     public ResponseEntity<Void> deleteTicket(@PathVariable UUID ticketId) {
         ticketService.deleteTicket(ticketId);
         return ResponseEntity.noContent().build(); //204
+    }
+
+    @GetMapping("/{ticketId}")
+    public ResponseEntity<TicketDetailResponse> getTicketDetail(@PathVariable UUID ticketId) {
+        TicketDetailResponse response = ticketService.getTicketDetail(ticketId);
+        return ResponseEntity.ok(response);
     }
 }

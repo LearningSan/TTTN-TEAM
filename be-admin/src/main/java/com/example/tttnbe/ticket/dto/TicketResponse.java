@@ -15,6 +15,7 @@ import java.util.UUID;
 @Builder
 public class TicketResponse {
     private UUID ticketId;
+    private UUID concertId;
     private String tokenId;
     private String walletAddress;
     private String status;
