@@ -19,21 +19,29 @@ import axios from "axios";
 
 const Home = () => {
   const [events, setEvents] = useState([]);
-  const [user, setUser] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
+  const [searchTerm, setSearchTerm] = useState(""); // Lưu từ khóa nhập vào
+  const [filteredEvents, setFilteredEvents] = useState([]); // Lưu danh sách sau khi lọc
   const sliderImages = [
     "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?q=80&w=1000",
     "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1000",
     "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=1000",
     "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1000",
   ];
-
+  useEffect(() => {
+    // Lọc danh sách events dựa trên searchTerm
+    const results = events.filter(
+      (event) =>
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.location &&
+          event.location.toLowerCase().includes(searchTerm.toLowerCase())),
+    );
+    setFilteredEvents(results);
+  }, [searchTerm, events]);
   useEffect(() => {
     const fetchData = async () => {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) setUser(JSON.parse(storedUser));
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/concert`,
@@ -153,6 +161,8 @@ const Home = () => {
             <input
               type="text"
               placeholder="Search Events"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)} // Cập nhật từ khóa khi gõ
               className="bg-transparent w-full outline-none text-sm font-semibold text-gray-700"
             />
           </div>
@@ -166,13 +176,13 @@ const Home = () => {
       <section className="max-w-5xl mx-auto py-16 px-6 space-y-12">
         {loading ? (
           <div className="text-center font-bold">Loading...</div>
-        ) : (
-          events.map((event) => (
+        ) : filteredEvents.length > 0 ? (
+          filteredEvents.map((event) => (
             <div
               key={event.concert_id}
               className="bg-[#F7F7E8] rounded-xl flex flex-col md:flex-row items-center p-6 
-                   shadow-[0_0_20px_rgba(255,223,137,0.5)] border-y-4 border-orange-100/30
-                   relative transition-transform hover:scale-[1.02]"
+             shadow-[0_0_20px_rgba(255,223,137,0.5)] border-y-4 border-orange-100/30
+             relative transition-transform hover:scale-[1.02]"
             >
               {/* Ảnh Concert */}
               <div className="w-full md:w-80 h-52 rounded-xl overflow-hidden shrink-0 shadow-lg">
@@ -199,15 +209,16 @@ const Home = () => {
               {/* Nút Find Ticket - Thêm onClick để chuyển trang */}
               <button
                 onClick={() => navigate(`/concert/${event.concert_id}`)}
-                className="absolute top-6 right-6 md:static bg-[#8D1B1B] text-white 
-                     px-5 py-2 text-sm font-black rounded-xl uppercase 
-                     border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
-                     hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                className="absolute top-6 right-6 md:static bg-[#8D1B1B] text-white px-5 py-2 text-sm font-black rounded-xl uppercase border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
               >
                 FIND TICKET
               </button>
             </div>
           ))
+        ) : (
+          <div className="text-center py-10 text-gray-500 font-bold">
+            Không tìm thấy concert nào phù hợp với "{searchTerm}"
+          </div>
         )}
       </section>
 

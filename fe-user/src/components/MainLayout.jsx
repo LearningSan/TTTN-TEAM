@@ -23,35 +23,47 @@ const MainLayout = () => {
   const borderColor = isDetailPage ? "border-none" : "border-b border-gray-100";
 
   // 2. Sử dụng useEffect để đồng bộ dữ liệu mới nhất từ server qua API /api/me
+  // Trong MainLayout.jsx
   useEffect(() => {
+    // Hàm cập nhật user từ localStorage
+    const syncUser = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        setUser(null);
+      }
+    };
+
+    // 1. Lắng nghe sự kiện 'storage' (khi tab/popup khác thay đổi localStorage)
+    window.addEventListener("storage", syncUser);
+
+    // 2. Đồng bộ ngay lập tức từ server (giữ nguyên logic của bạn)
     const fetchUserProfile = async () => {
       try {
-        // Gọi API lấy thông tin user hiện tại
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/me`, {
-          withCredentials: true, // Quan trọng để gửi kèm Cookie/Token nếu có
+          withCredentials: true,
         });
-
-        if (response.data?.success) {
-          const freshUserData = response.data.data;
-          setUser(freshUserData);
-          // Cập nhật lại localStorage để các lần load sau nhanh hơn
-          localStorage.setItem("user", JSON.stringify(freshUserData));
+        if (response.data && response.data.user_id) {
+          const userData = response.data;
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
         }
       } catch (error) {
-        // Nếu lỗi 401 (hết hạn phiên đăng nhập), có thể xóa user
+        console.error("Lỗi xác thực:", error);
+        // Nếu lỗi 401 (chưa đăng nhập) thì xóa local
         if (error.response?.status === 401) {
           localStorage.removeItem("user");
           setUser(null);
         }
-        console.error("Lỗi lấy thông tin user:", error);
       }
     };
 
-    if (user) {
-      fetchUserProfile();
-    }
-  }, []); // Chạy 1 lần khi load trang
+    fetchUserProfile();
 
+    // Cleanup khi unmount
+    return () => window.removeEventListener("storage", syncUser);
+  }, [location]); // Chạy lại khi chuyển trang hoặc mount
   const handleLogout = () => {
     localStorage.removeItem("user");
     setUser(null);

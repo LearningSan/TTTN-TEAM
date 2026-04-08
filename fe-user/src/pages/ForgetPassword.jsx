@@ -123,6 +123,7 @@ const ForgotPassword = () => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
+                    minLength={6}
                     className="w-full pl-11 pr-10 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                   <div

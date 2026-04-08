@@ -30,10 +30,26 @@ const Login = () => {
 
       if (event.origin !== serverOrigin) return;
 
+      // Sửa đoạn code trong image_c05f7a.png của bạn
+      // Trong file Login.jsx, đoạn xử lý Google Login
+      // TRONG FILE Login.jsx
       if (event.data === "LOGIN_SUCCESS") {
-        alert("Đăng nhập bằng Google thành công!");
-        // Chuyển hướng và load lại để nhận Cookie mới từ Backend
-        window.location.href = "/";
+        axios
+          .get(`${import.meta.env.VITE_API_URL}/me`, { withCredentials: true })
+          .then((response) => {
+            // SỬA TẠI ĐÂY: Vì API trả về user trực tiếp, không bọc trong trường .data nữa
+            const userData = response.data;
+
+            if (userData && userData.user_id) {
+              localStorage.setItem("user", JSON.stringify(userData));
+              window.dispatchEvent(new Event("storage"));
+              window.location.href = "/"; // Chuyển hướng ngay
+            }
+          })
+          .catch((err) => {
+            console.error("Lỗi:", err);
+            window.location.href = "/";
+          });
       }
     };
 
