@@ -64,10 +64,26 @@ const MainLayout = () => {
     // Cleanup khi unmount
     return () => window.removeEventListener("storage", syncUser);
   }, [location]); // Chạy lại khi chuyển trang hoặc mount
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // 1. Gọi API Logout để xóa Session/Cookie trên Server
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/logout`,
+        {},
+        { withCredentials: true },
+      );
+    } catch (error) {
+      console.error("Lỗi Logout Server:", error);
+    }
+
+    // 2. Xóa sạch dữ liệu trong localStorage
     localStorage.removeItem("user");
+
+    // 3. Cập nhật state về null ngay lập tức
     setUser(null);
-    navigate("/login");
+
+    // 4. Làm mới trang để xóa sạch mọi dấu vết
+    window.location.href = "/";
   };
 
   return (
