@@ -23,7 +23,7 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
     Integer findMaxSeatNumberByZoneId(@Param("zoneId") UUID zoneId);
 
     //tim ky tu cua hang ghe dau tien - rowPrefix
-    @Query(value = "SELECT TOP 1 row_label" +
+    @Query(value = "SELECT TOP 1 row_label " +
                     "FROM seats " +
                     "WHERE zone_id = :zoneId " +
                     "ORDER BY LEN(row_label) ASC, row_label ASC", nativeQuery = true)
