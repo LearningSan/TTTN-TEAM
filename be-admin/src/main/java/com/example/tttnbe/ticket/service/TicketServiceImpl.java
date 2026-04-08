@@ -14,6 +14,7 @@ import com.example.tttnbe.payment.entity.PaymentTransaction;
 import com.example.tttnbe.payment.repository.PaymentRepository;
 import com.example.tttnbe.seat.entity.Seat;
 import com.example.tttnbe.seat.repository.SeatRepository;
+import com.example.tttnbe.ticket.dto.TicketDetailResponse;
 import com.example.tttnbe.ticket.dto.TicketRequest;
 import com.example.tttnbe.ticket.dto.TicketResponse;
 import com.example.tttnbe.ticket.dto.TicketUpdateRequest;
@@ -57,6 +58,7 @@ public class TicketServiceImpl implements TicketService{
     private TicketResponse mapToResponse(Ticket ticket) {
         return TicketResponse.builder()
                 .ticketId(ticket.getTicketId())
+                .concertId(ticket.getConcert().getConcertId())
                 .tokenId(ticket.getTokenId())
                 .walletAddress(ticket.getWalletAddress())
                 .status(ticket.getStatus())
@@ -172,5 +174,11 @@ public class TicketServiceImpl implements TicketService{
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy vé để xóa"));
         ticketRepository.delete(ticket);
+    }
+
+    @Override
+    public TicketDetailResponse getTicketDetail(UUID ticketId) {
+        return ticketRepository.getFullTicketDetailById(ticketId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy vé với ID: " + ticketId));
     }
 }

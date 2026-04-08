@@ -1,6 +1,7 @@
 package com.example.tttnbe.ticket.service;
 
 import com.example.tttnbe.common.response.PageResponse;
+import com.example.tttnbe.ticket.dto.TicketDetailResponse;
 import com.example.tttnbe.ticket.dto.TicketRequest;
 import com.example.tttnbe.ticket.dto.TicketResponse;
 import com.example.tttnbe.ticket.dto.TicketUpdateRequest;
@@ -18,4 +19,6 @@ public interface TicketService {
     public TicketResponse updateTicket(UUID ticketId, TicketUpdateRequest request);
 
     public void deleteTicket(UUID ticketId);
+
+    public TicketDetailResponse getTicketDetail(UUID ticketId);
 }
