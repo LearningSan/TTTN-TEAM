@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Table, Button, Space, message, Popconfirm, Modal, 
-  Form, Input, DatePicker, Select, InputNumber, Divider, Card, Badge, Descriptions, Tag, Tooltip, Typography 
+  Form, Input, DatePicker, Select, InputNumber, Divider, Card, Tag, Tooltip, Typography, Switch, Descriptions 
 } from 'antd';
 import { 
   EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, ReloadOutlined 
@@ -13,6 +13,19 @@ import API from '../api/config';
 dayjs.extend(customParseFormat);
 const { Text } = Typography;
 
+const ZONE_COLORS = [
+  { value: '#FF4D4F', label: 'Đỏ (Red)' },
+  { value: '#1890FF', label: 'Xanh dương (Blue)' },
+  { value: '#52C41A', label: 'Xanh lá (Green)' },
+  { value: '#FAAD14', label: 'Vàng (Yellow)' },
+  { value: '#FA8C16', label: 'Cam (Orange)' },
+  { value: '#722ED1', label: 'Tím (Purple)' },
+  { value: '#13C2C2', label: 'Xanh ngọc (Cyan)' },
+  { value: '#EB2F96', label: 'Hồng (Pink)' },
+  { value: '#A0D911', label: 'Xanh chanh (Lime)' },
+  { value: '#5C0011', label: 'Đỏ thẫm (Dark Red)' }
+];
+
 const ConcertManagement = () => {
   const [concerts, setConcerts] = useState([]);
   const [venues, setVenues] = useState([]);
@@ -22,17 +35,14 @@ const ConcertManagement = () => {
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
-  // --- CẤU HÌNH ĐỊNH DẠNG TỪ API ---
   const API_DATE_FORMAT = "DD/MM/YYYY HH:mm:ss";
 
-  // Hàm parse an toàn dành riêng cho định dạng DD/MM/YYYY trả về từ BE
   const parseApiDate = (dateStr) => {
     if (!dateStr || dateStr === 'null') return null;
     const d = dayjs(dateStr, API_DATE_FORMAT);
     return d.isValid() ? d : null;
   };
 
-  // Trả về chuỗi an toàn để render UI
   const formatSafeDate = (dateStr) => {
     const d = parseApiDate(dateStr);
     return d ? d.format('DD/MM/YYYY HH:mm') : 'N/A';
@@ -45,14 +55,10 @@ const ConcertManagement = () => {
         API.get(`/admin/concerts?page=${page - 1}&size=${pageSize}`),
         API.get('/admin/venues')
       ]);
-
-      // Bọc thép dữ liệu để không bao giờ bị sập màn hình trắng
       const cData = resConcerts.data;
       setConcerts(Array.isArray(cData?.content) ? cData.content : (Array.isArray(cData) ? cData : []));
-      
       const vData = resVenues.data;
       setVenues(Array.isArray(vData?.content) ? vData.content : (Array.isArray(vData) ? vData : []));
-
       if (cData?.totalElements !== undefined) {
         setPagination(prev => ({ ...prev, current: page, total: cData.totalElements }));
       }
@@ -64,7 +70,6 @@ const ConcertManagement = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  // XEM CHI TIẾT
   const handleViewDetail = async (id) => {
     setDetailModal({ open: true, data: null, loading: true });
     try {
@@ -76,30 +81,37 @@ const ConcertManagement = () => {
     }
   };
 
-  // TÍNH TOÁN KÝ TỰ DÃY TIẾP THEO (A -> B -> C) CHO NÚT THÊM ZONE
-  const calculateNextPrefix = (zones) => {
-    if (!zones || zones.length === 0) return 'A';
-    const lastZone = zones[zones.length - 1];
-    const prefix = (lastZone.rowPrefix || 'A').toString().toUpperCase();
-    const rows = lastZone.rowCount || 0;
+  // --- THUẬT TOÁN MỚI: TÍNH PREFIX THEO TỪNG ZONE (RESET KHI QUA ZONE MỚI) ---
+  const getNextPrefixInZone = (zoneIndex) => {
+    const zones = form.getFieldValue('zones') || [];
+    const targetZone = zones[zoneIndex];
     
-    let startIndex = 0;
-    for (let i = 0; i < prefix.length; i++) {
-      startIndex = startIndex * 26 + (prefix.charCodeAt(i) - 64);
-    }
-    startIndex -= 1; 
-    let nextIndex = startIndex + rows;
-    
+    // Nếu chưa có Tier nào trong Zone này, bắt đầu từ 'A'
+    if (!targetZone || !targetZone.tiers || targetZone.tiers.length === 0) return 'A';
+
+    let maxIndexInZone = 0;
+    targetZone.tiers.forEach(t => {
+      if (t && t.rowPrefix && t.rowCount) {
+        const prefix = t.rowPrefix.toUpperCase();
+        let startIndex = 0;
+        for (let i = 0; i < prefix.length; i++) {
+          startIndex = startIndex * 26 + (prefix.charCodeAt(i) - 64);
+        }
+        const endIndex = startIndex + t.rowCount - 1;
+        if (endIndex > maxIndexInZone) maxIndexInZone = endIndex;
+      }
+    });
+
+    let nextVal = maxIndexInZone + 1;
     let nextPrefix = '';
-    let temp = nextIndex;
-    while (temp >= 0) {
-      nextPrefix = String.fromCharCode((temp % 26) + 65) + nextPrefix;
-      temp = Math.floor(temp / 26) - 1;
+    while (nextVal > 0) {
+      let mod = (nextVal - 1) % 26;
+      nextPrefix = String.fromCharCode(65 + mod) + nextPrefix;
+      nextVal = Math.floor((nextVal - mod) / 26);
     }
     return nextPrefix;
   };
 
-  // LƯU (CREATE / UPDATE)
   const handleFinish = async (values) => {
     setLoading(true);
     try {
@@ -109,13 +121,33 @@ const ConcertManagement = () => {
         endDate: values.endDate ? values.endDate.toISOString() : null,
         saleStartAt: values.saleStartAt ? values.saleStartAt.toISOString() : null,
         saleEndAt: values.saleEndAt ? values.saleEndAt.toISOString() : null,
-        zones: values.zones?.map((z, i) => ({
-          ...z,
-          displayOrder: i + 1,
-          hasSeatMap: true,
-          colorCode: z.colorCode || '#FF0000',
-          rowPrefix: z.rowPrefix?.toUpperCase(),
-        })) || []
+        zones: values.zones?.map((z, i) => {
+          const isSeated = z.hasSeatMap;
+          let calculatedTotal = 0; 
+          const mappedTiers = isSeated ? z.tiers?.map((t, j) => {
+            const rCount = t.rowCount || 1;
+            const sCount = t.seatsPerRow || 1;
+            calculatedTotal += (rCount * sCount);
+            return {
+              ...t,
+              tierName: t.tierName || 'STANDARD',
+              displayOrder: j + 1,
+              currency: z.currency || 'USDT',
+              colorCode: z.colorCode || ZONE_COLORS[0].value,
+              rowPrefix: t.rowPrefix?.toUpperCase(),
+              rowCount: rCount,
+              seatsPerRow: sCount
+            };
+          }) || [] : [];
+          return {
+            ...z,
+            zoneName: z.zoneName?.trim() || `Khu vực ${i+1}`,
+            displayOrder: i + 1,
+            colorCode: z.colorCode || ZONE_COLORS[i % ZONE_COLORS.length].value,
+            totalSeats: isSeated ? calculatedTotal : (z.totalSeats || 1),
+            tiers: mappedTiers
+          };
+        }) || []
       };
 
       if (modalState.id) {
@@ -128,20 +160,17 @@ const ConcertManagement = () => {
       setModalState({ open: false, id: null });
       fetchData(pagination.current);
     } catch (error) {
-      console.error(error);
-      const backendMsg = error.response?.data?.message || 'Vui lòng kiểm tra lại dữ liệu nhập!';
+      console.error("API Error: ", error.response?.data);
+      const backendMsg = error.response?.data?.message || 'Có lỗi xảy ra!';
       message.error(`Lưu thất bại: ${backendMsg}`);
     } finally { setLoading(false); }
   };
 
-  // MỞ FORM SỬA (TỰ ĐỘNG ĐIỀN DATA CŨ)
   const handleOpenEdit = async (record) => {
     setLoading(true);
     try {
-      // Gọi API chi tiết để lấy đủ rowPrefix, rowCount, seatsPerRow
       const res = await API.get(`/admin/concerts/${record.concertId || record.id}`);
       const fullData = res.data;
-
       form.resetFields();
       form.setFieldsValue({
         ...fullData,
@@ -149,15 +178,12 @@ const ConcertManagement = () => {
         endDate: parseApiDate(fullData.endDate),
         saleStartAt: parseApiDate(fullData.saleStartAt),
         saleEndAt: parseApiDate(fullData.saleEndAt),
-        // Giờ đã có dữ liệu thật từ BE, không lo bị trống nữa[cite: 8]
         zones: fullData.zones || []
       });
       setModalState({ open: true, id: fullData.concertId || fullData.id });
     } catch  {
-      message.error("Không thể lấy dữ liệu chi tiết để sửa!");
-    } finally {
-      setLoading(false);
-    }
+      message.error("Không thể lấy dữ liệu chi tiết!");
+    } finally { setLoading(false); }
   };
 
   const columns = [
@@ -169,16 +195,9 @@ const ConcertManagement = () => {
     { title: 'Nghệ sĩ', dataIndex: 'artist' },
     { 
       title: 'Địa điểm', dataIndex: 'venueId',
-      render: (vId, record) => {
-        if (record.venueName) return record.venueName;
-        const matched = venues.find(v => (v.venueId || v.venue_id) === vId);
-        return matched ? (matched.name || matched.venueName) : <Text type="secondary">Chưa cập nhật</Text>;
-      }
+      render: (vId, record) => record.venueName || venues.find(v => (v.venueId || v.venue_id) === vId)?.name || 'Chưa cập nhật'
     },
-    { 
-      title: 'Ngày diễn', dataIndex: 'concertDate', 
-      render: (d) => formatSafeDate(d) 
-    },
+    { title: 'Ngày diễn', dataIndex: 'concertDate', render: (d) => formatSafeDate(d) },
     { 
       title: 'Trạng thái', dataIndex: 'status', width: 120,
       render: (status) => {
@@ -195,9 +214,9 @@ const ConcertManagement = () => {
           </Tooltip>
           <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => handleOpenEdit(r)}>Sửa</Button>
           <Popconfirm title="Xóa concert?" onConfirm={() => API.delete(`/admin/concerts/${r.concertId || r.id}`).then(() => {
-        message.success('Xóa concert thành công!'); // Thêm dòng thông báo này
-        fetchData(pagination.current);
-      }).catch(() => message.error('Xóa concert thất bại!'))}>
+            message.success('Xóa concert thành công!');
+            fetchData(pagination.current);
+          }).catch(() => message.error('Xóa concert thất bại!'))}>
             <Button size="small" danger icon={<DeleteOutlined />}>Xóa</Button>
           </Popconfirm>
         </Space>
@@ -206,31 +225,37 @@ const ConcertManagement = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
       <Card 
         title={<h2 style={{ margin: 0 }}>Quản lý Concert</h2>} 
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => fetchData(pagination.current)}>Làm mới</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setModalState({ open: true, id: null }); }}>Tạo mới</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { 
+              form.resetFields(); 
+              form.setFieldsValue({ 
+                status: 'DRAFT', 
+                zones: [{ 
+                  zoneName: 'Khu vực 1', price: 10, currency: 'USDT', colorCode: ZONE_COLORS[0].value, 
+                  hasSeatMap: true, 
+                  tiers: [{ price: 10, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] 
+                }] 
+              });
+              setModalState({ open: true, id: null }); 
+            }}>Tạo Concert</Button>
           </Space>
         }
       >
         <Table columns={columns} dataSource={concerts} rowKey={(r) => r.concertId || r.id || Math.random()} loading={loading} pagination={pagination} onChange={(p) => fetchData(p.current, p.pageSize)} bordered scroll={{ x: 800 }} />
       </Card>
 
-      {/* ========================================================== */}
-      {/* MODAL THÊM / SỬA CONCERT & ZONES */}
-      {/* ========================================================== */}
       <Modal 
         title={modalState.id ? "SỬA THÔNG TIN CONCERT" : "TẠO CONCERT MỚI"} 
         open={modalState.open} 
         onCancel={() => setModalState({ open: false, id: null })} 
-        footer={null} 
-        width={1050} 
-        destroyOnClose
+        footer={null} width={1100} destroyOnClose
       >
-        <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={{ status: 'DRAFT', zones: [{ rowPrefix: 'A', rowCount: 1, seatsPerRow: 20, currency: 'VND', colorCode: '#FF0000' }] }}>
+        <Form layout="vertical" form={form} onFinish={handleFinish}>
           <Divider orientation="left">1. Thông tin chung</Divider>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px' }}>
             <Form.Item name="title" label="Tên chương trình" rules={[{ required: true }]}><Input size="large" /></Form.Item>
@@ -241,53 +266,188 @@ const ConcertManagement = () => {
           </div>
 
           <Divider orientation="left">2. Thời gian diễn & Mở bán</Divider>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
-            <Form.Item name="concertDate" label="Ngày diễn" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
-            <Form.Item name="endDate" label="Kết thúc diễn" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
-            <Form.Item name="saleStartAt" label="Mở bán vé" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
-            <Form.Item name="saleEndAt" label="Đóng bán vé" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
-          </div>
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
+  {/* 1. Mở bán vé: Phải >= Hiện tại */}
+  <Form.Item 
+    name="saleStartAt" 
+    label="Mở bán vé" 
+    rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}
+  >
+    <DatePicker 
+      showTime 
+      format="DD/MM/YYYY HH:mm" 
+      style={{width:'100%'}} 
+      disabledDate={(current) => current && current < dayjs().startOf('day')}
+    />
+  </Form.Item>
 
-          <Divider orientation="left">3. Cấu trúc Khu vực (Zones)</Divider>
+  {/* 2. Đóng bán vé: Phải sau Mở bán */}
+  <Form.Item 
+    name="saleEndAt" 
+    label="Đóng bán vé" 
+    dependencies={['saleStartAt']}
+    rules={[
+      { required: true, message: 'Vui lòng chọn thời gian!' },
+      ({ getFieldValue }) => ({
+        validator(_, value) {
+          if (!value || value.isAfter(getFieldValue('saleStartAt'))) {
+            return Promise.resolve();
+          }
+          return Promise.reject(new Error('Kết thúc bán phải SAU khi bắt đầu bán!'));
+        },
+      }),
+    ]}
+  >
+    <DatePicker 
+      showTime 
+      format="DD/MM/YYYY HH:mm" 
+      style={{width:'100%'}} 
+      disabledDate={(current) => current && current < dayjs().startOf('day')}
+    />
+  </Form.Item>
+
+  {/* 3. Ngày diễn: Phải sau Đóng bán */}
+  <Form.Item 
+    name="concertDate" 
+    label="Ngày diễn" 
+    dependencies={['saleEndAt']}
+    rules={[
+      { required: true, message: 'Vui lòng chọn thời gian!' },
+      ({ getFieldValue }) => ({
+        validator(_, value) {
+          if (!value || value.isAfter(getFieldValue('saleEndAt'))) {
+            return Promise.resolve();
+          }
+          return Promise.reject(new Error('Ngày diễn phải SAU khi đóng bán vé!'));
+        },
+      }),
+    ]}
+  >
+    <DatePicker 
+      showTime 
+      format="DD/MM/YYYY HH:mm" 
+      style={{width:'100%'}} 
+      disabledDate={(current) => current && current < dayjs().startOf('day')}
+    />
+  </Form.Item>
+
+  {/* 4. Kết thúc diễn: Phải sau Ngày diễn */}
+  <Form.Item 
+    name="endDate" 
+    label="Kết thúc diễn" 
+    dependencies={['concertDate']}
+    rules={[
+      { required: true, message: 'Vui lòng chọn thời gian!' },
+      ({ getFieldValue }) => ({
+        validator(_, value) {
+          if (!value || value.isAfter(getFieldValue('concertDate'))) {
+            return Promise.resolve();
+          }
+          return Promise.reject(new Error('Kết thúc diễn phải SAU khi bắt đầu diễn!'));
+        },
+      }),
+    ]}
+  >
+    <DatePicker 
+      showTime 
+      format="DD/MM/YYYY HH:mm" 
+      style={{width:'100%'}} 
+      disabledDate={(current) => current && current < dayjs().startOf('day')}
+    />
+  </Form.Item>
+</div>
+
+          <Divider orientation="left">3. Xây dựng Sơ đồ & Giá vé</Divider>
           <Form.List name="zones">
-            {(fields, { add, remove }) => (
+            {(zoneFields, { add: addZone, remove: removeZone }) => (
               <>
-                {fields.map(({ key, name, ...restField }) => (
-                  <Card size="small" key={key} style={{ marginBottom: 16, background: '#f8fbff', borderColor: '#bae0ff' }} 
-                    title={
-                      <Space>Khu vực #{name + 1} 
-                        <Form.Item noStyle shouldUpdate>{() => <Tag color="green">Tổng: {(form.getFieldValue(['zones', name, 'rowCount']) || 0) * (form.getFieldValue(['zones', name, 'seatsPerRow']) || 0)} ghế</Tag>}</Form.Item>
-                      </Space>
-                    }
-                    extra={fields.length > 1 && <Button type="link" danger onClick={() => remove(name)}>Xóa khu vực này</Button>}
-                  >
-                    <Form.Item {...restField} name={[name, 'zoneId']} hidden><Input /></Form.Item>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: '12px' }}>
-                      <Form.Item {...restField} name={[name, 'zoneName']} label="Tên Khu vực" rules={[{ required: true }]}><Input /></Form.Item>
-                      <Form.Item {...restField} name={[name, 'price']} label="Giá vé" rules={[{ required: true }]}><InputNumber min={0} style={{width:'100%'}} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
-                      <Form.Item {...restField} name={[name, 'currency']} label="Tiền tệ" rules={[{ required: true }]}><Select options={[ {value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'},{value: 'BNB', label: 'BNB'}]} /></Form.Item>
-                      
-                      <Form.Item {...restField} name={[name, 'colorCode']} label="Màu Sơ đồ" rules={[{ required: true }]}>
-                        <Select options={[
-                          { value: '#FF0000', label: <Space><div style={{width: 12, height: 12, background: '#FF0000', borderRadius: '50%'}}></div>Đỏ</Space> },
-                          { value: '#1890FF', label: <Space><div style={{width: 12, height: 12, background: '#1890FF', borderRadius: '50%'}}></div>Xanh dương</Space> },
-                          { value: '#52C41A', label: <Space><div style={{width: 12, height: 12, background: '#52C41A', borderRadius: '50%'}}></div>Xanh lá</Space> },
-                          { value: '#FAAD14', label: <Space><div style={{width: 12, height: 12, background: '#FAAD14', borderRadius: '50%'}}></div>Vàng</Space> },
-                          { value: '#000000', label: <Space><div style={{width: 12, height: 12, background: '#000000', borderRadius: '50%'}}></div>Đen</Space> }
-                        ]} />
-                      </Form.Item>
-                    </div>
+                {zoneFields.map(({ key: zKey, name: zName, ...restZField }) => (
+                  <Form.Item noStyle shouldUpdate key={zKey}>
+                    {() => {
+                      const currentZone = form.getFieldValue(['zones', zName]) || {};
+                      const isZoneLocked = currentZone.totalSeats > 0 && currentZone.availableSeats < currentZone.totalSeats;
+                      const hasSeatMap = currentZone.hasSeatMap;
+                      const activeColor = currentZone.colorCode || '#d9d9d9';
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', background: '#e6f4ff', padding: 12, borderRadius: 6 }}>
-                      <Form.Item {...restField} name={[name, 'rowPrefix']} label="Ký tự bắt đầu" rules={[{ required: true }]}><Input style={{ textTransform: 'uppercase', fontWeight: 'bold' }} /></Form.Item>
-                      <Form.Item {...restField} name={[name, 'rowCount']} label="Tổng số hàng" rules={[{ required: true }]}><InputNumber min={1} style={{width:'100%'}} /></Form.Item>
-                      <Form.Item {...restField} name={[name, 'seatsPerRow']} label="Số ghế / 1 hàng" rules={[{ required: true }]}><InputNumber min={1} style={{width:'100%'}} /></Form.Item>
-                    </div>
-                  </Card>
+                      return (
+                        <Card 
+                          size="small" 
+                          style={{ 
+                            marginBottom: 20, borderLeft: `6px solid ${activeColor}`,
+                            background: isZoneLocked ? '#fff1f0' : '#fcfcfc',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                          }} 
+                          title={<Space><b style={{fontSize: 16}}>Khu vực #{zName + 1}</b> {isZoneLocked && <Tag color="red">🔒 Đã bán vé - Khóa cấu trúc</Tag>}</Space>}
+                          extra={!isZoneLocked && zoneFields.length > 1 && <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeZone(zName)}>Xóa Khu vực</Button>}
+                        >
+                          <Form.Item {...restZField} name={[zName, 'zoneId']} hidden><Input /></Form.Item>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1.5fr', gap: '12px', marginTop: 8, marginBottom: 16 }}>
+                            <Form.Item {...restZField} name={[zName, 'zoneName']} label="Tên Khu vực" rules={[{ required: true }]}><Input disabled={isZoneLocked} /></Form.Item>
+                            <Form.Item {...restZField} name={[zName, 'price']} label="Giá gốc (Base)" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
+                            <Form.Item {...restZField} name={[zName, 'currency']} label="Tiền tệ" rules={[{ required: true }]}><Select disabled={isZoneLocked} options={[{value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'},{value: 'BNB', label: 'BNB'}]} /></Form.Item>
+                            <Form.Item {...restZField} name={[zName, 'colorCode']} label="Màu hiển thị" rules={[{ required: true }]}>
+                              <Select disabled={isZoneLocked} options={ZONE_COLORS.map(c => ({ value: c.value, label: <Space><div style={{width: 12, height: 12, background: c.value, borderRadius: '50%'}}></div>{c.label}</Space> }))} />
+                            </Form.Item>
+                          </div>
+
+                          <div style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #e8e8e8' }}>
+                            <Form.Item {...restZField} name={[zName, 'hasSeatMap']} label="Tính chất Không gian" valuePropName="checked">
+                              <Switch disabled={isZoneLocked} checkedChildren="🎫 VÉ NGỒI" unCheckedChildren="🏃 VÉ ĐỨNG" />
+                            </Form.Item>
+
+                            {!hasSeatMap ? (
+                              <div style={{ background: '#e6f7ff', padding: 12, borderRadius: 6 }}>
+                                <Form.Item {...restZField} name={[zName, 'totalSeats']} label="Tổng số vé bán ra" rules={[{ required: true }]}>
+                                  <InputNumber disabled={isZoneLocked} min={1} style={{width:'30%'}} />
+                                </Form.Item>
+                              </div>
+                            ) : (
+                              <Form.List name={[zName, 'tiers']}>
+                                {(tierFields, { add: addTier, remove: removeTier }) => (
+                                  <>
+                                    {tierFields.map(({ key: tKey, name: tName, ...restTField }, index) => (
+                                      <div key={tKey} style={{ background: '#fafafa', padding: 12, marginBottom: 12, borderRadius: 6, border: '1px dashed #d9d9d9' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                          <Text strong>📌 Phân Hạng (Tier) #{index + 1}</Text>
+                                          {!isZoneLocked && tierFields.length > 1 && (
+                                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeTier(tName)} size="small" />
+                                          )}
+                                        </div>
+                                        <Form.Item {...restTField} name={[tName, 'tierId']} hidden><Input /></Form.Item>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                          <Form.Item {...restTField} name={[tName, 'tierName']} label="Tên Hạng" rules={[{ required: true }]}>
+                                            <Select disabled={isZoneLocked} placeholder="-- Chọn hạng vé --">
+                                              <Select.Option value="VIP">VIP</Select.Option>
+                                              <Select.Option value="MID">MID</Select.Option>
+                                              <Select.Option value="STANDARD">STANDARD</Select.Option>
+                                            </Select>
+                                          </Form.Item>
+                                          <Form.Item {...restTField} name={[tName, 'price']} label="Giá hạng" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                                          <Form.Item {...restTField} name={[tName, 'rowPrefix']} label="Bắt đầu" rules={[{ required: true }]}>
+                                            <Input disabled={isZoneLocked} style={{textTransform:'uppercase', fontWeight: 'bold'}} />
+                                          </Form.Item>
+                                          <Form.Item {...restTField} name={[tName, 'rowCount']} label="Số hàng" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={1} style={{width:'100%'}} /></Form.Item>
+                                          <Form.Item {...restTField} name={[tName, 'seatsPerRow']} label="Ghế/Hàng" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={1} style={{width:'100%'}} /></Form.Item>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {!isZoneLocked && (
+                                      <Button type="dashed" onClick={() => addTier({ price: currentZone.price || 0, rowPrefix: getNextPrefixInZone(zName), rowCount: 1, seatsPerRow: 2 })} block icon={<PlusOutlined />}>Thêm Phân Hạng</Button>
+                                    )}
+                                  </>
+                                )}
+                              </Form.List>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    }}
+                  </Form.Item>
                 ))}
-                <Button type="dashed" onClick={() => add({ rowPrefix: calculateNextPrefix(form.getFieldValue('zones')), rowCount: 1, seatsPerRow: 20, currency: 'VND', colorCode: '#1890FF' })} block icon={<PlusOutlined />} style={{ height: 40 }}>
-                  Thêm Khu Vực Mới (Tự động nối ký tự)
+                <Button type="dashed" onClick={() => addZone({ zoneName: `Khu vực ${zoneFields.length + 1}`, price: 10, currency: 'USDT', colorCode: ZONE_COLORS[zoneFields.length % ZONE_COLORS.length].value, hasSeatMap: true, tiers: [{  price: 10, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] })} block icon={<PlusOutlined />} style={{ height: 40, borderColor: '#1890ff', color: '#1890ff' }}>
+                  Thêm Khu Vực Mới
                 </Button>
               </>
             )}
@@ -295,20 +455,15 @@ const ConcertManagement = () => {
 
           <Divider orientation="left">4. Khác</Divider>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <Form.Item name="bannerURL" label="Đường dẫn ảnh Banner"><Input /></Form.Item>
-            <Form.Item name="status" label="Trạng thái Concert"><Select options={['DRAFT', 'ON_SALE', 'COMPLETED', 'CANCELLED'].map(v => ({value:v, label:v}))} /></Form.Item>
+            <Form.Item name="bannerURL" label="Ảnh Banner"><Input /></Form.Item>
+            <Form.Item name="status" label="Trạng thái"><Select options={['DRAFT', 'ON_SALE', 'COMPLETED', 'CANCELLED'].map(v => ({value:v, label:v}))} /></Form.Item>
           </div>
-          <Form.Item name="description" label="Mô tả sự kiện"><Input.TextArea rows={3} /></Form.Item>
-          
-          <Button type="primary" htmlType="submit" block size="large" loading={loading} style={{height: 50, fontSize: 16, marginTop: 10}}>
-            {modalState.id ? "LƯU THAY ĐỔI" : "XÁC NHẬN TẠO CONCERT"}
-          </Button>
+          <Form.Item name="description" label="Mô tả"><Input.TextArea rows={3} /></Form.Item>
+          <Button type="primary" htmlType="submit" block size="large" loading={loading} style={{height: 50, fontSize: 16}}>XÁC NHẬN</Button>
         </Form>
       </Modal>
 
-      {/* ========================================================== */}
-      {/* MODAL CHI TIẾT ĐẦY ĐỦ */}
-      {/* ========================================================== */}
+      {/* MODAL CHI TIẾT */}
       <Modal 
         title={<b style={{fontSize: 20}}>CHI TIẾT: {detailModal.data?.title}</b>} 
         open={detailModal.open} 
@@ -342,22 +497,56 @@ const ConcertManagement = () => {
               rowKey={(r) => r.zoneId || Math.random()} 
               pagination={false} 
               size="small" 
+              expandable={{
+                expandedRowRender: (record) => (
+                  <Table 
+                    dataSource={record.tiers || []} 
+                    rowKey={(t) => t.tierId || Math.random()} 
+                    pagination={false} 
+                    size="small"
+                    columns={[
+                      { title: 'Hạng vé', dataIndex: 'tierName', render: (text) => <b>{text}</b> },
+                      { title: 'Giá hạng', dataIndex: 'price', render: (p) => <Text type="secondary">{p?.toLocaleString()} {record.currency}</Text> },
+                      { 
+                        title: 'Cấu hình ghế',
+                        render: (_, t) => record.hasSeatMap 
+                          ? <Text type="secondary">Bắt đầu: {t.rowPrefix} ({t.rowCount} hàng x {t.seatsPerRow} ghế)</Text>
+                          : <Text type="secondary">Vé tự do (Đứng)</Text>
+                      },{
+          title: 'Tình trạng Hạng vé',
+          render: (_, t) => {
+            const total = t.totalSeats || 0;
+            const available = t.availableSeats || 0;
+            const booked = total - available;
+            return (
+              <Space direction="vertical" size={0}>
+                <Text strong style={{ fontSize: 12 }}>Tổng: {total}</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>Đã bán: {booked}</Text>
+                <Text type={available > 0 ? 'success' : 'danger'} style={{ fontSize: 12 }}>
+                  Còn trống: {available}
+                </Text>
+              </Space>
+            );
+          }}
+                    ]}
+                  />
+                ),
+                rowExpandable: (record) => record.tiers && record.tiers.length > 0,
+              }}
               columns={[
                 { 
                   title: 'Khu vực (Zone)', 
                   dataIndex: 'zoneName',
                   render: (name, record) => <Space><div style={{width: 12, height: 12, background: record.colorCode || '#ccc', borderRadius: '50%'}}></div> <b>{name}</b></Space>
                 },
-                { title: 'Giá vé', dataIndex: 'price', render: (p, r) => `${p?.toLocaleString()} ${r.currency}` },
-                // { 
-                //   title: 'Cấu trúc Ghế', 
-                //   render: (_, r) => <Space direction="vertical" size={0}>
-                //     <Text type="secondary">Bắt đầu: <Tag color="blue">{r.rowPrefix}</Tag></Text>
-                //     <Text type="secondary">Hàng x Ghế: {r.rowCount} x {r.seatsPerRow}</Text>
-                //   </Space>
-                // },
+                { title: 'Giá gốc', dataIndex: 'price', render: (p, r) => `${p?.toLocaleString()} ${r.currency}` },
                 { 
-                  title: 'Tình trạng ghế', 
+                  title: 'Loại vé', 
+                  dataIndex: 'hasSeatMap', 
+                  render: (hsm) => <Tag color={hsm ? "blue" : "purple"}>{hsm ? "Vé ngồi" : "Vé đứng"}</Tag> 
+                },
+                { 
+                  title: 'Tình trạng', 
                   render: (_, r) => {
                     const total = r.totalSeats || 0;
                     const available = r.availableSeats || 0;
@@ -366,7 +555,7 @@ const ConcertManagement = () => {
                       <Space direction="vertical" size={0}>
                         <Text strong>Tổng: {total}</Text>
                         <Text type="secondary">Đã đặt: {booked}</Text>
-                        <Text type={available > 0 ? 'success' : 'danger'}>Còn trống: {available}</Text>
+                        <Text type={available > 0 ? 'success' : 'danger'}>Còn: {available}</Text>
                       </Space>
                     );
                   }

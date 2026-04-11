@@ -29,7 +29,7 @@ const TicketManagement = () => {
       try {
         const res = await API.get('/admin/concerts?size=100');
         setConcerts(res.data?.content || []);
-      } catch (error) {
+      } catch  {
         message.error("Không thể tải danh sách concert");
       } finally {
         setLoadingList(false);
@@ -122,19 +122,26 @@ const TicketManagement = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
       <Card bordered={false} style={{ marginBottom: 24 }}>
         <Row align="middle" gutter={24}>
           <Col span={4}><Title level={4} style={{ margin: 0 }}>Quản lý Vé</Title></Col>
           <Col span={20}>
             <Select
-              showSearch
-              placeholder="🔍 Chọn sự kiện để xem báo cáo..."
+              showSearch={{
+    // Chuyển logic tìm kiếm vào đây để fix lỗi Deprecated
+    filterOption: (input, option) =>
+      (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+  }}
+              placeholder="🔍 Chọn concert để quản lý vé..."
               style={{ width: '100%' }}
               size="large"
               onChange={handleSelectConcert}
+              loading={loadingList} 
+              disabled={loadingList}
+              
               options={concerts.map(c => ({ value: c.concertId, label: c.title }))}
-              optionFilterProp="label"
+              // optionFilterProp="label"
             />
           </Col>
         </Row>
