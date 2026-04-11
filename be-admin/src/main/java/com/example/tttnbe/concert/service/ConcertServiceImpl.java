@@ -10,8 +10,10 @@ import com.example.tttnbe.concert.dto.UpdateStatusRequest;
 import com.example.tttnbe.concert.entity.Concert;
 import com.example.tttnbe.concert.repository.ConcertRepository;
 import com.example.tttnbe.common.exception.CustomException;
+import com.example.tttnbe.seat.dto.TierResponse;
 import com.example.tttnbe.seat.entity.Seat;
 import com.example.tttnbe.seat.repository.SeatRepository;
+import com.example.tttnbe.seat.repository.SeatTierRepository;
 import com.example.tttnbe.ticket.dto.TicketListItemResponse;
 import com.example.tttnbe.ticket.repository.TicketRepository;
 import com.example.tttnbe.venue.entity.Venue;
@@ -55,23 +57,34 @@ public class ConcertServiceImpl implements ConcertService {
     @Autowired
     private TicketRepository ticketRepository;
 
-    //dung chung - bien entity thanh dto
+    @Autowired
+    private SeatTierRepository seatTierRepository;
+
+    // Hàm dùng chung - Biến Entity thành DTO
     private ConcertResponse mapToResponse(Concert concert) {
-        //xu ly luu zone
         List<ZoneResponse> zoneResponses = null;
+
         if (concert.getZones() != null && !concert.getZones().isEmpty()) {
             zoneResponses = concert.getZones().stream().map(zone -> {
-                String rowPrefix = null;
-                Integer rowCount = null;
-                Integer seatsPerRow = null;
 
-                if (zone.isHasSeatMap()) {
-                    rowPrefix = seatRepository.findFirstRowLabelByZoneId(zone.getZoneId());
-                    rowCount = seatRepository.countRowsByZoneId(zone.getZoneId());
-                    seatsPerRow = seatRepository.findMaxSeatNumberByZoneId(zone.getZoneId());
+                // 1. Móc danh sách Tiers từ trong Zone ra và biến thành TierResponse
+                List<TierResponse> tierResponses = null;
+
+                // (⚠️ Đảm bảo trong Entity Zone của bạn đã có quan hệ:
+                // @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL) private List<SeatTier> seatTiers;)
+                if (zone.getSeatTiers() != null && !zone.getSeatTiers().isEmpty()) {
+                    tierResponses = zone.getSeatTiers().stream().map(tier -> new com.example.tttnbe.seat.dto.TierResponse(
+                            tier.getTierId(),
+                            tier.getTierName(),
+                            tier.getPrice(),
+                            tier.getCurrency(),
+                            tier.getColorCode(),
+                            tier.getDescription(),
+                            tier.getDisplayOrder()
+                    )).collect(Collectors.toList());
                 }
 
-
+                // 2. Nhét Tiers vào trong ZoneResponse
                 return new ZoneResponse(
                         zone.getZoneId(),
                         zone.getZoneName(),
@@ -82,9 +95,7 @@ public class ConcertServiceImpl implements ConcertService {
                         zone.getColorCode(),
                         zone.isHasSeatMap(),
                         zone.getDisplayOrder(),
-                        rowPrefix,
-                        rowCount,
-                        seatsPerRow
+                        tierResponses
                 );
             }).collect(Collectors.toList());
         }
@@ -100,7 +111,7 @@ public class ConcertServiceImpl implements ConcertService {
                 .saleStartAt(concert.getSaleStartAt())
                 .saleEndAt(concert.getSaleEndAt())
                 .status(concert.getStatus())
-                // Lấy nhẹ cái id, tên của Organizer và Venue ra thôi
+                // Lấy nhẹ cái id, tên của Organizer và Venue
                 .organizerId(concert.getOrganizer().getUserId())
                 .organizerName(concert.getOrganizer().getName())
                 .venueId(concert.getVenue().getVenueId())
@@ -109,7 +120,7 @@ public class ConcertServiceImpl implements ConcertService {
                 .build();
     }
 
-    //1 - create
+    // 1 - create
     @Transactional
     public ConcertResponse createConcert(ConcertRequest concertRequest) {
         Concert concert = new Concert();
@@ -124,32 +135,30 @@ public class ConcertServiceImpl implements ConcertService {
         concert.setSaleEndAt(concertRequest.getSaleEndAt());
         concert.setStatus(concertRequest.getStatus());
 
-        //tim organizer trong sercurity
+        // Tìm organizer trong security
         String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
         User organizer = userRepository.findById(UUID.fromString(currentUserId))
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy thông tin Admin (ID: " + currentUserId + ")"));
         concert.setOrganizer(organizer);
 
-        //tim venue
+        // Tìm venue
         Venue venue = venueRepository.findById(concertRequest.getVenueId())
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy địa điểm tổ chức với ID: " + concertRequest.getVenueId()));
         concert.setVenue(venue);
 
-        //map thanh dto de tra ve thong tin can thiet
+        // Lưu concert để lấy ID
         Concert savedConcert = concertRepository.save(concert);
 
-        //xu ly luu zone
+        // XỬ LÝ LƯU ZONE VÀ TIER VÀ SEAT
         if (concertRequest.getZones() != null && !concertRequest.getZones().isEmpty()) {
             List<Zone> zonesToSave = new ArrayList<>();
             List<Seat> allSeatsToSave = new ArrayList<>();
 
             for (ZoneRequest zReq : concertRequest.getZones()) {
                 Zone zone = new Zone();
-
-                // 1. SET TẤT CẢ THÔNG TIN CƠ BẢN CỦA ZONE TRƯỚC
                 zone.setConcert(savedConcert);
                 zone.setZoneName(zReq.getZoneName());
-                zone.setPrice(zReq.getPrice());
+                zone.setPrice(zReq.getPrice()); // Dành cho vé đứng
                 zone.setCurrency(zReq.getCurrency());
                 zone.setColorCode(zReq.getColorCode());
                 zone.setHasSeatMap(zReq.getHasSeatMap() != null ? zReq.getHasSeatMap() : false);
@@ -157,49 +166,76 @@ public class ConcertServiceImpl implements ConcertService {
                 zone.setStatus("ACTIVE");
                 zone.setSoldSeats(0);
 
-                // 2. XỬ LÝ SỐ LƯỢNG VÉ VÀ SINH GHẾ
-                if (zone.isHasSeatMap()) {
-                    // Tinh total_seats (so hang ghe * so ghe moi hang)
-                    int totalSeats = zReq.getRowCount() * zReq.getSeatsPerRow();
-                    zone.setTotalSeats(totalSeats);
-                    zone.setAvailableSeats(totalSeats);
+                // NẾU CÓ SƠ ĐỒ GHẾ VÀ CÓ TRUYỀN TIERS
+                if (zone.isHasSeatMap() && zReq.getTiers() != null && !zReq.getTiers().isEmpty()) {
+                    int totalSeatsForZone = 0;
 
-                    // Bây giờ Zone ĐÃ ĐẦY ĐỦ THÔNG TIN -> Mới được save xuống DB để lấy ID
+                    // Lưu Zone trước để lấy ID gắn vào Tier
                     Zone savedZone = zoneRepository.save(zone);
                     zonesToSave.add(savedZone);
 
-                    // 🌟 LOGIC SINH GHẾ CHUẨN EXCEL 🌟
-                    // Lấy tiền tố người dùng nhập (mặc định là A nếu để trống)
-                    String prefix = (zReq.getRowPrefix() != null && !zReq.getRowPrefix().isBlank())
-                            ? zReq.getRowPrefix().toUpperCase() : "A";
+                    // 🌟 VÒNG LẶP MỚI: QUÉT QUA TỪNG HẠNG VÉ (TIER)
+                    for (com.example.tttnbe.seat.dto.TierRequest tReq : zReq.getTiers()) {
+                        // 1. Tạo và lưu Hạng vé (Tier)
+                        com.example.tttnbe.seat.entity.SeatTier tier = new com.example.tttnbe.seat.entity.SeatTier();
+                        tier.setZone(savedZone);
+                        tier.setConcert(savedConcert);
+                        tier.setTierName(tReq.getTierName());
+                        tier.setPrice(tReq.getPrice());
+                        tier.setCurrency(tReq.getCurrency() != null ? tReq.getCurrency() : "USDT");
+                        tier.setColorCode(tReq.getColorCode());
+                        tier.setDescription(tReq.getDescription());
+                        tier.setDisplayOrder(tReq.getDisplayOrder() != null ? tReq.getDisplayOrder() : 1);
 
-                    // Chuyển tiền tố thành số (VD: "Y" -> 25)
-                    int startIndex = rowLabelToNumber(prefix);
+                        com.example.tttnbe.seat.entity.SeatTier savedTier = seatTierRepository.save(tier);
 
-                    for (int i = 0; i < zReq.getRowCount(); i++) {
-                        // Tính toán và chuyển ngược lại thành chữ (VD: 25 + 0 -> "Y", 25 + 1 -> "Z", 25 + 2 -> "AA")
-                        String currentRow = numberToRowLabel(startIndex + i);
+                        // 2. Logic sinh ghế chuẩn Excel cho Tier này
+                        int seatsInTier = tReq.getRowCount() * tReq.getSeatsPerRow();
+                        totalSeatsForZone += seatsInTier;
 
-                        for (int j = 1; j <= zReq.getSeatsPerRow(); j++) {
-                            Seat seat = new Seat();
-                            seat.setZone(savedZone);
-                            seat.setConcert(savedConcert);
-                            seat.setRowLabel(currentRow);
-                            seat.setSeatNumber(j);
-                            seat.setSeatLabel(currentRow + j); // Ghép lại thành Y1, Z1, AA1...
-                            seat.setStatus("AVAILABLE");
+                        String prefix = (tReq.getRowPrefix() != null && !tReq.getRowPrefix().isBlank())
+                                ? tReq.getRowPrefix().toUpperCase() : "A";
+                        int startIndex = rowLabelToNumber(prefix);
 
-                            allSeatsToSave.add(seat);
+                        for (int i = 0; i < tReq.getRowCount(); i++) {
+                            String currentRow = numberToRowLabel(startIndex + i);
+
+                            for (int j = 1; j <= tReq.getSeatsPerRow(); j++) {
+                                Seat seat = new Seat();
+                                seat.setZone(savedZone);
+                                seat.setConcert(savedConcert);
+                                seat.setSeatTier(savedTier); // 👈 Quan trọng: Gắn ghế vào Tier
+                                seat.setRowLabel(currentRow);
+                                seat.setSeatNumber(j);
+                                seat.setSeatLabel(currentRow + j);
+                                seat.setStatus("AVAILABLE");
+
+                                allSeatsToSave.add(seat);
+                            }
                         }
                     }
 
-                    if (!allSeatsToSave.isEmpty()) {
-                        seatRepository.saveAll(allSeatsToSave);
-                    }
+                    // Cập nhật lại tổng số ghế của Zone
+                    savedZone.setTotalSeats(totalSeatsForZone);
+                    savedZone.setAvailableSeats(totalSeatsForZone);
+                    zoneRepository.save(savedZone);
+
+                } else {
+                    // NẾU LÀ VÉ ĐỨNG (Không có sơ đồ ghế)
+                    zone.setTotalSeats(zReq.getTotalSeats() != null ? zReq.getTotalSeats() : 0);
+                    zone.setAvailableSeats(zReq.getTotalSeats() != null ? zReq.getTotalSeats() : 0);
+
+                    Zone savedZone = zoneRepository.save(zone);
+                    zonesToSave.add(savedZone);
                 }
             }
 
             savedConcert.setZones(zonesToSave);
+
+            // Lưu toàn bộ ghế xuống DB trong 1 câu lệnh (Tối ưu performance)
+            if (!allSeatsToSave.isEmpty()) {
+                seatRepository.saveAll(allSeatsToSave);
+            }
         }
 
         return mapToResponse(savedConcert);
@@ -216,6 +252,7 @@ public class ConcertServiceImpl implements ConcertService {
     }
 
     //3 - getById
+    @Transactional
     public ConcertResponse getConcert(UUID concertId) {
         Concert concert = concertRepository.findById(concertId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
@@ -223,11 +260,14 @@ public class ConcertServiceImpl implements ConcertService {
         return mapToResponse(concert);
     }
 
-    //4 - update
+    // 4 - update
+    @Transactional
     public ConcertResponse updateConcert(UUID concertId, UpdateConcertRequest concertRequest) {
+        // 1. Tìm Concert cũ trong DB
         Concert concert = concertRepository.findById(concertId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
 
+        // 2. Cập nhật các thông tin cơ bản
         concert.setTitle(concertRequest.getTitle());
         concert.setArtist(concertRequest.getArtist());
         concert.setConcertDate(concertRequest.getConcertDate());
@@ -238,17 +278,125 @@ public class ConcertServiceImpl implements ConcertService {
         concert.setSaleEndAt(concertRequest.getSaleEndAt());
         concert.setStatus(concertRequest.getStatus());
 
+        // Kiểm tra và cập nhật địa điểm (Venue) nếu có thay đổi
         if (!concert.getVenue().getVenueId().equals(concertRequest.getVenueId())) {
             Venue venue = venueRepository.findById(concertRequest.getVenueId())
                     .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy địa điểm tổ chức"));
             concert.setVenue(venue);
         }
 
+        // 3. XỬ LÝ SƠ ĐỒ GHẾ (ZONES / TIERS / SEATS)
+        if (concertRequest.getZones() != null && !concertRequest.getZones().isEmpty()) {
+
+            // KIỂM TRA LUẬT THÉP: Đã bán vé chưa?
+            long soldTickets = ticketRepository.countByConcert_ConcertId(concertId);
+
+            if (soldTickets > 0) {
+                // Đã bán vé -> Chặn đứng hành động sửa sơ đồ ghế!
+                throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Concert này đã có vé được bán ra! Bạn chỉ được sửa thông tin cơ bản, KHÔNG THỂ thay đổi sơ đồ khu vực và hạng vé.");
+            } else {
+                // Chưa bán vé -> Cho phép "Đập đi xây lại"
+
+                // BƯỚC 3.1: Xóa sạch dữ liệu cũ (Phải xóa từ dưới lên để không lỗi khóa ngoại)
+                seatRepository.deleteByConcert_ConcertId(concertId);
+                seatTierRepository.deleteByConcert_ConcertId(concertId);
+                zoneRepository.deleteByConcert_ConcertId(concertId);
+
+                // Lấy Concert sau khi đã lưu thông tin cơ bản để gắn vào Zone mới
+                Concert savedConcert = concertRepository.save(concert);
+
+                // BƯỚC 3.2: Xây lại sơ đồ mới (Copy y chang logic từ hàm Create)
+                List<Zone> zonesToSave = new ArrayList<>();
+                List<Seat> allSeatsToSave = new ArrayList<>();
+
+                for (ZoneRequest zReq : concertRequest.getZones()) {
+                    Zone zone = new Zone();
+                    zone.setConcert(savedConcert);
+                    zone.setZoneName(zReq.getZoneName());
+                    zone.setPrice(zReq.getPrice());
+                    zone.setCurrency(zReq.getCurrency());
+                    zone.setColorCode(zReq.getColorCode());
+                    zone.setHasSeatMap(zReq.getHasSeatMap() != null ? zReq.getHasSeatMap() : false);
+                    zone.setDisplayOrder(zReq.getDisplayOrder());
+                    zone.setStatus("ACTIVE");
+                    zone.setSoldSeats(0);
+
+                    if (zone.isHasSeatMap() && zReq.getTiers() != null && !zReq.getTiers().isEmpty()) {
+                        int totalSeatsForZone = 0;
+                        Zone savedZone = zoneRepository.save(zone);
+                        zonesToSave.add(savedZone);
+
+                        for (com.example.tttnbe.seat.dto.TierRequest tReq : zReq.getTiers()) {
+                            com.example.tttnbe.seat.entity.SeatTier tier = new com.example.tttnbe.seat.entity.SeatTier();
+                            tier.setZone(savedZone);
+                            tier.setConcert(savedConcert);
+                            tier.setTierName(tReq.getTierName());
+                            tier.setPrice(tReq.getPrice());
+                            tier.setCurrency(tReq.getCurrency() != null ? tReq.getCurrency() : "USDT");
+                            tier.setColorCode(tReq.getColorCode());
+                            tier.setDescription(tReq.getDescription());
+                            tier.setDisplayOrder(tReq.getDisplayOrder() != null ? tReq.getDisplayOrder() : 1);
+
+                            com.example.tttnbe.seat.entity.SeatTier savedTier = seatTierRepository.save(tier);
+
+                            int seatsInTier = tReq.getRowCount() * tReq.getSeatsPerRow();
+                            totalSeatsForZone += seatsInTier;
+
+                            String prefix = (tReq.getRowPrefix() != null && !tReq.getRowPrefix().isBlank()) ? tReq.getRowPrefix().toUpperCase() : "A";
+                            int startIndex = rowLabelToNumber(prefix);
+
+                            for (int i = 0; i < tReq.getRowCount(); i++) {
+                                String currentRow = numberToRowLabel(startIndex + i);
+                                for (int j = 1; j <= tReq.getSeatsPerRow(); j++) {
+                                    Seat seat = new Seat();
+                                    seat.setZone(savedZone);
+                                    seat.setConcert(savedConcert);
+                                    seat.setSeatTier(savedTier);
+                                    seat.setRowLabel(currentRow);
+                                    seat.setSeatNumber(j);
+                                    seat.setSeatLabel(currentRow + j);
+                                    seat.setStatus("AVAILABLE");
+                                    allSeatsToSave.add(seat);
+                                }
+                            }
+                        }
+                        savedZone.setTotalSeats(totalSeatsForZone);
+                        savedZone.setAvailableSeats(totalSeatsForZone);
+                        zoneRepository.save(savedZone);
+
+                    } else {
+                        // Vé đứng
+                        zone.setTotalSeats(zReq.getTotalSeats() != null ? zReq.getTotalSeats() : 0);
+                        zone.setAvailableSeats(zReq.getTotalSeats() != null ? zReq.getTotalSeats() : 0);
+                        Zone savedZone = zoneRepository.save(zone);
+                        zonesToSave.add(savedZone);
+                    }
+                }
+
+                if (savedConcert.getZones() != null) {
+                    // Xóa sạch bộ nhớ tạm của Hibernate về danh sách cũ
+                    savedConcert.getZones().clear();
+                    // Bơm danh sách mới vào (Hibernate sẽ tự hiểu là update)
+                    savedConcert.getZones().addAll(zonesToSave);
+                } else {
+                    savedConcert.setZones(zonesToSave);
+                }
+
+                if (!allSeatsToSave.isEmpty()) {
+                    seatRepository.saveAll(allSeatsToSave);
+                }
+
+                return mapToResponse(savedConcert);
+            }
+        }
+
+        // Nếu FE không gửi danh sách zones lên (chỉ cập nhật thông tin cơ bản)
         Concert savedConcert = concertRepository.save(concert);
         return mapToResponse(savedConcert);
     }
 
-    // 5 - delete (Soft Delete - Xóa mềm)
+    // 5 - delete (Kết hợp Hard Delete và Soft Delete)
+    @Transactional
     public void deleteConcert(UUID concertId) {
         Concert concert = concertRepository.findById(concertId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
@@ -258,17 +406,38 @@ public class ConcertServiceImpl implements ConcertService {
             throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Sự kiện này đã bị hủy từ trước rồi!");
         }
 
-        // Thay vì dùng lệnh delete(), ta chỉ đổi trạng thái thành CANCELLED
-        concert.setStatus("CANCELLED");
+        // KIỂM TRA LUẬT THÉP: Đã có ai mua vé chưa?
+        long soldTickets = ticketRepository.countByConcert_ConcertId(concertId);
 
-        // Lưu bản cập nhật xuống Database
-        concertRepository.save(concert);
+        if (soldTickets == 0) {
+            // ==========================================
+            // TRƯỜNG HỢP 1: CHƯA BÁN VÉ -> HARD DELETE
+            // ==========================================
+            // Quét sạch rác trong DB từ dưới lên trên để không lỗi khóa ngoại
+            seatRepository.deleteByConcert_ConcertId(concertId);
+            seatTierRepository.deleteByConcert_ConcertId(concertId);
+            zoneRepository.deleteByConcert_ConcertId(concertId);
 
-        /*
-         * 💡 GHI CHÚ CHO SAU NÀY (BLOCKCHAIN):
-         * Tại đây, sau khi lưu DB thành công, bạn có thể gọi thêm API/Service của Smart Contract
-         * để vô hiệu hóa (revoke) hàng loạt các vé NFT thuộc về Concert này nếu cần.
-         */
+            // Cuối cùng là xóa luôn Concert này cho DB sạch sẽ
+            concertRepository.delete(concert);
+
+        } else {
+            // ==========================================
+            // TRƯỜNG HỢP 2: ĐÃ BÁN VÉ -> SOFT DELETE (HỦY SHOW)
+            // ==========================================
+            // Đổi trạng thái Concert thành CANCELLED
+            concert.setStatus("CANCELLED");
+            concertRepository.save(concert);
+
+            // 💡 GHI CHÚ CHO BẠN PHÁT TRIỂN TIẾP (Tùy chọn):
+            /*
+             * Chỗ này sau này bạn có thể viết thêm code để:
+             * 1. Cập nhật toàn bộ vé (Tickets) của Concert này thành trạng thái "REVOKED" (Đã thu hồi).
+             * 2. Gọi Smart Contract để đốt (Burn) NFT Tickets trên Blockchain.
+             * 3. Bắn event sang hệ thống Payment để tự động Refund (Hoàn tiền) cho User.
+             * 4. Gửi Email hàng loạt xin lỗi khách hàng.
+             */
+        }
     }
 
     //6 - update status thanh "ON_SALE" khi admin nhan "Mo ban"

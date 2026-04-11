@@ -58,7 +58,7 @@ public class Seat {
 
 
     //=================================================================
-    //Mapping quan he (2)
+    //Mapping quan he (3)
     //=================================================================
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
@@ -69,4 +69,8 @@ public class Seat {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "concert_id", nullable = false)
     private Concert concert; // Ghế này thuộc concert nào
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tier_id")
+    private SeatTier seatTier;
 }

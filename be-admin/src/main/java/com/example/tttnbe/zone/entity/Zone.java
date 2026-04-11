@@ -1,6 +1,7 @@
 package com.example.tttnbe.zone.entity;
 
 import com.example.tttnbe.concert.entity.Concert;
+import com.example.tttnbe.seat.entity.SeatTier;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,6 +12,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -74,4 +76,7 @@ public class Zone {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "concert_id", nullable = false)
     private Concert concert;
+
+    @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<SeatTier> seatTiers;
 }
