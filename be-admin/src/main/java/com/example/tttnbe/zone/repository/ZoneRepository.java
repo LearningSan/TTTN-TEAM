@@ -8,5 +8,6 @@ import java.util.UUID;
 
 @Repository
 public interface ZoneRepository extends JpaRepository<Zone, UUID> {
-
+    // Xóa sạch Zone của một Concert
+    void deleteByConcert_ConcertId(UUID concertId);
 }

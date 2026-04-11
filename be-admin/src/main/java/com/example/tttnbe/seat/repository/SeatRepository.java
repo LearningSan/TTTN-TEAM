@@ -28,4 +28,7 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
                     "WHERE zone_id = :zoneId " +
                     "ORDER BY LEN(row_label) ASC, row_label ASC", nativeQuery = true)
     String findFirstRowLabelByZoneId(@Param("zoneId") UUID zoneId);
+
+    // Xóa sạch ghế của một Concert
+    void deleteByConcert_ConcertId(UUID concertId);
 }

@@ -40,4 +40,7 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
             "JOIN t.payment pt " +
             "WHERE t.ticketId = :ticketId")
     Optional<TicketDetailResponse> getFullTicketDetailById(@Param("ticketId") UUID ticketId);
+
+    // Đếm xem Concert này đã bán được bao nhiêu vé
+    long countByConcert_ConcertId(UUID concertId);
 }
