@@ -1,15 +1,15 @@
 package com.example.tttnbe.zone.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import com.example.tttnbe.seat.dto.TierResponse;
+import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
 public class ZoneResponse {
@@ -22,7 +22,6 @@ public class ZoneResponse {
     private String colorCode;
     private Boolean hasSeatMap;
     private Integer displayOrder;
-    private String rowPrefix;
-    private Integer rowCount;
-    private Integer seatsPerRow;
+
+    private List<TierResponse> tiers;
 }
