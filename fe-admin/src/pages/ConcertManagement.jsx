@@ -266,12 +266,96 @@ const ConcertManagement = () => {
           </div>
 
           <Divider orientation="left">2. Thời gian diễn & Mở bán</Divider>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
-            <Form.Item name="concertDate" label="Ngày diễn" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
-            <Form.Item name="endDate" label="Kết thúc diễn" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
-            <Form.Item name="saleStartAt" label="Mở bán vé" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
-            <Form.Item name="saleEndAt" label="Đóng bán vé" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
-          </div>
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
+  {/* 1. Mở bán vé: Phải >= Hiện tại */}
+  <Form.Item 
+    name="saleStartAt" 
+    label="Mở bán vé" 
+    rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}
+  >
+    <DatePicker 
+      showTime 
+      format="DD/MM/YYYY HH:mm" 
+      style={{width:'100%'}} 
+      disabledDate={(current) => current && current < dayjs().startOf('day')}
+    />
+  </Form.Item>
+
+  {/* 2. Đóng bán vé: Phải sau Mở bán */}
+  <Form.Item 
+    name="saleEndAt" 
+    label="Đóng bán vé" 
+    dependencies={['saleStartAt']}
+    rules={[
+      { required: true, message: 'Vui lòng chọn thời gian!' },
+      ({ getFieldValue }) => ({
+        validator(_, value) {
+          if (!value || value.isAfter(getFieldValue('saleStartAt'))) {
+            return Promise.resolve();
+          }
+          return Promise.reject(new Error('Kết thúc bán phải SAU khi bắt đầu bán!'));
+        },
+      }),
+    ]}
+  >
+    <DatePicker 
+      showTime 
+      format="DD/MM/YYYY HH:mm" 
+      style={{width:'100%'}} 
+      disabledDate={(current) => current && current < dayjs().startOf('day')}
+    />
+  </Form.Item>
+
+  {/* 3. Ngày diễn: Phải sau Đóng bán */}
+  <Form.Item 
+    name="concertDate" 
+    label="Ngày diễn" 
+    dependencies={['saleEndAt']}
+    rules={[
+      { required: true, message: 'Vui lòng chọn thời gian!' },
+      ({ getFieldValue }) => ({
+        validator(_, value) {
+          if (!value || value.isAfter(getFieldValue('saleEndAt'))) {
+            return Promise.resolve();
+          }
+          return Promise.reject(new Error('Ngày diễn phải SAU khi đóng bán vé!'));
+        },
+      }),
+    ]}
+  >
+    <DatePicker 
+      showTime 
+      format="DD/MM/YYYY HH:mm" 
+      style={{width:'100%'}} 
+      disabledDate={(current) => current && current < dayjs().startOf('day')}
+    />
+  </Form.Item>
+
+  {/* 4. Kết thúc diễn: Phải sau Ngày diễn */}
+  <Form.Item 
+    name="endDate" 
+    label="Kết thúc diễn" 
+    dependencies={['concertDate']}
+    rules={[
+      { required: true, message: 'Vui lòng chọn thời gian!' },
+      ({ getFieldValue }) => ({
+        validator(_, value) {
+          if (!value || value.isAfter(getFieldValue('concertDate'))) {
+            return Promise.resolve();
+          }
+          return Promise.reject(new Error('Kết thúc diễn phải SAU khi bắt đầu diễn!'));
+        },
+      }),
+    ]}
+  >
+    <DatePicker 
+      showTime 
+      format="DD/MM/YYYY HH:mm" 
+      style={{width:'100%'}} 
+      disabledDate={(current) => current && current < dayjs().startOf('day')}
+    />
+  </Form.Item>
+</div>
 
           <Divider orientation="left">3. Xây dựng Sơ đồ & Giá vé</Divider>
           <Form.List name="zones">
