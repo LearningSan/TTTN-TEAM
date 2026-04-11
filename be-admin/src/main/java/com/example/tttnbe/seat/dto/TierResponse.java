@@ -17,4 +17,8 @@ public class TierResponse {
     private String colorCode;
     private String description;
     private Integer displayOrder;
+
+    private String rowPrefix;
+    private Integer rowCount;
+    private Integer seatsPerRow;
 }
