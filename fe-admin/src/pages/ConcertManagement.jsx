@@ -512,7 +512,22 @@ const ConcertManagement = () => {
                         render: (_, t) => record.hasSeatMap 
                           ? <Text type="secondary">Bắt đầu: {t.rowPrefix} ({t.rowCount} hàng x {t.seatsPerRow} ghế)</Text>
                           : <Text type="secondary">Vé tự do (Đứng)</Text>
-                      }
+                      },{
+          title: 'Tình trạng Hạng vé',
+          render: (_, t) => {
+            const total = t.totalSeats || 0;
+            const available = t.availableSeats || 0;
+            const booked = total - available;
+            return (
+              <Space direction="vertical" size={0}>
+                <Text strong style={{ fontSize: 12 }}>Tổng: {total}</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>Đã bán: {booked}</Text>
+                <Text type={available > 0 ? 'success' : 'danger'} style={{ fontSize: 12 }}>
+                  Còn trống: {available}
+                </Text>
+              </Space>
+            );
+          }}
                     ]}
                   />
                 ),
