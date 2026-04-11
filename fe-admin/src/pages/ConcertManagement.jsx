@@ -13,7 +13,6 @@ import API from '../api/config';
 dayjs.extend(customParseFormat);
 const { Text } = Typography;
 
-// --- DANH SÁCH 10 MÀU ZONE ---
 const ZONE_COLORS = [
   { value: '#FF4D4F', label: 'Đỏ (Red)' },
   { value: '#1890FF', label: 'Xanh dương (Blue)' },
@@ -36,7 +35,6 @@ const ConcertManagement = () => {
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
-  // --- CẤU HÌNH ĐỊNH DẠNG TỪ API ---
   const API_DATE_FORMAT = "DD/MM/YYYY HH:mm:ss";
 
   const parseApiDate = (dateStr) => {
@@ -57,13 +55,10 @@ const ConcertManagement = () => {
         API.get(`/admin/concerts?page=${page - 1}&size=${pageSize}`),
         API.get('/admin/venues')
       ]);
-
       const cData = resConcerts.data;
       setConcerts(Array.isArray(cData?.content) ? cData.content : (Array.isArray(cData) ? cData : []));
-      
       const vData = resVenues.data;
       setVenues(Array.isArray(vData?.content) ? vData.content : (Array.isArray(vData) ? vData : []));
-
       if (cData?.totalElements !== undefined) {
         setPagination(prev => ({ ...prev, current: page, total: cData.totalElements }));
       }
@@ -86,26 +81,33 @@ const ConcertManagement = () => {
     }
   };
 
-  // Tính Ký tự bắt đầu (rowPrefix) tự động để tránh lỗi trùng lặp DB (uq_seat_position)
-  const getNextPrefixForNewTier = (zName) => {
-    const tiers = form.getFieldValue(['zones', zName, 'tiers']) || [];
-    if (tiers.length === 0) return 'A';
+  // --- THUẬT TOÁN MỚI: TÍNH PREFIX THEO TỪNG ZONE (RESET KHI QUA ZONE MỚI) ---
+  const getNextPrefixInZone = (zoneIndex) => {
+    const zones = form.getFieldValue('zones') || [];
+    const targetZone = zones[zoneIndex];
     
-    const lastTier = tiers[tiers.length - 1];
-    const prefix = (lastTier.rowPrefix || 'A').toUpperCase();
-    const rows = lastTier.rowCount || 1;
-    
-    let startIndex = 0;
-    for (let i = 0; i < prefix.length; i++) {
-      startIndex = startIndex * 26 + (prefix.charCodeAt(i) - 64);
-    }
-    let nextIndex = startIndex + rows; // Ký tự liền kề sau hạng vé trước
-    
+    // Nếu chưa có Tier nào trong Zone này, bắt đầu từ 'A'
+    if (!targetZone || !targetZone.tiers || targetZone.tiers.length === 0) return 'A';
+
+    let maxIndexInZone = 0;
+    targetZone.tiers.forEach(t => {
+      if (t && t.rowPrefix && t.rowCount) {
+        const prefix = t.rowPrefix.toUpperCase();
+        let startIndex = 0;
+        for (let i = 0; i < prefix.length; i++) {
+          startIndex = startIndex * 26 + (prefix.charCodeAt(i) - 64);
+        }
+        const endIndex = startIndex + t.rowCount - 1;
+        if (endIndex > maxIndexInZone) maxIndexInZone = endIndex;
+      }
+    });
+
+    let nextVal = maxIndexInZone + 1;
     let nextPrefix = '';
-    while (nextIndex > 0) {
-      let mod = (nextIndex - 1) % 26;
+    while (nextVal > 0) {
+      let mod = (nextVal - 1) % 26;
       nextPrefix = String.fromCharCode(65 + mod) + nextPrefix;
-      nextIndex = Math.floor((nextIndex - mod) / 26);
+      nextVal = Math.floor((nextVal - mod) / 26);
     }
     return nextPrefix;
   };
@@ -119,23 +121,31 @@ const ConcertManagement = () => {
         endDate: values.endDate ? values.endDate.toISOString() : null,
         saleStartAt: values.saleStartAt ? values.saleStartAt.toISOString() : null,
         saleEndAt: values.saleEndAt ? values.saleEndAt.toISOString() : null,
-        // Map dữ liệu Zones và Tiers chuẩn chỉ theo UX mới
         zones: values.zones?.map((z, i) => {
           const isSeated = z.hasSeatMap;
+          let calculatedTotal = 0; 
+          const mappedTiers = isSeated ? z.tiers?.map((t, j) => {
+            const rCount = t.rowCount || 1;
+            const sCount = t.seatsPerRow || 1;
+            calculatedTotal += (rCount * sCount);
+            return {
+              ...t,
+              tierName: t.tierName || 'STANDARD',
+              displayOrder: j + 1,
+              currency: z.currency || 'USDT',
+              colorCode: z.colorCode || ZONE_COLORS[0].value,
+              rowPrefix: t.rowPrefix?.toUpperCase(),
+              rowCount: rCount,
+              seatsPerRow: sCount
+            };
+          }) || [] : [];
           return {
             ...z,
+            zoneName: z.zoneName?.trim() || `Khu vực ${i+1}`,
             displayOrder: i + 1,
-            colorCode: z.colorCode || '#1890FF',
-            totalSeats: isSeated ? 0 : (z.totalSeats || 0), // Vé đứng lấy totalSeats, Vé ngồi để BE tự tính
-            tiers: isSeated 
-              ? z.tiers?.map((t, j) => ({
-                  ...t,
-                  displayOrder: j + 1,
-                  rowPrefix: t.rowPrefix?.toUpperCase(),
-                  rowCount: t.rowCount,
-                  seatsPerRow: t.seatsPerRow
-                })) || []
-              : [] // NẾU LÀ VÉ ĐỨNG: Xóa sạch mảng tiers để tránh lỗi DB
+            colorCode: z.colorCode || ZONE_COLORS[i % ZONE_COLORS.length].value,
+            totalSeats: isSeated ? calculatedTotal : (z.totalSeats || 1),
+            tiers: mappedTiers
           };
         }) || []
       };
@@ -150,8 +160,8 @@ const ConcertManagement = () => {
       setModalState({ open: false, id: null });
       fetchData(pagination.current);
     } catch (error) {
-      console.error(error);
-      const backendMsg = error.response?.data?.message || 'Có thể do trùng lặp tên Khu vực/Hạng vé hoặc trùng Sơ đồ ghế!';
+      console.error("API Error: ", error.response?.data);
+      const backendMsg = error.response?.data?.message || 'Có lỗi xảy ra!';
       message.error(`Lưu thất bại: ${backendMsg}`);
     } finally { setLoading(false); }
   };
@@ -161,7 +171,6 @@ const ConcertManagement = () => {
     try {
       const res = await API.get(`/admin/concerts/${record.concertId || record.id}`);
       const fullData = res.data;
-
       form.resetFields();
       form.setFieldsValue({
         ...fullData,
@@ -173,10 +182,8 @@ const ConcertManagement = () => {
       });
       setModalState({ open: true, id: fullData.concertId || fullData.id });
     } catch  {
-      message.error("Không thể lấy dữ liệu chi tiết để sửa!");
-    } finally {
-      setLoading(false);
-    }
+      message.error("Không thể lấy dữ liệu chi tiết!");
+    } finally { setLoading(false); }
   };
 
   const columns = [
@@ -188,11 +195,7 @@ const ConcertManagement = () => {
     { title: 'Nghệ sĩ', dataIndex: 'artist' },
     { 
       title: 'Địa điểm', dataIndex: 'venueId',
-      render: (vId, record) => {
-        if (record.venueName) return record.venueName;
-        const matched = venues.find(v => (v.venueId || v.venue_id) === vId);
-        return matched ? (matched.name || matched.venueName) : <Text type="secondary">Chưa cập nhật</Text>;
-      }
+      render: (vId, record) => record.venueName || venues.find(v => (v.venueId || v.venue_id) === vId)?.name || 'Chưa cập nhật'
     },
     { title: 'Ngày diễn', dataIndex: 'concertDate', render: (d) => formatSafeDate(d) },
     { 
@@ -232,17 +235,20 @@ const ConcertManagement = () => {
               form.resetFields(); 
               form.setFieldsValue({ 
                 status: 'DRAFT', 
-                zones: [{ hasSeatMap: true, tiers: [{ tierName: 'STANDARD', price: 0, rowPrefix: 'A', rowCount: 5, seatsPerRow: 10 }] }] 
+                zones: [{ 
+                  zoneName: 'Khu vực 1', price: 10, currency: 'USDT', colorCode: ZONE_COLORS[0].value, 
+                  hasSeatMap: true, 
+                  tiers: [{ price: 10, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] 
+                }] 
               });
               setModalState({ open: true, id: null }); 
-            }}>Tạo mới</Button>
+            }}>Tạo Concert</Button>
           </Space>
         }
       >
         <Table columns={columns} dataSource={concerts} rowKey={(r) => r.concertId || r.id || Math.random()} loading={loading} pagination={pagination} onChange={(p) => fetchData(p.current, p.pageSize)} bordered scroll={{ x: 800 }} />
       </Card>
 
-      {/* MODAL THÊM / SỬA */}
       <Modal 
         title={modalState.id ? "SỬA THÔNG TIN CONCERT" : "TẠO CONCERT MỚI"} 
         open={modalState.open} 
@@ -267,124 +273,109 @@ const ConcertManagement = () => {
             <Form.Item name="saleEndAt" label="Đóng bán vé" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} /></Form.Item>
           </div>
 
-          <Divider orientation="left">3. Cấu trúc Khu vực (Zones) & Cấu hình Ghế (Seats)</Divider>
+          <Divider orientation="left">3. Xây dựng Sơ đồ & Giá vé</Divider>
           <Form.List name="zones">
             {(zoneFields, { add: addZone, remove: removeZone }) => (
               <>
-                {zoneFields.map(({ key: zKey, name: zName, ...restZField }) => {
-                  const currentZone = form.getFieldValue(['zones', zName]);
-                  const isZoneLocked = currentZone?.totalSeats > 0 && currentZone?.availableSeats < currentZone?.totalSeats;
-                  
-                  return (
-                    <Card size="small" key={zKey} style={{ marginBottom: 16, background: '#f8fbff', borderColor: isZoneLocked ? '#ffccc7' : '#bae0ff' }} 
-                      title={<Space>Khu vực #{zName + 1} {isZoneLocked && <Tag color="red">Đã phát sinh giao dịch - Khóa cấu trúc</Tag>}</Space>}
-                      extra={!isZoneLocked && zoneFields.length > 1 && <Button type="link" danger onClick={() => removeZone(zName)}>Xóa Khu vực</Button>}
-                    >
-                      <Form.Item {...restZField} name={[zName, 'zoneId']} hidden><Input /></Form.Item>
-                      
-                      {/* --- THÔNG TIN CƠ BẢN CỦA ZONE --- */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1.5fr', gap: '12px' }}>
-                        <Form.Item {...restZField} name={[zName, 'zoneName']} label="Tên Khu vực" rules={[{ required: true }]}><Input disabled={isZoneLocked} placeholder="VD: VIP A, Sân đứng..."/></Form.Item>
-                        <Form.Item {...restZField} name={[zName, 'price']} label="Giá gốc (Base Price)" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
-                        <Form.Item {...restZField} name={[zName, 'currency']} label="Tiền tệ" rules={[{ required: true }]}><Select disabled={isZoneLocked} options={[{value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'}]} /></Form.Item>
-                        <Form.Item {...restZField} name={[zName, 'colorCode']} label="Màu hiển thị" rules={[{ required: true }]}>
-                          <Select disabled={isZoneLocked} options={ZONE_COLORS.map(c => ({ value: c.value, label: <Space><div style={{width: 12, height: 12, background: c.value, borderRadius: '50%'}}></div>{c.label}</Space> }))} />
-                        </Form.Item>
-                      </div>
+                {zoneFields.map(({ key: zKey, name: zName, ...restZField }) => (
+                  <Form.Item noStyle shouldUpdate key={zKey}>
+                    {() => {
+                      const currentZone = form.getFieldValue(['zones', zName]) || {};
+                      const isZoneLocked = currentZone.totalSeats > 0 && currentZone.availableSeats < currentZone.totalSeats;
+                      const hasSeatMap = currentZone.hasSeatMap;
+                      const activeColor = currentZone.colorCode || '#d9d9d9';
 
-                      {/* --- UX/UI: VÉ NGỒI VS VÉ ĐỨNG --- */}
-                      <Form.Item noStyle shouldUpdate>
-                        {() => {
-                          const hasSeatMap = form.getFieldValue(['zones', zName, 'hasSeatMap']);
-                          return (
-                            <div style={{ marginBottom: 8 }}>
-                              <Form.Item {...restZField} name={[zName, 'hasSeatMap']} label="Tính chất khu vực (Vé đứng / Vé ngồi)" valuePropName="checked" style={{ marginBottom: 12 }}>
-                                <Switch disabled={isZoneLocked} checkedChildren="Vé ngồi (Có ghế và Phân hạng)" unCheckedChildren="Vé đứng (Khu vực tự do)" />
-                              </Form.Item>
+                      return (
+                        <Card 
+                          size="small" 
+                          style={{ 
+                            marginBottom: 20, borderLeft: `6px solid ${activeColor}`,
+                            background: isZoneLocked ? '#fff1f0' : '#fcfcfc',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                          }} 
+                          title={<Space><b style={{fontSize: 16}}>Khu vực #{zName + 1}</b> {isZoneLocked && <Tag color="red">🔒 Đã bán vé - Khóa cấu trúc</Tag>}</Space>}
+                          extra={!isZoneLocked && zoneFields.length > 1 && <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeZone(zName)}>Xóa Khu vực</Button>}
+                        >
+                          <Form.Item {...restZField} name={[zName, 'zoneId']} hidden><Input /></Form.Item>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1.5fr', gap: '12px', marginTop: 8, marginBottom: 16 }}>
+                            <Form.Item {...restZField} name={[zName, 'zoneName']} label="Tên Khu vực" rules={[{ required: true }]}><Input disabled={isZoneLocked} /></Form.Item>
+                            <Form.Item {...restZField} name={[zName, 'price']} label="Giá gốc (Base)" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
+                            <Form.Item {...restZField} name={[zName, 'currency']} label="Tiền tệ" rules={[{ required: true }]}><Select disabled={isZoneLocked} options={[{value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'},{value: 'BNB', label: 'BNB'}]} /></Form.Item>
+                            <Form.Item {...restZField} name={[zName, 'colorCode']} label="Màu hiển thị" rules={[{ required: true }]}>
+                              <Select disabled={isZoneLocked} options={ZONE_COLORS.map(c => ({ value: c.value, label: <Space><div style={{width: 12, height: 12, background: c.value, borderRadius: '50%'}}></div>{c.label}</Space> }))} />
+                            </Form.Item>
+                          </div>
 
-                              {!hasSeatMap ? (
-                                // NẾU LÀ VÉ ĐỨNG -> Chỉ hỏi số lượng vé
-                                <div style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #d9d9d9' }}>
-                                  <Text strong type="warning" style={{display:'block', marginBottom:12}}>🎫 Đối với vé đứng, bạn chỉ cần nhập tổng số vé bán ra. Hệ thống sẽ bỏ qua bước tạo sơ đồ ghế.</Text>
-                                  <Form.Item {...restZField} name={[zName, 'totalSeats']} label="Tổng số vé bán ra" rules={[{ required: true }]}>
-                                    <InputNumber disabled={isZoneLocked} min={1} style={{width:'30%'}} placeholder="VD: 1000" />
-                                  </Form.Item>
-                                </div>
-                              ) : (
-                                // NẾU LÀ VÉ NGỒI -> Hiện UI phân hạng và cấu hình ghế rõ ràng
-                                <Card type="inner" title="Thiết lập Phân hạng (Tiers) & Cấu hình Sơ đồ ghế" style={{ background: '#fff' }}>
-                                  <Form.List name={[zName, 'tiers']}>
-                                    {(tierFields, { add: addTier, remove: removeTier }) => (
-                                      <>
-                                        {tierFields.map(({ key: tKey, name: tName, ...restTField }, index) => (
-                                          <div key={tKey} style={{ background: '#fafafa', padding: 12, marginBottom: 12, borderRadius: 6, border: '1px dashed #d9d9d9' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                                              <Text strong>Hạng vé #{index + 1}</Text>
-                                              {!isZoneLocked && tierFields.length > 1 && (
-                                                <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeTier(tName)} size="small" />
-                                              )}
-                                            </div>
-                                            
-                                            <Form.Item {...restTField} name={[tName, 'tierId']} hidden><Input /></Form.Item>
-                                            
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                              <Form.Item {...restTField} name={[tName, 'tierName']} label="Tên Hạng (VD: VIP, STANDARD)" rules={[{ required: true }]}>
-                                                <Input disabled={isZoneLocked} placeholder="Nhập tên hạng..." />
-                                              </Form.Item>
-                                              <Form.Item {...restTField} name={[tName, 'price']} label="Giá hạng vé" rules={[{ required: true }]}>
-                                                <InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} />
-                                              </Form.Item>
-                                            </div>
+                          <div style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #e8e8e8' }}>
+                            <Form.Item {...restZField} name={[zName, 'hasSeatMap']} label="Tính chất Không gian" valuePropName="checked">
+                              <Switch disabled={isZoneLocked} checkedChildren="🎫 VÉ NGỒI" unCheckedChildren="🏃 VÉ ĐỨNG" />
+                            </Form.Item>
 
-                                            <Divider style={{ margin: '8px 0' }} dashed />
-                                            <Text type="secondary" style={{fontSize: 12, marginBottom: 8, display:'block'}}>Cấu hình sơ đồ ghế cho hạng này:</Text>
-                                            
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                                              <Form.Item {...restTField} name={[tName, 'rowPrefix']} label="Ký tự bắt đầu (VD: A)" rules={[{ required: true }]}>
-                                                <Input disabled={isZoneLocked} style={{textTransform:'uppercase'}} placeholder="A, B, AA..." />
-                                              </Form.Item>
-                                              <Form.Item {...restTField} name={[tName, 'rowCount']} label="Số lượng hàng" rules={[{ required: true }]}>
-                                                <InputNumber disabled={isZoneLocked} min={1} style={{width:'100%'}} placeholder="VD: 5" />
-                                              </Form.Item>
-                                              <Form.Item {...restTField} name={[tName, 'seatsPerRow']} label="Số ghế mỗi hàng" rules={[{ required: true }]}>
-                                                <InputNumber disabled={isZoneLocked} min={1} style={{width:'100%'}} placeholder="VD: 20" />
-                                              </Form.Item>
-                                            </div>
-                                          </div>
-                                        ))}
-                                        {!isZoneLocked && (
-                                          <Button type="dashed" onClick={() => addTier({ tierName: '', price: 0, rowPrefix: getNextPrefixForNewTier(zName), rowCount: 1, seatsPerRow: 10 })} block icon={<PlusOutlined />}>Thêm Phân Hạng Vé Mới</Button>
-                                        )}
-                                      </>
+                            {!hasSeatMap ? (
+                              <div style={{ background: '#e6f7ff', padding: 12, borderRadius: 6 }}>
+                                <Form.Item {...restZField} name={[zName, 'totalSeats']} label="Tổng số vé bán ra" rules={[{ required: true }]}>
+                                  <InputNumber disabled={isZoneLocked} min={1} style={{width:'30%'}} />
+                                </Form.Item>
+                              </div>
+                            ) : (
+                              <Form.List name={[zName, 'tiers']}>
+                                {(tierFields, { add: addTier, remove: removeTier }) => (
+                                  <>
+                                    {tierFields.map(({ key: tKey, name: tName, ...restTField }, index) => (
+                                      <div key={tKey} style={{ background: '#fafafa', padding: 12, marginBottom: 12, borderRadius: 6, border: '1px dashed #d9d9d9' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                          <Text strong>📌 Phân Hạng (Tier) #{index + 1}</Text>
+                                          {!isZoneLocked && tierFields.length > 1 && (
+                                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeTier(tName)} size="small" />
+                                          )}
+                                        </div>
+                                        <Form.Item {...restTField} name={[tName, 'tierId']} hidden><Input /></Form.Item>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                          <Form.Item {...restTField} name={[tName, 'tierName']} label="Tên Hạng" rules={[{ required: true }]}>
+                                            <Select disabled={isZoneLocked} placeholder="-- Chọn hạng vé --">
+                                              <Select.Option value="VIP">VIP</Select.Option>
+                                              <Select.Option value="MID">MID</Select.Option>
+                                              <Select.Option value="STANDARD">STANDARD</Select.Option>
+                                            </Select>
+                                          </Form.Item>
+                                          <Form.Item {...restTField} name={[tName, 'price']} label="Giá hạng" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                                          <Form.Item {...restTField} name={[tName, 'rowPrefix']} label="Bắt đầu" rules={[{ required: true }]}>
+                                            <Input disabled={isZoneLocked} style={{textTransform:'uppercase', fontWeight: 'bold'}} />
+                                          </Form.Item>
+                                          <Form.Item {...restTField} name={[tName, 'rowCount']} label="Số hàng" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={1} style={{width:'100%'}} /></Form.Item>
+                                          <Form.Item {...restTField} name={[tName, 'seatsPerRow']} label="Ghế/Hàng" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={1} style={{width:'100%'}} /></Form.Item>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {!isZoneLocked && (
+                                      <Button type="dashed" onClick={() => addTier({ price: currentZone.price || 0, rowPrefix: getNextPrefixInZone(zName), rowCount: 1, seatsPerRow: 2 })} block icon={<PlusOutlined />}>Thêm Phân Hạng</Button>
                                     )}
-                                  </Form.List>
-                                </Card>
-                              )}
-                            </div>
-                          );
-                        }}
-                      </Form.Item>
-
-                    </Card>
-                  );
-                })}
-                <Button type="dashed" onClick={() => addZone({ hasSeatMap: true, tiers: [{ tierName: 'STANDARD', price: 0, rowPrefix: getNextPrefixForNewTier(zoneFields.length - 1), rowCount: 5, seatsPerRow: 10 }] })} block icon={<PlusOutlined />} style={{ height: 40 }}>
-                  Thêm Khu Vực (Zone)
+                                  </>
+                                )}
+                              </Form.List>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    }}
+                  </Form.Item>
+                ))}
+                <Button type="dashed" onClick={() => addZone({ zoneName: `Khu vực ${zoneFields.length + 1}`, price: 10, currency: 'USDT', colorCode: ZONE_COLORS[zoneFields.length % ZONE_COLORS.length].value, hasSeatMap: true, tiers: [{  price: 10, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] })} block icon={<PlusOutlined />} style={{ height: 40, borderColor: '#1890ff', color: '#1890ff' }}>
+                  Thêm Khu Vực Mới
                 </Button>
               </>
             )}
           </Form.List>
 
-          <Divider orientation="left">4. Cấu hình khác</Divider>
+          <Divider orientation="left">4. Khác</Divider>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <Form.Item name="bannerURL" label="Đường dẫn ảnh Banner"><Input /></Form.Item>
-            <Form.Item name="status" label="Trạng thái Concert"><Select options={['DRAFT', 'ON_SALE', 'COMPLETED', 'CANCELLED'].map(v => ({value:v, label:v}))} /></Form.Item>
+            <Form.Item name="bannerURL" label="Ảnh Banner"><Input /></Form.Item>
+            <Form.Item name="status" label="Trạng thái"><Select options={['DRAFT', 'ON_SALE', 'COMPLETED', 'CANCELLED'].map(v => ({value:v, label:v}))} /></Form.Item>
           </div>
-          <Form.Item name="description" label="Mô tả sự kiện"><Input.TextArea rows={3} /></Form.Item>
-          
-          <Button type="primary" htmlType="submit" block size="large" loading={loading} style={{height: 50, fontSize: 16, marginTop: 10}}>
-            {modalState.id ? "LƯU THAY ĐỔI" : "XÁC NHẬN TẠO CONCERT"}
-          </Button>
+          <Form.Item name="description" label="Mô tả"><Input.TextArea rows={3} /></Form.Item>
+          <Button type="primary" htmlType="submit" block size="large" loading={loading} style={{height: 50, fontSize: 16}}>XÁC NHẬN</Button>
         </Form>
       </Modal>
 
