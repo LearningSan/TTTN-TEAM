@@ -9,7 +9,7 @@ import {
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import API from '../api/config';
-
+import SeatMapBuilder from '../components/SeatMapBuilder';
 dayjs.extend(customParseFormat);
 const { Text } = Typography;
 
@@ -115,8 +115,10 @@ const ConcertManagement = () => {
   const handleFinish = async (values) => {
     setLoading(true);
     try {
+      const concertDescriptionObj = { text: values.description || '', stages: values.stages || [] };
       const payload = {
         ...values,
+        description: JSON.stringify(concertDescriptionObj),
         concertDate: values.concertDate ? values.concertDate.toISOString() : null,
         endDate: values.endDate ? values.endDate.toISOString() : null,
         saleStartAt: values.saleStartAt ? values.saleStartAt.toISOString() : null,
@@ -171,14 +173,31 @@ const ConcertManagement = () => {
     try {
       const res = await API.get(`/admin/concerts/${record.concertId || record.id}`);
       const fullData = res.data;
+      // 📦 GIẢI NÉN JSON KHI SỬA
+      let descText = fullData.description, savedStages = [];
+      try {
+        if (descText?.startsWith('{')) {
+          const parsed = JSON.parse(descText);
+          descText = parsed.text; savedStages = parsed.stages || [];
+        }
+      } catch  { console.warn("Lỗi parse description"); }
+
+      const processedZones = fullData.zones?.map(z => {
+        let layout = { x: 50, y: 150, w: 120, h: 60 };
+        try { if (z.description?.startsWith('{')) layout = JSON.parse(z.description); } catch  { console.warn("Lỗi parse zone layout"); }
+        return { ...z, layoutConfig: layout };
+      });
       form.resetFields();
       form.setFieldsValue({
         ...fullData,
+        description: descText,
+        stages: savedStages,
+        zones: processedZones,
         concertDate: parseApiDate(fullData.concertDate),
         endDate: parseApiDate(fullData.endDate),
         saleStartAt: parseApiDate(fullData.saleStartAt),
         saleEndAt: parseApiDate(fullData.saleEndAt),
-        zones: fullData.zones || []
+        // zones: fullData.zones || []
       });
       setModalState({ open: true, id: fullData.concertId || fullData.id });
     } catch  {
@@ -232,7 +251,7 @@ const ConcertManagement = () => {
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => fetchData(pagination.current)}>Làm mới</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => { 
-              form.resetFields(); 
+              // form.resetFields(); 
               form.setFieldsValue({ 
                 status: 'DRAFT', 
                 zones: [{ 
@@ -256,6 +275,7 @@ const ConcertManagement = () => {
         footer={null} width={1100} destroyOnClose
       >
         <Form layout="vertical" form={form} onFinish={handleFinish}>
+          <SeatMapBuilder form={form} />
           <Divider orientation="left">1. Thông tin chung</Divider>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px' }}>
             <Form.Item name="title" label="Tên chương trình" rules={[{ required: true }]}><Input size="large" /></Form.Item>
