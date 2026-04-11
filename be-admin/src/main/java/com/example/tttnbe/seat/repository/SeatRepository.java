@@ -10,24 +10,25 @@ import java.util.UUID;
 
 @Repository
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
-    //dem hang ghe cua 1 khu vuc - rowCount
+    // 1. Đếm số lượng hàng ghế của 1 Hạng vé (rowCount)
     @Query("SELECT COUNT(DISTINCT s.rowLabel) " +
             "FROM Seat s " +
-            "WHERE s.zone.zoneId = :zoneId")
-    Integer countRowsByZoneId(@Param("zoneId") UUID zoneId);
+            "WHERE s.seatTier.tierId = :tierId")
+    Integer countRowsByTierId(@Param("tierId") UUID tierId);
 
-    //tim stt lon nhat cua moi hang ghe - seatsPerRow
+    // 2. Tìm số lượng ghế lớn nhất trên 1 hàng của Hạng vé (seatsPerRow)
     @Query("SELECT MAX(s.seatNumber) " +
             "FROM Seat s " +
-            "WHERE s.zone.zoneId = :zoneId")
-    Integer findMaxSeatNumberByZoneId(@Param("zoneId") UUID zoneId);
+            "WHERE s.seatTier.tierId = :tierId")
+    Integer findMaxSeatNumberByTierId(@Param("tierId") UUID tierId);
 
-    //tim ky tu cua hang ghe dau tien - rowPrefix
+    // 3. Tìm ký tự của hàng ghế đầu tiên (rowPrefix)
+    // (Vẫn dùng nativeQuery cho chuẩn xác vì ORDER BY độ dài string trong JPQL hơi phức tạp)
     @Query(value = "SELECT TOP 1 row_label " +
-                    "FROM seats " +
-                    "WHERE zone_id = :zoneId " +
-                    "ORDER BY LEN(row_label) ASC, row_label ASC", nativeQuery = true)
-    String findFirstRowLabelByZoneId(@Param("zoneId") UUID zoneId);
+            "FROM seats " +
+            "WHERE tier_id = :tierId " +
+            "ORDER BY LEN(row_label) ASC, row_label ASC", nativeQuery = true)
+    String findFirstRowLabelByTierId(@Param("tierId") UUID tierId);
 
     // Xóa sạch ghế của một Concert
     void deleteByConcert_ConcertId(UUID concertId);
