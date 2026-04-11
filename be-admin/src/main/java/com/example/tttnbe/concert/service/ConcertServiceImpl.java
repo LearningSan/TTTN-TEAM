@@ -82,6 +82,10 @@ public class ConcertServiceImpl implements ConcertService {
                         Integer rowCount = seatRepository.countRowsByTierId(tier.getTierId());
                         Integer seatsPerRow = seatRepository.findMaxSeatNumberByTierId(tier.getTierId());
 
+                        // 2. Lấy thông số thống kê số lượng vé (MỚI THÊM)
+                        Integer totalSeats = seatRepository.countTotalSeatsByTierId(tier.getTierId());
+                        Integer availableSeats = seatRepository.countAvailableSeatsByTierId(tier.getTierId());
+
                         return new com.example.tttnbe.seat.dto.TierResponse(
                                 tier.getTierId(),
                                 tier.getTierName(),
@@ -90,9 +94,11 @@ public class ConcertServiceImpl implements ConcertService {
                                 tier.getColorCode(),
                                 tier.getDescription(),
                                 tier.getDisplayOrder(),
-                                rowPrefix,   // 👈 Đã bổ sung biến thứ 8
-                                rowCount,    // 👈 Đã bổ sung biến thứ 9
-                                seatsPerRow  // 👈 Đã bổ sung biến thứ 10
+                                rowPrefix,
+                                rowCount,
+                                seatsPerRow,
+                                totalSeats,      // 👈 Trả về cho FE
+                                availableSeats
                         );
                     }).collect(Collectors.toList());
                 }
