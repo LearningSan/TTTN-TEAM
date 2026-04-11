@@ -12,6 +12,7 @@ import com.example.tttnbe.concert.repository.ConcertRepository;
 import com.example.tttnbe.common.exception.CustomException;
 import com.example.tttnbe.seat.dto.TierResponse;
 import com.example.tttnbe.seat.entity.Seat;
+import com.example.tttnbe.seat.entity.SeatTier;
 import com.example.tttnbe.seat.repository.SeatRepository;
 import com.example.tttnbe.seat.repository.SeatTierRepository;
 import com.example.tttnbe.ticket.dto.TicketListItemResponse;
@@ -70,18 +71,30 @@ public class ConcertServiceImpl implements ConcertService {
                 // 1. Móc danh sách Tiers từ trong Zone ra và biến thành TierResponse
                 List<TierResponse> tierResponses = null;
 
+
                 // (⚠️ Đảm bảo trong Entity Zone của bạn đã có quan hệ:
                 // @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL) private List<SeatTier> seatTiers;)
                 if (zone.getSeatTiers() != null && !zone.getSeatTiers().isEmpty()) {
-                    tierResponses = zone.getSeatTiers().stream().map(tier -> new com.example.tttnbe.seat.dto.TierResponse(
-                            tier.getTierId(),
-                            tier.getTierName(),
-                            tier.getPrice(),
-                            tier.getCurrency(),
-                            tier.getColorCode(),
-                            tier.getDescription(),
-                            tier.getDisplayOrder()
-                    )).collect(Collectors.toList());
+                    tierResponses = zone.getSeatTiers().stream().map(tier -> {
+
+                        // 🌟 DÙNG SEAT REPOSITORY ĐỂ LẤY 3 THÔNG SỐ VẼ SƠ ĐỒ CHO FE 🌟
+                        String rowPrefix = seatRepository.findFirstRowLabelByTierId(tier.getTierId());
+                        Integer rowCount = seatRepository.countRowsByTierId(tier.getTierId());
+                        Integer seatsPerRow = seatRepository.findMaxSeatNumberByTierId(tier.getTierId());
+
+                        return new com.example.tttnbe.seat.dto.TierResponse(
+                                tier.getTierId(),
+                                tier.getTierName(),
+                                tier.getPrice(),
+                                tier.getCurrency(),
+                                tier.getColorCode(),
+                                tier.getDescription(),
+                                tier.getDisplayOrder(),
+                                rowPrefix,   // 👈 Đã bổ sung biến thứ 8
+                                rowCount,    // 👈 Đã bổ sung biến thứ 9
+                                seatsPerRow  // 👈 Đã bổ sung biến thứ 10
+                        );
+                    }).collect(Collectors.toList());
                 }
 
                 // 2. Nhét Tiers vào trong ZoneResponse
@@ -187,7 +200,7 @@ public class ConcertServiceImpl implements ConcertService {
                         tier.setDescription(tReq.getDescription());
                         tier.setDisplayOrder(tReq.getDisplayOrder() != null ? tReq.getDisplayOrder() : 1);
 
-                        com.example.tttnbe.seat.entity.SeatTier savedTier = seatTierRepository.save(tier);
+                        SeatTier savedTier = seatTierRepository.save(tier);
 
                         // 2. Logic sinh ghế chuẩn Excel cho Tier này
                         int seatsInTier = tReq.getRowCount() * tReq.getSeatsPerRow();
