@@ -395,7 +395,8 @@ public class ConcertServiceImpl implements ConcertService {
         return mapToResponse(savedConcert);
     }
 
-    // 5 - delete (Soft Delete - Xóa mềm)
+    // 5 - delete (Kết hợp Hard Delete và Soft Delete)
+    @Transactional
     public void deleteConcert(UUID concertId) {
         Concert concert = concertRepository.findById(concertId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
@@ -405,17 +406,38 @@ public class ConcertServiceImpl implements ConcertService {
             throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Sự kiện này đã bị hủy từ trước rồi!");
         }
 
-        // Thay vì dùng lệnh delete(), ta chỉ đổi trạng thái thành CANCELLED
-        concert.setStatus("CANCELLED");
+        // KIỂM TRA LUẬT THÉP: Đã có ai mua vé chưa?
+        long soldTickets = ticketRepository.countByConcert_ConcertId(concertId);
 
-        // Lưu bản cập nhật xuống Database
-        concertRepository.save(concert);
+        if (soldTickets == 0) {
+            // ==========================================
+            // TRƯỜNG HỢP 1: CHƯA BÁN VÉ -> HARD DELETE
+            // ==========================================
+            // Quét sạch rác trong DB từ dưới lên trên để không lỗi khóa ngoại
+            seatRepository.deleteByConcert_ConcertId(concertId);
+            seatTierRepository.deleteByConcert_ConcertId(concertId);
+            zoneRepository.deleteByConcert_ConcertId(concertId);
 
-        /*
-         * 💡 GHI CHÚ CHO SAU NÀY (BLOCKCHAIN):
-         * Tại đây, sau khi lưu DB thành công, bạn có thể gọi thêm API/Service của Smart Contract
-         * để vô hiệu hóa (revoke) hàng loạt các vé NFT thuộc về Concert này nếu cần.
-         */
+            // Cuối cùng là xóa luôn Concert này cho DB sạch sẽ
+            concertRepository.delete(concert);
+
+        } else {
+            // ==========================================
+            // TRƯỜNG HỢP 2: ĐÃ BÁN VÉ -> SOFT DELETE (HỦY SHOW)
+            // ==========================================
+            // Đổi trạng thái Concert thành CANCELLED
+            concert.setStatus("CANCELLED");
+            concertRepository.save(concert);
+
+            // 💡 GHI CHÚ CHO BẠN PHÁT TRIỂN TIẾP (Tùy chọn):
+            /*
+             * Chỗ này sau này bạn có thể viết thêm code để:
+             * 1. Cập nhật toàn bộ vé (Tickets) của Concert này thành trạng thái "REVOKED" (Đã thu hồi).
+             * 2. Gọi Smart Contract để đốt (Burn) NFT Tickets trên Blockchain.
+             * 3. Bắn event sang hệ thống Payment để tự động Refund (Hoàn tiền) cho User.
+             * 4. Gửi Email hàng loạt xin lỗi khách hàng.
+             */
+        }
     }
 
     //6 - update status thanh "ON_SALE" khi admin nhan "Mo ban"
