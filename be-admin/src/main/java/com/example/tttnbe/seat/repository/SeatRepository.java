@@ -32,4 +32,12 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
 
     // Xóa sạch ghế của một Concert
     void deleteByConcert_ConcertId(UUID concertId);
+
+    // 5. Đếm TỔNG SỐ GHẾ của một Hạng vé
+    @Query("SELECT COUNT(s) FROM Seat s WHERE s.seatTier.tierId = :tierId")
+    Integer countTotalSeatsByTierId(@Param("tierId") UUID tierId);
+
+    // 6. Đếm SỐ GHẾ CÒN TRỐNG (AVAILABLE) của một Hạng vé
+    @Query("SELECT COUNT(s) FROM Seat s WHERE s.seatTier.tierId = :tierId AND s.status = 'AVAILABLE'")
+    Integer countAvailableSeatsByTierId(@Param("tierId") UUID tierId);
 }

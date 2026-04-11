@@ -21,4 +21,7 @@ public class TierResponse {
     private String rowPrefix;
     private Integer rowCount;
     private Integer seatsPerRow;
+
+    private Integer totalSeats;
+    private Integer availableSeats;
 }
