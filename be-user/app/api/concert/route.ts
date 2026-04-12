@@ -2,39 +2,31 @@
  * @swagger
  * /api/concert:
  *   get:
- *     summary: Lấy danh sách concert
- *     description: API hỗ trợ tìm kiếm theo artist, status và phân trang
+ *     summary: Tìm kiếm danh sách concert
+ *     description:  
+ *       API hỗ trợ tìm kiếm theo artist, status và phân trang.
+ *       Các trường trong request body **không bắt buộc**, nếu không truyền sẽ dùng giá trị mặc định.
  *     tags:
  *       - Concert
- *     parameters:
- *       - in: query
- *         name: artist
- *         required: false
- *         description: Tìm theo tên nghệ sĩ
- *         schema:
- *           type: string
- *           example: "Sơn Tùng"
- *       - in: query
- *         name: status
- *         required: false
- *         description: Trạng thái concert (ACTIVE, INACTIVE,...)
- *         schema:
- *           type: string
- *           example: "ACTIVE"
- *       - in: query
- *         name: page
- *         required: false
- *         description: Trang hiện tại
- *         schema:
- *           type: integer
- *           example: 1
- *       - in: query
- *         name: pageSize
- *         required: false
- *         description: Số lượng item mỗi trang
- *         schema:
- *           type: integer
- *           example: 10
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               artist:
+ *                 type: string
+ *                 example: "Sơn Tùng"
+ *               status:
+ *                 type: string
+ *                 example: "ACTIVE"
+ *               page:
+ *                 type: integer
+ *                 example: 1
+ *               pageSize:
+ *                 type: integer
+ *                 example: 10
  *     responses:
  *       200:
  *         description: Lấy danh sách concert thành công

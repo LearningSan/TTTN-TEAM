@@ -82,3 +82,45 @@ export async function updateOrderPayment(
     throw error;
   }
 }
+
+
+
+export async function getPaymentById(payment_id: string) {
+  try {
+    const db = await connectDB();
+
+    const result = await db.request()
+      .input("payment_id", payment_id)
+      .query(`
+        SELECT * FROM payment_transactions
+        WHERE payment_id = @payment_id
+      `);
+
+    return result.recordset[0];
+  } catch (error) {
+    console.error("Error in getPaymentById:", error);
+    throw new Error("Lấy thông tin payment thất bại");
+  }
+}
+
+export async function markPaymentSuccess(payment_id: string, hash: string, transaction?: any) {
+  try {
+    const request = transaction ? transaction.request() : (await connectDB()).request();
+
+    await request
+      .input("payment_id", payment_id)
+      .input("hash", hash)
+      .query(`
+        UPDATE payment_transactions
+        SET 
+          payment_status = 'SUCCESS',
+          transaction_hash = @hash,
+          confirmed_at = GETDATE(),
+          updated_at = GETDATE()
+        WHERE payment_id = @payment_id
+      `);
+  } catch (error) {
+    console.error("Error in markPaymentSuccess:", error);
+    throw new Error("Cập nhật payment thành công thất bại");
+  }
+}

@@ -110,6 +110,21 @@ export type seats = {
   locked_by_user_id: string | null,
   lock_expires_at: string | null, 
   created_at: string             
+  tier_id: string | null
+};
+
+export type seat_tiers = {
+  tier_id: string;         
+  zone_id: string;         
+  concert_id: string;       
+  tier_name: string;        
+  price: number;           
+  currency: string;        
+  color_code: string | null; 
+  description: string | null; 
+  display_order: number;   
+  created_at: string;      
+  updated_at: string;      
 };
 export type order = {
   order_id: string,
@@ -134,6 +149,7 @@ export type order_item = {
   quantity: number;
   unit_price: number;
   subtotal: number; // quantity * unit_price
+  tier_id:string | null;
 };
 export type tickets = {
   ticket_id: string;

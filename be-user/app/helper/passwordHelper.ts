@@ -33,7 +33,7 @@ export async function sendMail(email: string) {
 }
 
 export async function sendOTPEmail(to: string, otp: string) {
-  const transporter =await nodemailer.createTransport({
+  const transporter = await nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
@@ -43,13 +43,51 @@ export async function sendOTPEmail(to: string, otp: string) {
 
   try {
     const info = await transporter.sendMail({
-      from: `"Support" <${process.env.EMAIL_USER}>`,
+      from: `"Support Team" <${process.env.EMAIL_USER}>`,
       to,
-      subject: "OTP Reset Password",
-      text: `Mã OTP của bạn là: ${otp} (hết hạn 5 phút)`,
+      subject: "Mã OTP đặt lại mật khẩu",
+      html: `
+      <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 40px 0;">
+        <div style="max-width: 500px; margin: auto; background: #ffffff; border-radius: 10px; padding: 30px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+
+          <h2 style="color: #333;">🔐 Xác thực OTP</h2>
+
+          <p style="color: #555; font-size: 14px;">
+            Bạn vừa yêu cầu đặt lại mật khẩu.<br/>
+            Sử dụng mã OTP bên dưới để tiếp tục:
+          </p>
+
+          <div style="
+            margin: 25px 0;
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 6px;
+            color: #4CAF50;
+            background: #f1f8f4;
+            padding: 15px;
+            border-radius: 8px;
+            display: inline-block;
+          ">
+            ${otp}
+          </div>
+
+          <p style="font-size: 13px; color: #999;">
+            Mã này sẽ hết hạn sau <b>5 phút</b>.
+          </p>
+
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+
+          <p style="font-size: 12px; color: #999;">
+            Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.
+          </p>
+
+        </div>
+      </div>
+      `,
     });
 
     console.log(" Mail sent:", info);
+
   } catch (err) {
     console.error("Send mail error:", err);
     throw err;

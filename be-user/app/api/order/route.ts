@@ -60,7 +60,6 @@ import { verifyToken } from "@/app/helper/authenHelper";
 import { createOrder } from "@/app/helper/orderHelper";
 export async function POST(req: NextRequest) {
   try {
-    // 👉 lấy token từ cookie
     const token = req.cookies.get("access_token")?.value;
 
     if (!token) {
@@ -70,7 +69,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 👉 decode token bằng hàm của bạn
     const decoded = await verifyToken(token);
 
     if (!decoded) {
@@ -80,7 +78,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user_id = decoded.user_id; // ✅ lấy ở đây
+    const user_id = decoded.user_id; 
 
     const body = await req.json();
     const { concert_id, items, currency, note } = body;

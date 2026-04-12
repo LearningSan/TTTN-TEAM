@@ -132,3 +132,24 @@ export async function lockSeats(user_id: string, items: any[]) {
     }
   }
 }
+export async function markSeatsBookedByOrder(order_id: string, transaction?: any) {
+  try {
+    const request = transaction ? transaction.request() : (await connectDB()).request();
+
+    await request
+      .input("order_id", order_id)
+      .query(`
+        UPDATE s
+        SET 
+          s.status = 'BOOKED',
+          s.updated_at = GETDATE()
+        FROM seats s
+        INNER JOIN order_items oi 
+          ON s.seat_id = oi.seat_id
+        WHERE oi.order_id = @order_id
+      `);
+  } catch (error) {
+    console.error("Error in markSeatsBookedByOrder:", error);
+    throw new Error("Đánh dấu ghế BOOKED thất bại");
+  }
+}

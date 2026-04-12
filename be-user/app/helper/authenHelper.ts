@@ -6,6 +6,7 @@ import { findSocial,createSocial } from "../lib/social_account";
 import { error } from "node:console";
 import { users } from "../lib/defination";
 import { NextResponse } from "next/server";
+import { activateUser } from "@/app/lib/user";
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret"; 
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "supersecret";
 
@@ -75,7 +76,7 @@ export async function GoogleLogin(code: string) {
   });
 
   const user = await userRes.json();
-  const { email, name, id} = user;
+  const { email, name, id,picture} = user;
   let social = await findSocial("google", id);
   let userId;
 
@@ -85,7 +86,7 @@ export async function GoogleLogin(code: string) {
   } else {
     let existingUser = await getUser(email);
     if (!existingUser) {
-      const newUser = await createUser(email,null, name);
+      const newUser = await createUser(email,null, name,picture);
         if (!newUser) {
     throw new Error("Create user failed");
   }
@@ -93,6 +94,7 @@ export async function GoogleLogin(code: string) {
     } else {
       userId = existingUser.user_id;
     }
+      await activateUser(userId);
 
     await createSocial(userId, "google", id,email);
   }
@@ -132,7 +134,7 @@ export async function FacebookLogin(code: string) {
   );
 
   const user = await userRes.json();
-  const { id, name, email } = user;
+  const { id, name, email,picture } = user;
 
   let social = await findSocial("facebook", id);
   let userId;
@@ -142,14 +144,15 @@ export async function FacebookLogin(code: string) {
   } else {
     let existingUser = await getUser(email);
     if (!existingUser) {
-      const newUser = await createUser(email, null, name);
+      const newUser = await createUser(email, null, name,picture?.data?.url);
       if (!newUser) throw new Error("Create user failed");
       userId = newUser.user_id;
     } else {
       userId = existingUser.user_id;
     }
+      await activateUser(userId);
 
-    await createSocial(userId, "facebook", id);
+    await createSocial(userId, "facebook", id,email);
   }
 
   const tokenDataFB = await createToken({ user_id: userId, email, name });

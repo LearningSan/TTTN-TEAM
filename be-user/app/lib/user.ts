@@ -26,7 +26,8 @@ export async function getUser(email: string): Promise<users | undefined> {
 export async function createUser(
   email: string,
   password: string | null,
-  name: string
+  name: string,
+  avatar_url?: string 
 ): Promise<users | null> {
   try {
     const existingUser = await getUser(email);
@@ -44,9 +45,10 @@ export async function createUser(
       .input("email", email)
       .input("password_hash", password_hash)
       .input("name", name)
+      .input("avatar_url", avatar_url ?? null) 
       .query(`
-        INSERT INTO users (email, password_hash, name) 
-        VALUES (@email, @password_hash, @name)
+        INSERT INTO users (email, password_hash, name, avatar_url) 
+        VALUES (@email, @password_hash, @name, @avatar_url)
       `);
 
     const user = await getUser(email);
@@ -57,7 +59,25 @@ export async function createUser(
     throw new Error('Failed to create new user');
   }
 }
+export async function activateUser(userId: string): Promise<void> {
+  try {
+    const db = await connectDB();
 
+    await db.request()
+      .input("user_id", userId)
+      .query(`
+        UPDATE users
+        SET status = 'ACTIVE',
+            email_verified = 1
+        WHERE user_id = @user_id
+          AND (status <> 'ACTIVE' OR email_verified <> 1)
+      `);
+
+  } catch (error) {
+    console.error("Failed to activate user", error);
+    throw new Error("Failed to activate user");
+  }
+}
 export async function updatePassword(user_id: string, password_hash: string) {
   const db = await connectDB();
 

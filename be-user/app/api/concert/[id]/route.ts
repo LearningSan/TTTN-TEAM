@@ -9,11 +9,21 @@
  *     parameters:
  *       - in: path
  *         name: id
- *         required: true
- *         description: ID của concert
  *         schema:
  *           type: string
- *           example: "6d626e3b-2747-4f13-8a35-299729a78d19"
+ *         description: ID của concert cần lấy
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - concert_id
+ *             properties:
+ *               concert_id:
+ *                 type: string
+ *                 example: "6d626e3b-2747-4f13-8a35-299729a78d19"
  *     responses:
  *       200:
  *         description: Lấy dữ liệu thành công

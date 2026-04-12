@@ -1,6 +1,6 @@
 import { getZonePrice } from "../lib/zone";
 import { validateSeats,lockSeats } from "../lib/seat";
-import { insertOrder, insertOrderItem } from "../lib/order";
+import { insertOrder, insertOrderItem,getOrderById } from "../lib/order";
 
  export type CreateOrderInput = {
   user_id: string;
@@ -10,7 +10,8 @@ import { insertOrder, insertOrderItem } from "../lib/order";
   note?: string;
 };
 export async function createOrder(data: CreateOrderInput) {
-  const { user_id, concert_id, items, currency, note } = data;
+  try {
+    const { user_id, concert_id, items, currency, note } = data;
 
   await validateSeats(concert_id, items);
 
@@ -69,4 +70,21 @@ export async function createOrder(data: CreateOrderInput) {
       total_amount
     }
   };
+  } catch (error: any) {
+  throw new Error(error.message);
+}
+
+  
+}
+export async function getSpecificOrder(order_id: string) {
+try {
+  const order = await getOrderById(order_id);
+  if (!order) {
+    throw new Error("Order not found");
+  }
+  return order;
+} catch (error: any) {
+  throw new Error(error.message);
+}
+
 }

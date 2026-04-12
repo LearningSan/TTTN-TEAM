@@ -5,6 +5,12 @@
  *     summary: Lấy thông tin chi tiết ghế theo seat_id
  *     tags:
  *       - Order
+*     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         description: ID của ghế cần lấy
  *     requestBody:
  *       required: true
  *       content:

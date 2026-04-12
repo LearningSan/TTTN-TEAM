@@ -44,7 +44,7 @@ export default async function middleware(req: NextRequest) {
     return new NextResponse(null, {
       status: 200,
       headers: {
-        "Access-Control-Allow-Origin": "http://localhost:1573",
+        "Access-Control-Allow-Origin": "http://localhost:5173",
         "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Credentials": "true",
@@ -57,7 +57,7 @@ export default async function middleware(req: NextRequest) {
   const { user, newAccessToken, newRefreshToken } = await handleTokens(accessToken, refreshToken);
 
   const res = NextResponse.next();
- res.headers.set("Access-Control-Allow-Origin", "http://localhost:1573");
+ res.headers.set("Access-Control-Allow-Origin", "http://localhost:5173");
   res.headers.set("Access-Control-Allow-Credentials", "true");
   res.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.headers.set("Access-Control-Allow-Headers", "Content-Type");
@@ -77,15 +77,15 @@ export default async function middleware(req: NextRequest) {
     });
   }
 
-  const onDashboard = req.nextUrl.pathname.startsWith("/dashboard");
+//   const onDashboard = req.nextUrl.pathname.startsWith("/dashboard");
 
-  if (onDashboard && !user) {
-  return NextResponse.redirect(new URL("/login", req.url));
-}
+//   if (onDashboard && !user) {
+//   return NextResponse.redirect(new URL("/login", req.url));
+// }
 
-if (!onDashboard && user) {
-  return NextResponse.redirect(new URL("/dashboard", req.url));
-}
+// if (!onDashboard && user) {
+//   return NextResponse.redirect(new URL("/swagger", req.url));
+// }
   return res;
 }
 

@@ -13,7 +13,8 @@ export async function GET() {
       {name: "Payment", description: "API liên quan đến thanh toán"},
       {name: "Order", description: "API liên quan đến đơn hàng"},
       {name:"Login", description: "API liên quan đến đăng nhập và xác thực"},
-      {name:"Concert", description: "API liên quan đến concert"}
+      {name:"Concert", description: "API liên quan đến concert"},
+      {name:"Tickets", description: "API liên quan đến vé"},
 
       ]
     },
