@@ -12,7 +12,6 @@ const STAGE_SHAPES = [
 ];
 
 const SeatMapBuilder = ({ form }) => {
-  // Lấy dữ liệu trực tiếp từ form để hiển thị
   const zones = Form.useWatch('zones', form) || [];
   const stages = Form.useWatch('stages', form) || [];
 
@@ -36,35 +35,32 @@ const SeatMapBuilder = ({ form }) => {
         {/* =============== RENDER SÂN KHẤU ================= */}
         {stages.map((stg, idx) => (
           <Rnd
-            // Dùng tên kết hợp index để làm key động tránh lỗi khi xóa
             key={`stg-rnd-${idx}-${stg?.name}`} 
             bounds="parent"
             dragGrid={[10, 10]}
-            
-            // 🚀 BÍ QUYẾT Ở ĐÂY: Dùng 'default' thay vì 'position'
             default={{
-              x: stg?.x || 300,
-              y: stg?.y || 20,
-              width: stg?.w || 200,
-              height: stg?.h || 80
+              x: stg?.layoutConfig?.x || 300,
+              y: stg?.layoutConfig?.y || 20,
+              width: stg?.layoutConfig?.w || 200,
+              height: stg?.layoutConfig?.h || 80
             }}
-            
-            // Chỉ âm thầm cập nhật Form khi thả chuột, không ép vị trí UI
             onDragStop={(e, d) => {
               const currentStages = [...(form.getFieldValue('stages') || [])];
               if(currentStages[idx]) {
-                currentStages[idx].x = d.x;
-                currentStages[idx].y = d.y;
+                currentStages[idx].layoutConfig = { ...(currentStages[idx].layoutConfig || {}), x: d.x, y: d.y };
                 form.setFieldsValue({ stages: currentStages });
               }
             }}
             onResizeStop={(e, dir, ref, delta, pos) => {
               const currentStages = [...(form.getFieldValue('stages') || [])];
               if(currentStages[idx]) {
-                 currentStages[idx].w = parseInt(ref.style.width);
-                 currentStages[idx].h = parseInt(ref.style.height);
-                 currentStages[idx].x = pos.x;
-                 currentStages[idx].y = pos.y;
+                 currentStages[idx].layoutConfig = { 
+                   ...(currentStages[idx].layoutConfig || {}), 
+                   w: parseInt(ref.style.width), 
+                   h: parseInt(ref.style.height), 
+                   x: pos.x, 
+                   y: pos.y 
+                 };
                  form.setFieldsValue({ stages: currentStages });
               }
             }}
@@ -93,15 +89,7 @@ const SeatMapBuilder = ({ form }) => {
               key={`zone-rnd-${idx}-${z?.zoneName}`}
               bounds="parent"
               dragGrid={[10, 10]}
-              
-              // 🚀 BÍ QUYẾT: Dùng 'default' để Rnd tự xử lý mượt mà
-              default={{
-                x: layout.x,
-                y: layout.y,
-                width: layout.w,
-                height: layout.h
-              }}
-              
+              default={{ x: layout.x, y: layout.y, width: layout.w, height: layout.h }}
               disableDragging={isLocked}
               enableResizing={!isLocked}
               onDragStop={(e, d) => {
@@ -145,7 +133,6 @@ const SeatMapBuilder = ({ form }) => {
         })}
       </div>
 
-      {/* TOOLBAR QUẢN LÝ SÂN KHẤU */}
       <Card size="small" title="Quản lý Khối Sân khấu" variant="borderless" style={{ background: 'transparent' }}>
         <Form.List name="stages">
           {(fields, { add, remove }) => (
@@ -157,11 +144,15 @@ const SeatMapBuilder = ({ form }) => {
                     <Form.Item {...restField} name={[name, 'shape']} noStyle>
                       <Select options={STAGE_SHAPES} style={{ width: 110 }} />
                     </Form.Item>
+                    <Form.Item {...restField} name={[name, 'layoutConfig', 'x']} hidden><Input /></Form.Item>
+    <Form.Item {...restField} name={[name, 'layoutConfig', 'y']} hidden><Input /></Form.Item>
+    <Form.Item {...restField} name={[name, 'layoutConfig', 'w']} hidden><Input /></Form.Item>
+    <Form.Item {...restField} name={[name, 'layoutConfig', 'h']} hidden><Input /></Form.Item>
                     <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
                   </Space>
                 ))}
               </div>
-              <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ name: 'STAGE', shape: 'rectangle', x: 200, y: 50, w: 200, h: 80 })}>
+              <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ name: 'STAGE', shape: 'rectangle', layoutConfig: {x: 300, y: 50, w: 200, h: 80} })}>
                 Thêm khối Sân khấu mới
               </Button>
             </>
