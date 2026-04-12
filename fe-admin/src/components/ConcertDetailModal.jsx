@@ -10,13 +10,13 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
       open={open} 
       onCancel={onCancel} 
       footer={[<Button key="close" type="primary" onClick={onCancel}>Đóng</Button>]} 
-      width={900}
+      width={1100}
       loading={loading}
     >
       {data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <Divider orientation="left">Sa bàn Sân khấu</Divider>
+          <Divider orientation="left">Sơ đồ Sân khấu</Divider>
           {(() => {
              let parsedDesc = { text: data.description, stages: [], zoneLayouts: [] };
              try { if(data.description?.startsWith('{')) parsedDesc = JSON.parse(data.description); } catch {console.warn("Lỗi parse JSON");}
@@ -69,7 +69,8 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
 
                    {/* Vẽ Zones giống hệt SeatMapBuilder */}
                    {zones.map((z, i) => {
-                      const layout = zoneLayouts[i] || { x: 0, y: 0, w: 0, h: 0 };
+                    const matchedZone = zoneLayouts.find(layoutObj => layoutObj.zoneName === z.zoneName);
+                      const layout = matchedZone ? matchedZone.layoutConfig : { x: 0, y: 0, w: 0, h: 0 };
                       return (
                          <div 
                           key={`view-zone-${i}`} 

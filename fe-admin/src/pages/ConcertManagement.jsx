@@ -79,8 +79,15 @@ const ConcertManagement = () => {
     try {
       const concertDescriptionObj = { 
         text: values.description || '', 
+        canvasConfig: {
+        width: 1100, // Chiều rộng chuẩn của Modal/Canvas lúc Admin vẽ
+        height: 550  // Chiều cao chuẩn của khung đen
+      },
         stages: values.stages || [],
-        zoneLayouts: values.zones?.map(z => z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 }) 
+        zoneLayouts: values.zones?.map(z => ({
+    zoneName: z.zoneName, 
+    layoutConfig: z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 }
+  }))
       };
 
       const payload = {
@@ -142,8 +149,9 @@ const ConcertManagement = () => {
         }
       } catch  { console.warn("Lỗi parse description"); }
 
-      const processedZones = fullData.zones?.map((z, idx) => {
-        const layout = savedZoneLayouts[idx] || { x: 50 + (idx * 20), y: 150, w: 120, h: 60 };
+      const processedZones = fullData.zones?.map((z) => {
+        const matchedZone = savedZoneLayouts.find(layoutObj => layoutObj.zoneName === z.zoneName);
+        const layout = matchedZone ? matchedZone.layoutConfig : { x: 50, y: 150, w: 120, h: 60 };
         return { ...z, layoutConfig: layout };
       });
 
