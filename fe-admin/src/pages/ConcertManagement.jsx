@@ -194,7 +194,7 @@ const ConcertManagement = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => { 
               form.setFieldsValue({ 
                 status: 'DRAFT', 
-                stages: [{ name: 'STAGE', shape: 'rectangle', layoutConfig: {x: 300, y: 20, w: 200, h: 80} }],
+                stages: [{ name: 'Sân khấu', shape: 'rectangle', layoutConfig: {x: 300, y: 20, w: 200, h: 80} }],
                 zones: [{ zoneName: 'Khu vực 1', price: 10, currency: 'USDT', colorCode: ZONE_COLORS[0].value, hasSeatMap: true, layoutConfig: {x: 50, y: 150, w: 120, h: 60}, tiers: [{ price: 10, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] }] 
               });
               setModalState({ open: true, id: null }); 

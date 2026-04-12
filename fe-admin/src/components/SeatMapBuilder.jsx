@@ -152,7 +152,7 @@ const SeatMapBuilder = ({ form }) => {
                   </Space>
                 ))}
               </div>
-              <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ name: 'STAGE', shape: 'rectangle', layoutConfig: {x: 300, y: 50, w: 200, h: 80} })}>
+              <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ name: 'Sân khấu', shape: 'rectangle', layoutConfig: {x: 300, y: 50, w: 200, h: 80} })}>
                 Thêm khối Sân khấu mới
               </Button>
             </>

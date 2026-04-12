@@ -53,7 +53,7 @@ const ConcertFormModal = ({ open, modalId, onCancel, form, onFinish, loading, ve
           </Form.Item>
         </div>
 
-        <Divider orientation="left">2. Thời gian diễn & Mở bán</Divider>
+        <Divider orientation="left">2. Thời gian bán vé và diễn</Divider>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
           <Form.Item name="saleStartAt" label="Mở bán vé" rules={[{ required: true }]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} disabledDate={(current) => current && current < dayjs().startOf('day')} /></Form.Item>
           <Form.Item name="saleEndAt" label="Đóng bán vé" dependencies={['saleStartAt']} rules={[{ required: true }, ({ getFieldValue }) => ({ validator(_, value) { if (!value || value.isAfter(getFieldValue('saleStartAt'))) return Promise.resolve(); return Promise.reject(new Error('Kết thúc bán phải SAU khi bắt đầu bán!')); }, })]}><DatePicker showTime format="DD/MM/YYYY HH:mm" style={{width:'100%'}} disabledDate={(current) => current && current < dayjs().startOf('day')} /></Form.Item>
@@ -87,9 +87,9 @@ const ConcertFormModal = ({ open, modalId, onCancel, form, onFinish, loading, ve
   <Form.Item {...restZField} name={[zName, 'layoutConfig', 'h']} hidden><Input /></Form.Item>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1.5fr', gap: '12px', marginTop: 8, marginBottom: 16 }}>
                           <Form.Item {...restZField} name={[zName, 'zoneName']} label="Tên Khu vực" rules={[{ required: true }]}><Input disabled={isZoneLocked} /></Form.Item>
-                          <Form.Item {...restZField} name={[zName, 'price']} label="Giá gốc (Base)" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
+                          <Form.Item {...restZField} name={[zName, 'price']} label="Giá khu vực" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
                           <Form.Item {...restZField} name={[zName, 'currency']} label="Tiền tệ" rules={[{ required: true }]}><Select disabled={isZoneLocked} options={[{value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'},{value: 'BNB', label: 'BNB'}]} /></Form.Item>
-                          <Form.Item {...restZField} name={[zName, 'colorCode']} label="Màu hiển thị" rules={[{ required: true }]}><Select disabled={isZoneLocked} options={zoneColors.map(c => ({ value: c.value, label: <Space><div style={{width: 12, height: 12, background: c.value, borderRadius: '50%'}}></div>{c.label}</Space> }))} /></Form.Item>
+                          <Form.Item {...restZField} name={[zName, 'colorCode']} label="Màu khu vực" rules={[{ required: true }]}><Select disabled={isZoneLocked} options={zoneColors.map(c => ({ value: c.value, label: <Space><div style={{width: 12, height: 12, background: c.value, borderRadius: '50%'}}></div>{c.label}</Space> }))} /></Form.Item>
                         </div>
 
                         <div style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #e8e8e8' }}>
@@ -109,9 +109,29 @@ const ConcertFormModal = ({ open, modalId, onCancel, form, onFinish, loading, ve
                                     <div key={tKey} style={{ background: '#fafafa', padding: 12, marginBottom: 12, borderRadius: 6, border: '1px dashed #d9d9d9' }}>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><Text strong>📌 Phân Hạng (Tier) #{index + 1}</Text>{!isZoneLocked && tierFields.length > 1 && (<Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeTier(tName)} size="small" />)}</div>
                                       <Form.Item {...restTField} name={[tName, 'tierId']} hidden><Input /></Form.Item>
-                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                                         <Form.Item {...restTField} name={[tName, 'tierName']} label="Tên Hạng" rules={[{ required: true }]}><Select disabled={isZoneLocked} placeholder="-- Chọn hạng vé --"><Select.Option value="VIP">VIP</Select.Option><Select.Option value="MID">MID</Select.Option><Select.Option value="STANDARD">STANDARD</Select.Option></Select></Form.Item>
                                         <Form.Item {...restTField} name={[tName, 'price']} label="Giá hạng" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
+                                        <Form.Item 
+    {...restTField} 
+    name={[tName, 'colorCode']} 
+    label="Màu hạng vé" 
+    rules={[{ required: true }]}
+    initialValue={currentZone.colorCode} // Mặc định lấy theo màu của Zone
+  >
+    <Select 
+      disabled={isZoneLocked} 
+      options={zoneColors.map(c => ({ 
+        value: c.value, 
+        label: (
+          <Space>
+            <div style={{width: 12, height: 12, background: c.value, borderRadius: '50%'}}></div>
+            {c.label}
+          </Space>
+        ) 
+      }))} 
+    />
+  </Form.Item>
                                       </div>
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                                         <Form.Item {...restTField} name={[tName, 'rowPrefix']} label="Bắt đầu" rules={[{ required: true }]}><Input disabled={isZoneLocked} style={{textTransform:'uppercase', fontWeight: 'bold'}} /></Form.Item>
