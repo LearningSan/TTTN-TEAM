@@ -306,6 +306,39 @@ public class ConcertServiceImpl implements ConcertService {
     // 4 - update
     @Transactional
     public ConcertResponse updateConcert(UUID concertId, UpdateConcertRequest concertRequest) {
+        // ==========================================
+        // 🛡️ LỚP PHÒNG THỦ 2.1: RÀNG BUỘC THỜI GIAN (TIME LOGIC)
+        // ==========================================
+        if (concertRequest.getSaleStartAt().isAfter(concertRequest.getSaleEndAt()) ||
+                concertRequest.getSaleStartAt().isEqual(concertRequest.getSaleEndAt())) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian mở bán vé phải diễn ra TRƯỚC thời gian đóng bán!");
+        }
+
+        if (concertRequest.getConcertDate().isAfter(concertRequest.getEndDate()) ||
+                concertRequest.getConcertDate().isEqual(concertRequest.getEndDate())) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian bắt đầu sự kiện phải diễn ra TRƯỚC thời gian kết thúc!");
+        }
+
+        if (concertRequest.getSaleEndAt().isAfter(concertRequest.getConcertDate())) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Phải kết thúc đóng cửa bán vé TRƯỚC HOẶC ĐÚNG LÚC sự kiện bắt đầu!");
+        }
+
+        // ==========================================
+        // 🛡️ LỚP PHÒNG THỦ 2.2: BẪY ĐỤNG SHOW KHI UPDATE
+        // ==========================================
+        // Khác với Create, khi Update ta phải DẶN DATABASE LÀ:
+        // "Tìm xem có ai đụng show không, nhưng NHỚ LOẠI TRỪ CHÍNH CÁI CONCERT NÀY RA NHÉ!"
+        // (Nếu không loại trừ, nó sẽ báo đụng show với chính nó)
+        boolean isVenueBooked = concertRepository.existsByVenueIdAndDateOverlapForUpdate(
+                concertRequest.getVenueId(),
+                concertRequest.getConcertDate(),
+                concertRequest.getEndDate(),
+                concertId // 👈 Truyền ID hiện tại vào để loại trừ
+        );
+        if (isVenueBooked) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Địa điểm này đã có một sự kiện khác đặt lịch trong khung giờ này!");
+        }
+
         // 1. Tìm Concert cũ trong DB
         Concert concert = concertRepository.findById(concertId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy concert với ID: " + concertId));
