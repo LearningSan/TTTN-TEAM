@@ -285,10 +285,13 @@ public class ConcertServiceImpl implements ConcertService {
     }
 
     //2 - getAll co phan trang
-    public PageResponse<ConcertResponse> getAllConcerts(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+    public PageResponse<ConcertResponse> getAllConcerts(int page, int size, String keyword, UUID venueId, String status) {
 
-        Page<Concert> concertPage = concertRepository.findAll(pageable);
+        int currentPage = (page > 0) ? page - 1 : 0;
+        Pageable pageable = PageRequest.of(currentPage, size, Sort.by("createdAt").descending());
+
+        Page<Concert> concertPage = concertRepository.searchConcerts(keyword, venueId, status, pageable);
+
         Page<ConcertResponse> dtoPage = concertPage.map(this::mapToResponse);
 
         return PageResponse.from(dtoPage);

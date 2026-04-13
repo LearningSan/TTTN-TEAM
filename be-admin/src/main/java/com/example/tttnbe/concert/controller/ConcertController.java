@@ -29,9 +29,14 @@ public class ConcertController {
 
     @GetMapping
     public ResponseEntity<PageResponse<ConcertResponse>> getAllConcerts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(concertService.getAllConcerts(page, size)); //200
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) UUID venueId,
+            @RequestParam(required = false) String status) {
+
+        PageResponse<ConcertResponse> response = concertService.getAllConcerts(page, size, keyword, venueId, status);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{concertId}")
