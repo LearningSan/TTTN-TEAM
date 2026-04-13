@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Col, Row, Select, Typography, Empty, message } from 'antd';
 import API from '../api/config';
-
+import TicketInvoiceModal from '../components/TicketInvoiceModal';
 // Import các Component con đệ vừa tạo
 import TicketOverview from '../components/TicketOverview';
 import TicketZoneStats from '../components/TicketZoneStats';
@@ -20,7 +20,7 @@ const TicketManagement = () => {
   const [loadingTickets, setLoadingTickets] = useState(false);
   
   const [ticketPagination, setTicketPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-
+  const [invoiceModal, setInvoiceModal] = useState({ open: false, ticketId: null });
   // Lấy danh sách Concert vào SelectBox
   useEffect(() => {
     const fetchConcertList = async () => {
@@ -129,9 +129,15 @@ const TicketManagement = () => {
             pagination={ticketPagination} 
             onChangePage={fetchTickets} 
             concertId={selectedConcertId}
+            onViewInvoice={(tId) => setInvoiceModal({ open: true, ticketId: tId })}
           />
         </>
       )}
+      <TicketInvoiceModal 
+        open={invoiceModal.open} 
+        ticketId={invoiceModal.ticketId} 
+        onCancel={() => setInvoiceModal({ open: false, ticketId: null })} 
+      />
     </div>
   );
 };
