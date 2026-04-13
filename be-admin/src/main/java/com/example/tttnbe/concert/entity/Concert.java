@@ -66,6 +66,9 @@ public class Concert {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(name = "layout_config", columnDefinition = "NVARCHAR(MAX)")
+    private String layoutConfig;
+
 
     //=================================================================
     //Mapping quan he (3)

@@ -41,5 +41,7 @@ public class ConcertResponse {
     private UUID venueId;
     private String venueName;
 
+    private String layoutConfig;
+
     private List<ZoneResponse> zones;
 }
