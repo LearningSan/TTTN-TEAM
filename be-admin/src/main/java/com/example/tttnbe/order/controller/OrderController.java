@@ -32,7 +32,7 @@ public class OrderController {
     }
 
     // API 2: Thống kê tổng quan cho Dashboard
-    @GetMapping("/total")
+    @GetMapping("/revenue/total")
     public ResponseEntity<DashboardStatsResponse> getDashboardStats() {
         DashboardStatsResponse stats = orderService.getDashboardStats();
         return ResponseEntity.ok(stats);
