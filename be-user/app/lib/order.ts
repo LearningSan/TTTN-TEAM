@@ -50,39 +50,36 @@ export async function insertOrder(data: any): Promise<string> {
 export async function insertOrderItem(data: any) {
   const db = await connectDB();
 
-  try {
-    const request = db.request()
-      .input("order_id", data.order_id)
-      .input("zone_id", data.zone_id)
-      .input("seat_id", data.seat_id)
-      .input("quantity", data.quantity)
-      .input("unit_price", data.unit_price);
+  const request = db.request()
+    .input("order_id", data.order_id)
+    .input("zone_id", data.zone_id)
+    .input("tier_id", data.tier_id || null)
+    .input("seat_id", data.seat_id || null)
+    .input("quantity", data.quantity)
+    .input("unit_price", data.unit_price);
 
-    const query = `
-      INSERT INTO order_items (
-        order_id,
-        zone_id,
-        seat_id,
-        quantity,
-        unit_price
-      )
-      VALUES (
-        @order_id,
-        @zone_id,
-        @seat_id,
-        @quantity,
-        @unit_price
-      )
-    `;
+  const query = `
+    INSERT INTO order_items (
+      order_id,
+      zone_id,
+      tier_id,
+      seat_id,
+      quantity,
+      unit_price
+    )
+    VALUES (
+      @order_id,
+      @zone_id,
+      @tier_id,
+      @seat_id,
+      @quantity,
+      @unit_price
+    )
+  `;
 
-    await request.query(query);
+  await request.query(query);
 
-    return true;
-
-  } catch (error) {
-    console.error("insertOrderItem DB error:", error);
-    throw error;
-  }
+  return true;
 }
 export async function getOrderById(order_id: string) {
   const db = await connectDB();

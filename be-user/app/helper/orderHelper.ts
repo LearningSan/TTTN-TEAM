@@ -1,7 +1,6 @@
-import { getZonePrice } from "../lib/zone";
-import { validateSeats,lockSeats } from "../lib/seat";
+import { getZoneById } from "../lib/zone";
+import { validateSeats,lockSeats, getSeatById } from "../lib/seat";
 import { insertOrder, insertOrderItem,getOrderById } from "../lib/order";
-
  export type CreateOrderInput = {
   user_id: string;
   concert_id: string;
@@ -10,25 +9,53 @@ import { insertOrder, insertOrderItem,getOrderById } from "../lib/order";
   note?: string;
 };
 export async function createOrder(data: CreateOrderInput) {
-  try {
-    const { user_id, concert_id, items, currency, note } = data;
+  const { user_id, concert_id, items, currency, note } = data;
 
   await validateSeats(concert_id, items);
 
   let total_amount = 0;
-  const orderItems = [];
+  const orderItems: any[] = [];
 
   for (const item of items) {
-    const price = await getZonePrice(item.zone_id);
-    const subtotal = price * item.quantity;
+    const zone = await getZoneById(item.zone_id);
 
+    let unit_price = 0;
+    let tier_id: string | null = null;
+
+
+    if (!zone.has_seat_map) {
+      if ("seat_id" in item) {
+        throw new Error(
+          `Zone ${item.zone_id} does not support seat selection`
+        );
+      }
+
+      unit_price = zone.price;
+    }
+
+
+    else {
+      if (!item.seat_id) {
+        throw new Error(
+          `seat_id is required for zone ${item.zone_id}`
+        );
+      }
+
+      const seatInfo = await getSeatById(item.seat_id);
+
+      unit_price = seatInfo.price;
+      tier_id = seatInfo.tier_id;
+    }
+
+    const subtotal = unit_price * item.quantity;
     total_amount += subtotal;
 
     orderItems.push({
       zone_id: item.zone_id,
-      seat_id: item.seat_id,
+      seat_id: item.seat_id ?? null,
+      tier_id,
       quantity: item.quantity,
-      unit_price: price
+      unit_price,
     });
   }
 
@@ -37,44 +64,21 @@ export async function createOrder(data: CreateOrderInput) {
     concert_id,
     total_amount,
     currency,
-    note
+    note,
   });
 
   for (const item of orderItems) {
     await insertOrderItem({
       order_id,
-      ...item
+      ...item,
     });
   }
-  await lockSeats(user_id, orderItems);
-
-  // 🔥 thêm expires_at để FE countdown
-  const expires_at = new Date(Date.now() + 15 * 60 * 1000);
 
   return {
-    order: {
-      order_id,
-      user_id,
-      concert_id,
-      total_amount,
-      currency,
-      order_status: "PENDING",
-      note: note || null,
-      created_at: new Date(),
-      expires_at
-    },
+    order_id,
+    total_amount,
     items: orderItems,
-    summary: {
-      total_items: orderItems.length,
-      total_quantity: orderItems.reduce((sum, i) => sum + i.quantity, 0),
-      total_amount
-    }
   };
-  } catch (error: any) {
-  throw new Error(error.message);
-}
-
-  
 }
 export async function getSpecificOrder(order_id: string) {
 try {

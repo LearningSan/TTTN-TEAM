@@ -5,7 +5,7 @@
  *     summary: Đăng nhập bằng email và password
  *     description: API dùng để xác thực người dùng và trả về accessToken + refreshToken (qua cookies)
  *     tags:
- *       - Auth
+ *       - Login
  *     requestBody:
  *       required: true
  *       content:

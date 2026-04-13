@@ -1,17 +1,26 @@
 /**
  * @swagger
  * /api/concert/{id}:
- *   get:
+ *   post:
  *     summary: Lấy chi tiết concert theo ID
- *     description: API trả về thông tin concert kèm danh sách zone và venue
+ *     description: |
+ *       Trả về thông tin chi tiết concert và venue.
+ *
+ *       ⚠️ Lưu ý quan trọng:
+ *       - API này KHÔNG trả về giá vé
+ *       - Để lấy giá vé, cần gọi API `/api/zone`
+ *       - Frontend sẽ tự tính giá thấp nhất / cao nhất từ danh sách zones
+ *
+ *       Luồng chuẩn:
+ *       1. Gọi `/api/concert/{id}` để lấy thông tin concert + venue
+ *       2. Gọi `/api/zone` để lấy danh sách zone
+ *       3. Tự tính giá:
+ *          - minPrice = Math.min(...zones.map(z => z.price))
+ *          - maxPrice = Math.max(...zones.map(z => z.price))
+ *
  *     tags:
  *       - Concert
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         description: ID của concert cần lấy
+ *
  *     requestBody:
  *       required: true
  *       content:
@@ -23,46 +32,109 @@
  *             properties:
  *               concert_id:
  *                 type: string
- *                 example: "6d626e3b-2747-4f13-8a35-299729a78d19"
+ *                 example: "C1"
+ *                 description: ID của concert
+ *
  *     responses:
  *       200:
- *         description: Lấy dữ liệu thành công
+ *         description: Lấy thông tin concert thành công
  *         content:
  *           application/json:
- *             example:
- *               success: true
- *               data:
- *                 - concert_id: "abc"
- *                   title: "Live Concert"
- *                   artist: "Sơn Tùng M-TP"
- *                   concert_date: "2026-05-01T20:00:00Z"
- *                   end_date: "2026-05-01T23:00:00Z"
- *                   sale_start_at: "2026-04-01T00:00:00Z"
- *                   sale_end_at: "2026-04-30T23:59:59Z"
- *                   is_on_sale: true
- *                   zone_id: "zone1"
- *                   zone_name: "VIP"
- *                   price: 1500000
- *                   total_seats: 100
- *                   available_seats: 50
- *                   sold_seats: 50
- *                   venue_id: "venue1"
- *                   venue_name: "Sân vận động Mỹ Đình"
- *                   address: "Hà Nội"
- *                   district: "Nam Từ Liêm"
- *                   city: "Hà Nội"
- *                   country: "Việt Nam"
- *       400:
- *         description: Thiếu concert_id
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     concert:
+ *                       type: object
+ *                       properties:
+ *                         concert_id:
+ *                           type: string
+ *                         title:
+ *                           type: string
+ *                         artist:
+ *                           type: string
+ *                         concert_date:
+ *                           type: string
+ *                         end_date:
+ *                           type: string
+ *                           nullable: true
+ *                         description:
+ *                           type: string
+ *                           nullable: true
+ *                         banner_url:
+ *                           type: string
+ *                           nullable: true
+ *                         sale_start_at:
+ *                           type: string
+ *                           nullable: true
+ *                         sale_end_at:
+ *                           type: string
+ *                           nullable: true
+ *                         status:
+ *                           type: string
+ *                         is_on_sale:
+ *                           type: boolean
+ *
+ *                     venue:
+ *                       type: object
+ *                       properties:
+ *                         venue_id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         address:
+ *                           type: string
+ *                           nullable: true
+ *                         district:
+ *                           type: string
+ *                           nullable: true
+ *                         city:
+ *                           type: string
+ *                           nullable: true
+ *                         country:
+ *                           type: string
+ *                         capacity:
+ *                           type: number
+ *
+ *       404:
+ *         description: Không tìm thấy concert
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Concert not found
+ *
  *       500:
  *         description: Lỗi server
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getDetail } from "@/app/helper/concertHelper";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest) {
   try {
-    const { id: concert_id } = await params; 
+    const body = await req.json();
+    const { concert_id } = body; 
     if (!concert_id) throw new Error("concert_id is required");
 
     const result = await getDetail({ concert_id });

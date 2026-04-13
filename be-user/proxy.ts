@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, refreshAccessToken, refreshRefreshToken } from "./app/helper/authenHelper";
-
+const isProd = process.env.NODE_ENV === "production";
 async function handleTokens(accessToken?: string, refreshToken?: string) {
   let user: any = null;
   let newAccessToken: string | null = null;
@@ -10,29 +10,25 @@ async function handleTokens(accessToken?: string, refreshToken?: string) {
     try {
       user = await verifyToken(accessToken);
       return { user, newAccessToken, newRefreshToken };
-    } catch (err) {
-      console.log("Access token expired:", err);
+    } catch (err: any) {
+      if (err.name !== "TokenExpiredError") {
+        return { user: null, newAccessToken: null, newRefreshToken: null };
+      }
     }
   }
 
   if (refreshToken) {
     try {
-      newAccessToken = await refreshAccessToken(refreshToken);
-      user = await verifyToken(newAccessToken);
-      return { user, newAccessToken, newRefreshToken }; // chỉ reset access token
-    } catch (errAccess) {
-      console.log("Cannot refresh access token:", errAccess);
+      const tokens = await refreshRefreshToken(refreshToken); 
+      newAccessToken = tokens.accessToken;
+      newRefreshToken = tokens.refreshToken;
 
-      try {
-        const tokens = await refreshRefreshToken(refreshToken);
-        newAccessToken = tokens.accessToken;
-        newRefreshToken = tokens.refreshToken;
-        user = await verifyToken(newAccessToken);
-        return { user, newAccessToken, newRefreshToken }; // reset cả access + refresh token
-      } catch (errRefresh) {
-        console.log("Refresh token invalid or expired:", errRefresh);
-        return { user: null, newAccessToken: null, newRefreshToken: null }; // user phải login lại
-      }
+      user = await verifyToken(newAccessToken);
+
+      return { user, newAccessToken, newRefreshToken };
+    } catch (err) {
+      console.log("Refresh token invalid:", err);
+      return { user: null, newAccessToken: null, newRefreshToken: null };
     }
   }
 
@@ -40,6 +36,7 @@ async function handleTokens(accessToken?: string, refreshToken?: string) {
 }
 
 export default async function middleware(req: NextRequest) {
+  // ===== CORS =====
   if (req.method === "OPTIONS") {
     return new NextResponse(null, {
       status: 200,
@@ -51,41 +48,59 @@ export default async function middleware(req: NextRequest) {
       },
     });
   }
+
   const accessToken = req.cookies.get("access_token")?.value;
   const refreshToken = req.cookies.get("refresh_token")?.value;
 
-  const { user, newAccessToken, newRefreshToken } = await handleTokens(accessToken, refreshToken);
+  const { user, newAccessToken, newRefreshToken } =
+    await handleTokens(accessToken, refreshToken);
 
   const res = NextResponse.next();
- res.headers.set("Access-Control-Allow-Origin", "http://localhost:5173");
+
+  res.headers.set("Access-Control-Allow-Origin", "http://localhost:5173");
   res.headers.set("Access-Control-Allow-Credentials", "true");
   res.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+  // ===== set cookie mới nếu có =====
+  const isProd = process.env.NODE_ENV === "production";
 
   if (newAccessToken) {
     res.cookies.set("access_token", newAccessToken, {
       httpOnly: true,
       path: "/",
-      maxAge: 60 * 60, // 1 giờ
+      maxAge: 15 * 60,
+      sameSite: "none",
+      secure: isProd,
     });
   }
+
   if (newRefreshToken) {
     res.cookies.set("refresh_token", newRefreshToken, {
       httpOnly: true,
       path: "/",
-      maxAge: 7 * 24 * 60 * 60, // 7 ngày
+      maxAge: 7 * 24 * 60 * 60,
+      sameSite: "none",
+      secure: isProd,
     });
   }
 
-//   const onDashboard = req.nextUrl.pathname.startsWith("/dashboard");
+  const isProtected = req.nextUrl.pathname.startsWith("/dashboard");
 
-//   if (onDashboard && !user) {
-//   return NextResponse.redirect(new URL("/login", req.url));
-// }
+  if (isProtected && !user) {
+    return new NextResponse(
+      JSON.stringify({ message: "Unauthorized" }),
+      {
+        status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "http://localhost:5173",
+          "Access-Control-Allow-Credentials": "true",
+        },
+      }
+    );
+  }
 
-// if (!onDashboard && user) {
-//   return NextResponse.redirect(new URL("/swagger", req.url));
-// }
   return res;
 }
 

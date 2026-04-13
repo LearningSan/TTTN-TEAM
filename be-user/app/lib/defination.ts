@@ -52,6 +52,20 @@ export type email_verifications = {
   used_at: string | null;
   created_at: string;
 };
+
+
+export type venues = {
+  venue_id: string,       
+  name: string,          
+  address: string | null,
+  city: string | null,    
+  district: string | null,
+  country: string,       
+  capacity: number | null,
+  created_at: string,    
+  updated_at: string     
+};
+
 export type zones = {
   zone_id: string,          
   concert_id: string,       
@@ -85,19 +99,6 @@ export type concerts = {
   created_at: string,       
   updated_at: string       
 };
-
-export type venues = {
-  venue_id: string,       
-  name: string,          
-  address: string | null,
-  city: string | null,    
-  district: string | null,
-  country: string,       
-  capacity: number | null,
-  created_at: string,    
-  updated_at: string     
-};
-
 export type seats = {
   seat_id: string,               
   zone_id: string,               
@@ -121,7 +122,7 @@ export type seat_tiers = {
   price: number;           
   currency: string;        
   color_code: string | null; 
-  description: string | null; 
+  description: string | null;   
   display_order: number;   
   created_at: string;      
   updated_at: string;      

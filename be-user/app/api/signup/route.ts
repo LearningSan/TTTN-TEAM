@@ -3,13 +3,15 @@
  * /api/signup:
  *   post:
  *     summary: Đăng ký tài khoản
- *     description: Tạo tài khoản mới và gửi email xác thực
+ *     description: |
+ *       Tạo tài khoản mới và gửi email xác thực
+ *
  *       ⚠️ Lưu ý:
  *       - Trường `wallet_address` ban đầu sẽ NULL
  *       - Mỗi user có thể cập nhật wallet sau
  *       - Wallet address phải là duy nhất (nếu tồn tại)
  *     tags:
- *       - Auth
+ *       - Login
  *     requestBody:
  *       required: true
  *       content:
