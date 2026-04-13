@@ -1,11 +1,14 @@
 package com.example.tttnbe.seat.repository;
 
 import com.example.tttnbe.seat.entity.Seat;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -40,4 +43,9 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
     // 6. Đếm SỐ GHẾ CÒN TRỐNG (AVAILABLE) của một Hạng vé
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.seatTier.tierId = :tierId AND s.status = 'AVAILABLE'")
     Integer countAvailableSeatsByTierId(@Param("tierId") UUID tierId);
+
+    // Lấy ghế kèm theo cơ chế PESSIMISTIC_WRITE (Khóa dòng trong SQL để chống 2 người mua cùng 1 lúc)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Seat s WHERE s.seatId = :seatId")
+    Optional<Seat> findByIdWithLock(@Param("seatId") UUID seatId);
 }
