@@ -25,6 +25,8 @@ public class UpdateConcertRequest {
     private LocalDateTime saleEndAt;
     private UUID venueId;
     private String status;
+
+    private String layoutConfig;
     //cho admin tao zone trong khi tao concert moi
     private List<ZoneRequest> zones;
 }
