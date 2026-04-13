@@ -86,7 +86,7 @@ public class ConcertServiceImpl implements ConcertService {
                         Integer totalSeats = seatRepository.countTotalSeatsByTierId(tier.getTierId());
                         Integer availableSeats = seatRepository.countAvailableSeatsByTierId(tier.getTierId());
 
-                        return new com.example.tttnbe.seat.dto.TierResponse(
+                        return new TierResponse(
                                 tier.getTierId(),
                                 tier.getTierName(),
                                 tier.getPrice(),
@@ -135,6 +135,7 @@ public class ConcertServiceImpl implements ConcertService {
                 .organizerName(concert.getOrganizer().getName())
                 .venueId(concert.getVenue().getVenueId())
                 .venueName(concert.getVenue().getVenueName())
+                .layoutConfig(concert.getLayoutConfig())
                 .zones(zoneResponses)
                 .build();
     }
@@ -142,8 +143,30 @@ public class ConcertServiceImpl implements ConcertService {
     // 1 - create
     @Transactional
     public ConcertResponse createConcert(ConcertRequest concertRequest) {
-        Concert concert = new Concert();
 
+        // ==========================================
+        // ⏰ KIỂM TRA RÀNG BUỘC THỜI GIAN (TIME LOGIC)
+        // ==========================================
+
+        // 1. Logic Bán vé: Thời gian mở bán phải hợp lý (saleStartAt < saleEndAt)
+        if (concertRequest.getSaleStartAt().isAfter(concertRequest.getSaleEndAt()) ||
+                concertRequest.getSaleStartAt().isEqual(concertRequest.getSaleEndAt())) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian mở bán vé phải diễn ra TRƯỚC thời gian đóng bán!");
+        }
+
+        // 2. Logic Sự kiện: Ngày kết thúc phải sau Ngày bắt đầu (concertDate < endDate)
+        if (concertRequest.getConcertDate().isAfter(concertRequest.getEndDate()) ||
+                concertRequest.getConcertDate().isEqual(concertRequest.getEndDate())) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian bắt đầu sự kiện phải diễn ra TRƯỚC thời gian kết thúc (Tránh hát lùi thời gian)!");
+        }
+
+        // 3. Logic Chéo: Đóng cửa bán vé trước khi hát (saleEndAt <= concertDate)
+        // (Nếu saleEndAt lớn hơn concertDate -> Báo lỗi)
+        if (concertRequest.getSaleEndAt().isAfter(concertRequest.getConcertDate())) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Phải kết thúc đóng cửa bán vé TRƯỚC HOẶC ĐÚNG LÚC sự kiện bắt đầu!");
+        }
+
+        Concert concert = new Concert();
         concert.setTitle(concertRequest.getTitle());
         concert.setArtist(concertRequest.getArtist());
         concert.setConcertDate(concertRequest.getConcertDate());
@@ -153,6 +176,7 @@ public class ConcertServiceImpl implements ConcertService {
         concert.setSaleStartAt(concertRequest.getSaleStartAt());
         concert.setSaleEndAt(concertRequest.getSaleEndAt());
         concert.setStatus(concertRequest.getStatus());
+        concert.setLayoutConfig(concertRequest.getLayoutConfig());
 
         // Tìm organizer trong security
         String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -296,6 +320,7 @@ public class ConcertServiceImpl implements ConcertService {
         concert.setSaleStartAt(concertRequest.getSaleStartAt());
         concert.setSaleEndAt(concertRequest.getSaleEndAt());
         concert.setStatus(concertRequest.getStatus());
+        concert.setLayoutConfig(concertRequest.getLayoutConfig());
 
         // Kiểm tra và cập nhật địa điểm (Venue) nếu có thay đổi
         if (!concert.getVenue().getVenueId().equals(concertRequest.getVenueId())) {
