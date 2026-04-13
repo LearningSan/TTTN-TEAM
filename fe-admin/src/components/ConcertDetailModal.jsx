@@ -124,12 +124,12 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
                   size="small"
                   columns={[
                     { title: 'Hạng vé', dataIndex: 'tierName', render: (text) => <b>{text}</b> },
-                    { title: 'Giá hạng', dataIndex: 'price', render: (p) => <Text type="secondary">{p?.toLocaleString()} {record.currency}</Text> },
+                    { title: 'Giá hạng', dataIndex: 'price', render: (p) => <Text>{p?.toLocaleString()} {record.currency}</Text> },
                     { 
                       title: 'Cấu hình ghế',
                       render: (_, t) => record.hasSeatMap 
-                        ? <Text type="secondary">Bắt đầu: {t.rowPrefix} ({t.rowCount} hàng x {t.seatsPerRow} ghế)</Text>
-                        : <Text type="secondary">Vé tự do (Đứng)</Text>
+                        ? <Text >Bắt đầu: {t.rowPrefix} ({t.rowCount} hàng x {t.seatsPerRow} ghế)</Text>
+                        : <Text >Vé đứng</Text>
                     },{
                     title: 'Tình trạng Hạng vé',
                     render: (_, t) => {
@@ -155,7 +155,17 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
                 dataIndex: 'zoneName',
                 render: (name, record) => <Space><div style={{width: 12, height: 12, background: record.colorCode || '#ccc', borderRadius: '50%'}}></div> <b>{name}</b></Space>
               },
-              { title: 'Giá gốc', dataIndex: 'price', render: (p, r) => `${p?.toLocaleString()} ${r.currency}` },
+              { 
+  title: 'Mức giá', 
+  key: 'price', 
+  render: (_, r) => {
+    if (!r.hasSeatMap) {
+      return <Text strong>{r.price?.toLocaleString()} {r.currency}</Text>;
+    } else {
+      return <Text>— (Xem ở Hạng vé) —</Text>;
+    }
+  }
+},
               { 
                 title: 'Loại vé', 
                 dataIndex: 'hasSeatMap', 
