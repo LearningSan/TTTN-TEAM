@@ -1,0 +1,17 @@
+/* Đổi màu placeholder cho ô Input bình thường */
+.ant-input::placeholder {
+  color: #000000 !important;
+  opacity: 0.6 !important; 
+}
+
+/* Đổi màu placeholder cho ô Select (Dropdown) */
+.ant-select-selection-placeholder {
+  color: #000000 !important;
+  opacity: 0.8 !important;
+}
+
+/* Đổi màu placeholder cho ô Search */
+.ant-input-search .ant-input::placeholder {
+  color: #000000 !important;
+  opacity: 0.8 !important;
+}
