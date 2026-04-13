@@ -30,9 +30,10 @@ const AdminLayout = () => {
 
   // Cấu hình các nút trong Menu
   const menuItems = [
-    { key: '/dashboard', icon: <DashboardOutlined />, label: 'Bảng Điều Khiển' },
-    { key: '/dashboard/concerts', icon: <CustomerServiceOutlined />, label: 'Quản Lý Concert' },
-    { key: '/dashboard/tickets', icon: <TagsOutlined />, label: 'Quản Lý Vé' },
+    { key: '/dashboard', label: 'Bảng Điều Khiển' },
+    { key: '/dashboard/concerts', label: 'Quản Lý Concert' },
+    { key: '/dashboard/tickets', label: 'Quản Lý Vé' },
+    { key: '/dashboard/users', label: 'Quản Lý Người Dùng' },
   ];
 
   return (

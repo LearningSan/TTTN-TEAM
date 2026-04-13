@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId }) => {
+const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId, onViewInvoice }) => {
   const columns = [
     { 
       title: 'Mã vé (Ticket ID)', 
@@ -49,8 +49,14 @@ const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId
       title: 'Thao tác',
       align: 'center',
       render: (_, r) => (
-        <Tooltip title="Xem chi tiết giao dịch Blockchain">
-          <Button type="primary" ghost size="small" icon={<EyeOutlined />} onClick={() => message.info(`Tính năng xem chi tiết vé ${r.ticketId} đang phát triển`)} />
+        <Tooltip title="Xem chi tiết Hóa đơn & User">
+          {/* 🚀 Bấm nút này sẽ mở Modal chi tiết */}
+          <Button 
+            type="primary" 
+            ghost size="small" 
+            icon={<EyeOutlined />} 
+            onClick={() => onViewInvoice(r.ticketId)} 
+          />
         </Tooltip>
       )
     }

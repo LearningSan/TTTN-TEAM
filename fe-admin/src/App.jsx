@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import ConcertManagement from './pages/ConcertManagement';
 import TicketManagement from './pages/TicketManagement';
 import "./App.css"
+import UserManagement from './pages/UserManagement';
 function App() {
   return (
     <Routes>
@@ -21,6 +22,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/concerts" element={<ConcertManagement />} />
           <Route path="/dashboard/tickets" element={<TicketManagement />} />
+          <Route path="/dashboard/users" element={<UserManagement />} />
         </Route>
       </Route>
 
