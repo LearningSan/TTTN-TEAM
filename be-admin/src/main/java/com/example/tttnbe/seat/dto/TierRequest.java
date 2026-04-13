@@ -29,7 +29,6 @@ public class TierRequest {
     @Pattern(regexp = "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", message = "Mã màu phải đúng định dạng HEX (VD: #FFD700)")
     private String colorCode;
 
-    @NotBlank(message = "Mô tả hạng vé không được để trống")
     private String description;
 
     @NotNull(message = "Thứ tự hiển thị không được để trống")
