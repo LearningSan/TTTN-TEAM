@@ -1,6 +1,8 @@
 package com.example.tttnbe.concert.repository;
 
 import com.example.tttnbe.concert.entity.Concert;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,4 +25,14 @@ public interface ConcertRepository extends JpaRepository<Concert, UUID> {
             @Param("startDate") java.time.LocalDateTime startDate,
             @Param("endDate") java.time.LocalDateTime endDate,
             @Param("currentConcertId") UUID currentConcertId);
+
+    @Query("SELECT c FROM Concert c WHERE " +
+            "(:keyword IS NULL OR LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.artist) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "AND (:venueId IS NULL OR c.venue.venueId = :venueId) " +
+            "AND (:status IS NULL OR c.status = :status)")
+    Page<Concert> searchConcerts(
+            @Param("keyword") String keyword,
+            @Param("venueId") UUID venueId,
+            @Param("status") String status,
+            Pageable pageable);
 }

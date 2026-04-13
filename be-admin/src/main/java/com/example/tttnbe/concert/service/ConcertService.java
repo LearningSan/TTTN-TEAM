@@ -12,7 +12,7 @@ import java.util.UUID;
 public interface ConcertService {
     public ConcertResponse createConcert(ConcertRequest concertRequest);
 
-    public PageResponse<ConcertResponse> getAllConcerts(int page, int size);
+    public PageResponse<ConcertResponse> getAllConcerts(int page, int size, String keyword, UUID venueId, String status);
 
     public ConcertResponse getConcert(UUID concertId);
 
