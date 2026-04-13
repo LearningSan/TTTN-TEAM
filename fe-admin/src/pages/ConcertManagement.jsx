@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Table, Button, Space, message, Popconfirm, Form, Card, Tag, Tooltip } from 'antd';
+import { useState, useEffect ,useRef} from 'react';
+import { Input,Select,Table, Button, Space, message, Popconfirm, Form, Card, Tag, Tooltip } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -30,7 +30,12 @@ const ConcertManagement = () => {
   const [detailModal, setDetailModal] = useState({ open: false, data: null, loading: false });
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-
+  const [keyword, setKeyword] = useState('');
+  const [filterVenueId, setFilterVenueId] = useState(null);
+  const [filterStatus, setFilterStatus] = useState(null);
+  
+  // Dùng để tránh gọi API lần đầu khi vừa render
+  const isFirstRender = useRef(true);
   const parseApiDate = (dateStr) => {
     if (!dateStr || dateStr === 'null') return null;
     const d = dayjs(dateStr, "DD/MM/YYYY HH:mm:ss");
@@ -42,11 +47,15 @@ const ConcertManagement = () => {
     return d ? d.format('DD/MM/YYYY HH:mm') : 'N/A';
   };
 
-  const fetchData = async (page = 1, pageSize = 10) => {
+  const fetchData = async (page = 1, pageSize = 10, kw = keyword, vId = filterVenueId, st = filterStatus) => {
     setLoading(true);
     try {
+      let url = `/admin/concerts?page=${page - 1}&size=${pageSize}`;
+      if (kw) url += `&keyword=${encodeURIComponent(kw)}`;
+      if (vId) url += `&venueId=${vId}`;
+      if (st) url += `&status=${st}`;
       const [resConcerts, resVenues] = await Promise.all([
-        API.get(`/admin/concerts?page=${page - 1}&size=${pageSize}`),
+        API.get(url),
         API.get('/admin/venues')
       ]);
       const cData = resConcerts.data;
@@ -61,7 +70,29 @@ const ConcertManagement = () => {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchData(); // Chỉ chạy lần đầu
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(() => {
+      fetchData(1, pagination.pageSize, keyword, filterVenueId, filterStatus);
+    }, 500); // Đợi 500ms sau khi ngừng gõ mới gọi API
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [keyword]);
+
+  // 🚀 HÀM LÀM MỚI (RESET TOÀN BỘ)
+  const handleReset = () => {
+    setKeyword('');
+    setFilterVenueId(null);
+    setFilterStatus(null);
+    // Gọi API với tham số rỗng để quay về trạng thái ban đầu
+    fetchData(1, 10, '', null, null);
+    message.success('Đã xóa bộ lọc!');
+  };
 
   const handleViewDetail = async (id) => {
     setDetailModal({ open: true, data: null, loading: true });
@@ -187,7 +218,7 @@ const ConcertManagement = () => {
         title={<h2 style={{ margin: 0 }}>Quản lý Concert</h2>} 
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => fetchData(pagination.current)}>Làm mới</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>Làm mới</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => { 
               form.setFieldsValue({ 
                 status: 'DRAFT', 
@@ -199,6 +230,46 @@ const ConcertManagement = () => {
           </Space>
         }
       >
+        {/* 🚀 THANH CÔNG CỤ TÌM KIẾM LIVE SEARCH */}
+        <div style={{ marginBottom: 16, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <Input
+            placeholder="Tìm theo tên concert hoặc nghệ sĩ..."
+            allowClear
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)} // Cập nhật state liên tục để useEffect bên trên tự gọi API
+            style={{ width: 350 }}
+          />
+          
+          <Select
+            placeholder="Lọc theo Địa điểm"
+            allowClear
+            style={{ width: 250 }}
+            value={filterVenueId}
+            options={venues.map(v => ({ value: v.venueId || v.venue_id, label: v.venueName }))}
+            onChange={(val) => {
+              setFilterVenueId(val);
+              fetchData(1, pagination.pageSize, keyword, val, filterStatus);
+            }}
+          />
+
+          <Select
+            placeholder="Lọc theo Trạng thái"
+            allowClear
+            style={{ width: 200 }}
+            value={filterStatus}
+            onChange={(val) => {
+              setFilterStatus(val);
+              fetchData(1, pagination.pageSize, keyword, filterVenueId, val);
+            }}
+            options={[
+              { value: 'ON_SALE', label: 'ON_SALE' },
+              { value: 'DRAFT', label: 'DRAFT' },
+              { value: 'COMPLETED', label: 'COMPLETED' },
+              { value: 'CANCELLED', label: 'CANCELLED' },
+            ]}
+          />
+        </div>
+
         <Table columns={columns} dataSource={concerts} rowKey={(r) => r.concertId || r.id || Math.random()} loading={loading} pagination={pagination} onChange={(p) => fetchData(p.current, p.pageSize)} bordered scroll={{ x: 800 }} />
       </Card>
 

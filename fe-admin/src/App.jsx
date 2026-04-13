@@ -5,6 +5,7 @@ import AdminLayout from './layouts/AdminLayout';
 import Dashboard from './pages/Dashboard';
 import ConcertManagement from './pages/ConcertManagement';
 import TicketManagement from './pages/TicketManagement';
+import "./App.css"
 function App() {
   return (
     <Routes>
