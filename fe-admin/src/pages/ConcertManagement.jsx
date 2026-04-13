@@ -77,22 +77,21 @@ const ConcertManagement = () => {
   const handleFinish = async (values) => {
     setLoading(true);
     try {
-      const concertDescriptionObj = { 
-        text: values.description || '', 
+      const layoutConfigObj = { 
         canvasConfig: {
-        width: 1100, // Chiều rộng chuẩn của Modal/Canvas lúc Admin vẽ
-        height: 550  // Chiều cao chuẩn của khung đen
-      },
+          width: 1100, 
+          height: 550  
+        },
         stages: values.stages || [],
         zoneLayouts: values.zones?.map(z => ({
-    zoneName: z.zoneName, 
-    layoutConfig: z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 }
-  }))
+          zoneName: z.zoneName, 
+          layoutConfig: z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 }
+        }))
       };
 
       const payload = {
         ...values,
-        description: JSON.stringify(concertDescriptionObj),
+        layoutConfig: JSON.stringify(layoutConfigObj),
         concertDate: values.concertDate ? values.concertDate.toISOString() : null,
         endDate: values.endDate ? values.endDate.toISOString() : null,
         saleStartAt: values.saleStartAt ? values.saleStartAt.toISOString() : null,
@@ -138,16 +137,14 @@ const ConcertManagement = () => {
     try {
       const res = await API.get(`/admin/concerts/${record.concertId || record.id}`);
       const fullData = res.data;
-      
-      let descText = fullData.description, savedStages = [], savedZoneLayouts = [];
+      let savedStages = [], savedZoneLayouts = [];
       try {
-        if (descText?.startsWith('{')) {
-          const parsed = JSON.parse(descText);
-          descText = parsed.text; 
+        if (fullData.layoutConfig && fullData.layoutConfig.startsWith('{')) {
+          const parsed = JSON.parse(fullData.layoutConfig);
           savedStages = parsed.stages || [];
           savedZoneLayouts = parsed.zoneLayouts || [];
         }
-      } catch  { console.warn("Lỗi parse description"); }
+      } catch  { console.warn("Lỗi parse layoutConfig"); }
 
       const processedZones = fullData.zones?.map((z) => {
         const matchedZone = savedZoneLayouts.find(layoutObj => layoutObj.zoneName === z.zoneName);
@@ -157,7 +154,7 @@ const ConcertManagement = () => {
 
       form.resetFields();
       form.setFieldsValue({
-        ...fullData, description: descText, stages: savedStages, zones: processedZones,
+        ...fullData, stages: savedStages, zones: processedZones,
         concertDate: parseApiDate(fullData.concertDate), endDate: parseApiDate(fullData.endDate),
         saleStartAt: parseApiDate(fullData.saleStartAt), saleEndAt: parseApiDate(fullData.saleEndAt),
       });

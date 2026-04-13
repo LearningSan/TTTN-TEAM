@@ -18,18 +18,23 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
           
           <Divider orientation="left">Sơ đồ Sân khấu</Divider>
           {(() => {
-             let parsedDesc = { text: data.description, stages: [], zoneLayouts: [] };
-             try { if(data.description?.startsWith('{')) parsedDesc = JSON.parse(data.description); } catch {console.warn("Lỗi parse JSON");}
+             // 🚀 Bóc tách dữ liệu từ trường layoutConfig
+             let parsedLayout = { stages: [], zoneLayouts: [], canvasConfig: { width: 1100, height: 550 } };
+             try { 
+               if(data.layoutConfig && data.layoutConfig.startsWith('{')) {
+                 parsedLayout = JSON.parse(data.layoutConfig); 
+               }
+             } catch { console.warn("Lỗi parse layoutConfig"); }
              
-             const stages = parsedDesc.stages || [];
-             const zoneLayouts = parsedDesc.zoneLayouts || [];
+             const stages = parsedLayout.stages || [];
+             const zoneLayouts = parsedLayout.zoneLayouts || [];
              const zones = data.zones || [];
 
              return (
                 <div style={{ 
                   position: 'relative', 
                   width: '100%', 
-                  height: '550px', // Đã đồng bộ thành 550px giống hệt form Sửa
+                  height: '550px',
                   background: '#141414', 
                   borderRadius: 12, 
                   border: '4px solid #000',
@@ -38,57 +43,41 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
                 }}>
                   <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', color: '#333', fontWeight: 'bold', fontSize: 20, opacity: 0.5 }}>STAGE AREA</div>
 
-                   {/* Vẽ Stages giống hệt SeatMapBuilder */}
                    {stages.map((stg, i) => {
-                      const layout = stg.layoutConfig || { x: 300, y: 20, w: 200, h: 80 };
+                      const layout = stg.layoutConfig || {};
+                      const stageX = layout.x ?? 300;
+                      const stageY = layout.y ?? 20;
+                      const stageW = layout.w ?? 200;
+                      const stageH = layout.h ?? 80;
                       
                       return (
                         <div 
                           key={`view-stg-${i}`} 
-                          style={{ 
-                            position: 'absolute', 
-                            left: layout.x,      
-                            top: layout.y,       
-                            width: layout.w,     
-                            height: layout.h,    
-                            zIndex: 10 // Giữ nguyên z-index
-                          }}
+                          style={{ position: 'absolute', left: stageX, top: stageY, width: stageW, height: stageH, zIndex: 10 }}
                         >
                           <div style={{ 
-                            width: '100%', height: '100%', 
-                            background: '#434343', color: '#fff',
+                            width: '100%', height: '100%', background: '#434343', color: '#fff',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            borderRadius: stg.shape === 'circle' ? '50%' : '4px',
-                            border: '2px dashed #d9d9d9'
+                            borderRadius: stg.shape === 'circle' ? '50%' : '4px', border: '2px dashed #d9d9d9'
                           }}>
-                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>{stg.name || 'STAGE'}</Text>
+                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>{stg.name || 'Sân khấu'}</Text>
                           </div>
                         </div>
                       );
                    })}
 
-                   {/* Vẽ Zones giống hệt SeatMapBuilder */}
                    {zones.map((z, i) => {
-                    const matchedZone = zoneLayouts.find(layoutObj => layoutObj.zoneName === z.zoneName);
+                      const matchedZone = zoneLayouts.find(layoutObj => layoutObj.zoneName === z.zoneName);
                       const layout = matchedZone ? matchedZone.layoutConfig : { x: 0, y: 0, w: 0, h: 0 };
                       return (
                          <div 
                           key={`view-zone-${i}`} 
-                          style={{ 
-                            position: 'absolute', 
-                            left: layout.x, 
-                            top: layout.y, 
-                            width: layout.w, 
-                            height: layout.h,
-                            zIndex: 20 // Khối Zone phải nằm đè lên Stage
-                          }}
+                          style={{ position: 'absolute', left: layout.x, top: layout.y, width: layout.w, height: layout.h, zIndex: 20 }}
                          >
                             <div style={{ 
-                              background: z.colorCode || '#1890ff', color: '#fff', 
-                              width: '100%', height: '100%', borderRadius: 6,
+                              background: z.colorCode || '#1890ff', color: '#fff', width: '100%', height: '100%', borderRadius: 6,
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 10, fontWeight: 'bold', border: '2px solid #fff',
-                              boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                              fontSize: 10, fontWeight: 'bold', border: '2px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
                             }}>
                               <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', width: '90%', textAlign: 'center' }}>
                                 {z.zoneName}
@@ -112,14 +101,14 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
             <Descriptions.Item label="Kết thúc">{formatSafeDate(data.endDate)}</Descriptions.Item>
             <Descriptions.Item label="Mở bán vé">{formatSafeDate(data.saleStartAt)}</Descriptions.Item>
             <Descriptions.Item label="Đóng bán vé">{formatSafeDate(data.saleEndAt)}</Descriptions.Item>
+            
+            {/* 🚀 Đoạn này render Mô tả đã gọn gàng hơn rất nhiều vì chỉ cần đọc chữ thuần */}
             <Descriptions.Item label="Mô tả" span={2}>
-              {(() => {
-                try { return JSON.parse(data.description).text || data.description; } 
-                catch { return data.description || ''; }
-              })()}
+              <div style={{ whiteSpace: 'pre-wrap' }}>{data.description || 'Không có mô tả'}</div>
             </Descriptions.Item>
           </Descriptions>
           
+          {/* ... (Đoạn <Divider> và <Table> Cấu trúc Sơ đồ Ghế ở dưới giữ nguyên y hệt cũ) */}
           <Divider orientation="left">Cấu trúc Sơ đồ Ghế & Khu vực (Zones)</Divider>
           <Table 
             dataSource={data.zones || []} 
