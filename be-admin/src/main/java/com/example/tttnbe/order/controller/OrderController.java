@@ -2,14 +2,14 @@ package com.example.tttnbe.order.controller;
 
 import com.example.tttnbe.common.response.PageResponse;
 import com.example.tttnbe.order.dto.DashboardStatsResponse;
+import com.example.tttnbe.order.dto.OrderDetailResponse;
 import com.example.tttnbe.order.dto.OrderResponse;
 import com.example.tttnbe.order.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/admin/orders")
@@ -36,5 +36,12 @@ public class OrderController {
     public ResponseEntity<DashboardStatsResponse> getDashboardStats() {
         DashboardStatsResponse stats = orderService.getDashboardStats();
         return ResponseEntity.ok(stats);
+    }
+
+    // API 3: Xem chi tiết một đơn hàng cụ thể
+    @GetMapping("/{id}")
+    public ResponseEntity<OrderDetailResponse> getOrderDetail(@PathVariable UUID id) {
+        OrderDetailResponse detail = orderService.getOrderDetail(id);
+        return ResponseEntity.ok(detail);
     }
 }

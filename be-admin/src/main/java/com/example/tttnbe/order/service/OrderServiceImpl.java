@@ -1,7 +1,10 @@
 package com.example.tttnbe.order.service;
 
+import com.example.tttnbe.common.exception.CustomException;
 import com.example.tttnbe.common.response.PageResponse;
 import com.example.tttnbe.order.dto.DashboardStatsResponse;
+import com.example.tttnbe.order.dto.OrderDetailResponse;
+import com.example.tttnbe.order.dto.OrderItemDetailResponse;
 import com.example.tttnbe.order.dto.OrderResponse;
 import com.example.tttnbe.order.entity.Order;
 import com.example.tttnbe.order.repository.OrderRepository;
@@ -13,6 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -68,6 +73,44 @@ public class OrderServiceImpl implements OrderService {
                 .totalRevenue(totalRevenue)
                 .totalPaidOrders(totalPaidOrders)
                 .currency("USDT")
+                .build();
+    }
+
+    // API 3: Xem chi tiết một đơn hàng
+    public OrderDetailResponse getOrderDetail(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException(404, "Không tìm thấy đơn hàng ID: " + orderId));
+
+        // Map danh sách các item trong đơn hàng
+        List<OrderItemDetailResponse> items = order.getOrderItems().stream()
+                .map(item -> OrderItemDetailResponse.builder()
+                        .orderItemId(item.getOrderItemId())
+                        .zoneName(item.getZone().getZoneName())
+                        // Lấy Tier Name từ Seat (nếu có) hoặc từ Zone
+                        .tierName(item.getSeat() != null ? item.getSeat().getSeatTier().getTierName() : "Vé đứng")
+                        .seatLabel(item.getSeat() != null ? item.getSeat().getSeatLabel() : "N/A")
+                        .unitPrice(item.getUnitPrice())
+                        .quantity(item.getQuantity())
+                        .subtotal(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                        .build())
+                .toList();
+
+        // Đóng gói toàn bộ thông tin
+        return OrderDetailResponse.builder()
+                .orderId(order.getOrderId())
+                .orderStatus(order.getOrderStatus())
+                .totalAmount(order.getTotalAmount())
+                .currency(order.getCurrency())
+                .createdAt(order.getCreatedAt())
+                .expiresAt(order.getExpiresAt())
+                .paidAt(order.getPaidAt())
+                .note(order.getNote())
+                .userId(order.getUser().getUserId())
+                .userName(order.getUser().getName())
+                .userEmail(order.getUser().getEmail())
+                .concertTitle(order.getConcert().getTitle())
+                .venueName(order.getConcert().getVenue().getVenueName())
+                .items(items)
                 .build();
     }
 }
