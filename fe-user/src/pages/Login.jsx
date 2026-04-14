@@ -3,8 +3,11 @@ import { HiOutlineMail } from "react-icons/hi";
 import { RiLockPasswordLine, RiEyeOffLine, RiEyeLine } from "react-icons/ri";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { Link, useNavigate } from "react-router-dom"; // Thêm Link và useNavigate để điều hướng
+import axios from "axios"; // Import axios để gọi API
+import { motion } from "framer-motion"; // Thêm import motion từ framer-motion
+import { HiOutlineChevronDown } from "react-icons/hi"; // Icon mũi tên cho phần ngôn ngữ
+import { AiFillHome } from "react-icons/ai"; // Icon Home
 
 const Login = () => {
   // 1. Khai báo State để lưu thông tin
@@ -27,10 +30,26 @@ const Login = () => {
 
       if (event.origin !== serverOrigin) return;
 
+      // Sửa đoạn code trong image_c05f7a.png của bạn
+      // Trong file Login.jsx, đoạn xử lý Google Login
+      // TRONG FILE Login.jsx
       if (event.data === "LOGIN_SUCCESS") {
-        alert("Đăng nhập bằng Google thành công!");
-        // Chuyển hướng và load lại để nhận Cookie mới từ Backend
-        window.location.href = "/";
+        axios
+          .get(`${import.meta.env.VITE_API_URL}/me`, { withCredentials: true })
+          .then((response) => {
+            // SỬA TẠI ĐÂY: Vì API trả về user trực tiếp, không bọc trong trường .data nữa
+            const userData = response.data;
+
+            if (userData && userData.user_id) {
+              localStorage.setItem("user", JSON.stringify(userData));
+              window.dispatchEvent(new Event("storage"));
+              window.location.href = "/"; // Chuyển hướng ngay
+            }
+          })
+          .catch((err) => {
+            console.error("Lỗi:", err);
+            window.location.href = "/";
+          });
       }
     };
 
@@ -73,156 +92,168 @@ const Login = () => {
       `width=${width},height=${height},left=${left},top=${top}`,
     );
   };
-
+  const validatePassword = (pass) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+    return regex.test(pass);
+  };
   // 4. Hàm xử lý Login thông thường
   const handleLogin = async (e) => {
     e.preventDefault();
+    // Kiểm tra định dạng mật khẩu trước khi gọi API
+    if (!validatePassword(password)) {
+      alert("Mật khẩu phải bao gồm chữ hoa, chữ thường và số!");
+      return;
+    }
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/login`,
         {
           email: email,
           password: password,
-          deviceInfo: navigator.userAgent,
+          // deviceInfo: navigator.userAgent, // Bạn có thể bỏ dòng này nếu Backend không cần
         },
         { withCredentials: true },
       );
 
+      // Trong handleLogin
       if (response.data && (response.data.user_id || response.data.email)) {
-        localStorage.setItem("user", JSON.stringify(response.data));
+        const userData = response.data; // Giả sử API login cũng trả về Object user trực tiếp
+        localStorage.setItem("user", JSON.stringify(userData));
+
+        // QUAN TRỌNG: Kích hoạt sự kiện để MainLayout nhận diện tên ngay lập tức
+        window.dispatchEvent(new Event("storage"));
+
         alert("Đăng nhập thành công!");
         navigate("/");
       }
     } catch (error) {
+      const serverMessage = error.response?.data?.message || "Lỗi hệ thống!";
+      alert(serverMessage);
       console.error("Login error:", error);
-      if (error.response && error.response.status === 401) {
-        alert("Sai email hoặc mật khẩu!");
-      } else {
-        alert("Lỗi hệ thống. Vui lòng kiểm tra lại Backend!");
-      }
     }
   };
   return (
-    <div className="min-h-screen flex flex-col bg-[#101114] font-sans">
-      {/* Header */}
-      <header className="bg-black text-white p-4 shadow-md">
-        <h1 className="text-2xl font-black tracking-tighter ml-8">TICKETX</h1>
-      </header>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen flex flex-col bg-[#101114] font-sans"
+    >
+      <main className="flex-1 flex items-center justify-center bg-white p-4 relative overflow-hidden">
+        {/* Hiệu ứng nền đỏ mờ ở phía dưới như trong ảnh */}
+        <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-[#8D1B1B] to-transparent opacity-80" />
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center bg-gradient-to-r from-[#8D1B1B] via-[#2B2D33] to-[#070E2A] p-4">
-        <div className="flex flex-col md:flex-row w-full max-w-5xl bg-[#FBD9FA]/20 backdrop-blur-sm rounded-[40px] overflow-hidden shadow-2xl">
-          {/* Left Side: Illustration */}
-          <div className="hidden md:flex md:w-1/2 p-8 items-center justify-center">
-            <div className="w-full h-full rounded-[40px] overflow-hidden shadow-inner bg-[#070E2A]">
-              <img
-                src="https://i.pinimg.com/236x/87/6a/a6/876aa6769737ce65aee4fc9fcdf8d513.jpg"
-                alt="Illustration"
-                className="w-full h-full object-cover opacity-90"
-              />
-            </div>
-          </div>
-
-          {/* Right Side: Login Form */}
-          <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
-            <div className="bg-[#E9ECEF]/90 rounded-[30px] p-10 shadow-lg text-center">
-              <h2 className="text-4xl font-black text-[#8D1B1B] mb-8 uppercase italic">
-                Login
+        <div className="z-10 w-full max-auto flex justify-center">
+          {/* Box chính với viền xanh */}
+          <div className="bg-white w-[450px] border-[3px] border-[#31A1EE] rounded-[40px] p-10 shadow-xl">
+            {/* Header text */}
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-[#444] mb-2 uppercase tracking-tight">
+                Welcome Back!
               </h2>
-
-              <form className="space-y-4" onSubmit={handleLogin}>
-                <div className="text-left">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 ml-2">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <HiOutlineMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="email"
-                      placeholder="Enter Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="w-full pl-10 pr-4 py-3 bg-white/70 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#AC72A1]"
-                    />
-                  </div>
-                </div>
-
-                <div className="text-left">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 ml-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <RiLockPasswordLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="w-full pl-10 pr-10 py-3 bg-white/70 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#AC72A1]"
-                    />
-                    <div
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <RiEyeLine /> : <RiEyeOffLine />}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Social Login Buttons */}
-                <div className="flex gap-4 pt-2">
-                  <button
-                    type="button"
-                    onClick={handleGoogleLogin}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 bg-white rounded-full text-sm font-medium hover:bg-gray-50 transition-all shadow-sm"
-                  >
-                    <FcGoogle size={18} /> Google
-                  </button>
-                  <button
-                    type="button"
-                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-blue-800 shadow-sm"
-                    onClick={handleFacebookLogin}
-                  >
-                    <FaFacebook size={18} className="text-[#1877F2]" /> Facebook
-                  </button>
-                </div>
-
-                {/* Login Button */}
-                <button
-                  type="submit"
-                  className="
-                    w-full py-3 mt-4 
-                    /* Hiệu ứng gradient từ trên xuống dưới */
-                    bg-gradient-to-b from-[#AC72A1] to-[#3B1E54] 
-                    text-white font-bold 
-                    /* Bo tròn hoàn toàn hai đầu */
-                    rounded-full 
-                    /* Hiệu ứng đổ bóng phía dưới nút */
-                    shadow-[0px_4px_10px_rgba(0,0,0,0.5)] 
-                    hover:brightness-110 transition-all 
-                    text-2xl tracking-wider
-                    "
-                >
-                  Login
-                </button>
-
-                {/* Footer Links */}
-                <div className="flex justify-between mt-6 text-sm font-bold text-gray-800">
-                  <Link to="/register" className="hover:underline">
-                    Register
-                  </Link>
-                  <a href="#" className="hover:underline">
-                    Forget pass ?
-                  </a>
-                </div>
-              </form>
+              <p className="text-sm text-gray-500">
+                Don't have an account?{" "}
+                <Link to="/register" className="text-blue-500 hover:underline">
+                  Sign up
+                </Link>
+              </p>
             </div>
+
+            <form className="space-y-6" onSubmit={handleLogin}>
+              {/* Email Field */}
+              <div className="text-left">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="deniel123@gmail.com......"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-5 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+
+              {/* Password Field */}
+              <div className="text-left">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full px-5 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <div
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <RiEyeLine size={20} />
+                    ) : (
+                      <RiEyeOffLine size={20} />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Remember me & Forgot Pass */}
+              <div className="flex justify-between items-center px-1 text-xs font-medium text-gray-500">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" className="w-4 h-4 accent-blue-500" />
+                  Remember me
+                </label>
+                <Link to="/forgot-password" className="hover:text-blue-600">
+                  Forget password?
+                </Link>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                className="w-full py-3 bg-[#7A2121] text-white font-bold rounded-full text-lg shadow-lg hover:bg-[#5a1818] transition-all"
+              >
+                Sign In
+              </button>
+
+              {/* Divider */}
+              <div className="relative flex py-4 items-center">
+                <div className="flex-grow border-t border-gray-300"></div>
+                <span className="flex-shrink mx-4 text-gray-400 text-xs">
+                  or continue with
+                </span>
+                <div className="flex-grow border-t border-gray-300"></div>
+              </div>
+
+              {/* Social Buttons */}
+              <div className="flex gap-10 justify-center">
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="p-3 border border-blue-400 rounded-xl hover:bg-gray-50"
+                >
+                  <FcGoogle size={30} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFacebookLogin}
+                  className="p-3 border border-blue-400 rounded-xl hover:bg-gray-50"
+                >
+                  <FaFacebook size={30} className="text-[#1877F2]" />
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </main>
-    </div>
+      {/* </div> */}
+    </motion.div>
   );
 };
 

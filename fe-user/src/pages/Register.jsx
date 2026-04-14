@@ -1,28 +1,58 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { motion } from "framer-motion";
+import { HiOutlineMail, HiOutlineUser } from "react-icons/hi";
+import { RiEyeOffLine, RiEyeLine, RiLockPasswordLine } from "react-icons/ri";
 
 const Register = () => {
   const navigate = useNavigate();
-  // Khai báo state lưu trữ thông tin form
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     Name: "",
     email: "",
     password: "",
   });
+  const [error, setError] = useState("");
+  // 1. Cập nhật Regex: Ít nhất 8 ký tự, có chữ hoa, thường và số
+  const validatePassword = (pass) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    return regex.test(pass);
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    try {
-      const signupData = {
-        email: formData.email,
-        password: formData.password,
-        name: formData.Name,
-      };
+    setError(""); // Reset thông báo lỗi cũ
 
+    // 1. Kiểm tra độ dài Tên (2 - 50 ký tự)
+    if (formData.Name.length < 2 || formData.Name.length > 50) {
+      setError("Họ tên phải từ 2 đến 50 ký tự!");
+      return;
+    }
+
+    // 2. Kiểm tra định dạng Email hợp lệ
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Email không đúng định dạng (ví dụ: example@gmail.com)!");
+      return;
+    }
+
+    // 3. Kiểm tra mật khẩu (đã làm ở bước trước)
+    if (!validatePassword(formData.password)) {
+      setError(
+        "Mật khẩu phải từ 8 ký tự trở lên, gồm chữ hoa, chữ thường và số!",
+      );
+      return;
+    }
+
+    try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/signup`,
-        signupData,
+        {
+          email: formData.email,
+          password: formData.password,
+          name: formData.Name,
+        },
       );
 
       if (response.status === 201 || response.status === 200) {
@@ -30,63 +60,52 @@ const Register = () => {
         navigate("/login");
       }
     } catch (error) {
-      // Hiển thị lỗi chi tiết hơn từ Backend nếu có
-      const errorMsg =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        "Đăng ký thất bại!";
-      alert(errorMsg);
-      console.error("Signup Error:", error);
+      // Hiển thị thông báo lỗi trực tiếp từ Server nếu có
+      if (error.response?.data?.message === "User already exists") {
+        setError(<span>Email này đã tồn tại.</span>);
+      } else {
+        setError(error.response?.data?.message || "Đăng ký thất bại!");
+      }
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#101114] font-sans">
-      {/* Header */}
-      <header className="bg-black text-white p-4 shadow-md">
-        <h1 className="text-2xl font-black tracking-tighter ml-8">TICKETX</h1>
-      </header>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen flex flex-col bg-white font-sans"
+    >
+      <main className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Hiệu ứng nền đỏ mờ đồng bộ với Login */}
+        <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-[#8D1B1B] to-transparent opacity-80" />
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center bg-gradient-to-r from-[#070E2A] via-[#2B2D33] to-[#8D1B1B] p-4">
-        <div className="flex flex-col md:flex-row-reverse w-full max-w-5xl bg-[#FBD9FA]/20 backdrop-blur-sm rounded-[50px] overflow-hidden shadow-2xl">
-          {/* Right Side: Illustration (Đảo sang phải) */}
-          <div className="hidden md:flex md:w-1/2 p-8 items-center justify-center">
-            <div className="w-full h-full rounded-[50px] overflow-hidden shadow-inner bg-[#070E2A]">
-              <img
-                src="https://i.pinimg.com/236x/87/6a/a6/876aa6769737ce65aee4fc9fcdf8d513.jpg" // Thay bằng link ảnh chậu cây của bạn
-                alt="Illustration"
-                className="w-full h-full object-cover opacity-90"
-              />
-            </div>
-          </div>
-
-          {/* Left Side: Sign Up Form (Đảo sang trái) */}
-          <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
-            <div className="bg-[#E9ECEF]/90 rounded-[40px] p-8 shadow-lg text-center">
-              <h2
-                className="
-                  text-5xl font-black mb-6 uppercase tracking-tighter
-                  /* Hiệu ứng Gradient cho chữ */
-                  bg-gradient-to-b from-[#8D1B1B] to-[#070E2A] 
-                  bg-clip-text text-transparent
-                  /* Font chữ kéo dãn theo chiều dọc (nếu cần giống hệt mẫu) */
-                  scale-y-110
-                "
-              >
-                Sign Up
+        <div className="z-10 w-full max-auto flex justify-center">
+          {/* Box chính với viền xanh #31A1EE giống Login */}
+          <div className="bg-white w-[450px] border-[3px] border-[#31A1EE] rounded-[40px] p-10 shadow-xl">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-[#444] mb-2 uppercase tracking-tight">
+                Create Account
               </h2>
+              <p className="text-sm text-gray-500">
+                Already have an account?{" "}
+                <Link to="/login" className="text-blue-500 hover:underline">
+                  Sign in
+                </Link>
+              </p>
+            </div>
 
-              <form className="space-y-3" onSubmit={handleSignup}>
-                {/*  Name */}
-                <div className="text-left">
-                  <label className="block text-[10px] font-bold text-gray-700 mb-1 ml-2">
-                    Name
-                  </label>
+            <form onSubmit={handleSignup} className="space-y-6">
+              {/* Full Name Field */}
+              <div className="text-left">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <HiOutlineUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Enter your name"
-                    className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
+                    placeholder="Nguyễn Văn A"
+                    className="w-full pl-11 pr-5 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value={formData.Name}
                     onChange={(e) =>
                       setFormData({ ...formData, Name: e.target.value })
@@ -94,16 +113,19 @@ const Register = () => {
                     required
                   />
                 </div>
+              </div>
 
-                {/* Email */}
-                <div className="text-left">
-                  <label className="block text-[10px] font-bold text-gray-700 mb-1 ml-2">
-                    Email
-                  </label>
+              {/* Email Field */}
+              <div className="text-left">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <HiOutlineMail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="email"
-                    placeholder="Enter your email"
-                    className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
+                    placeholder="example@gmail.com"
+                    className="w-full pl-11 pr-5 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
@@ -111,49 +133,62 @@ const Register = () => {
                     required
                   />
                 </div>
+              </div>
 
-                {/* Password */}
-                <div className="text-left">
-                  <label className="block text-[10px] font-bold text-gray-700 mb-1 ml-2">
-                    Password
-                  </label>
+              {/* Password Field */}
+              <div className="text-left">
+                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <RiLockPasswordLine className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
-                    type="password"
-                    placeholder="Enter your password"
-                    className="w-full px-4 py-2 bg-white/70 rounded-full text-sm focus:outline-none border border-transparent focus:border-[#AC72A1]"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="w-full pl-11 pr-12 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value={formData.password}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required
                   />
-                </div>
-
-                {/* Sign Up Button */}
-                <div className="pt-4 px-10">
-                  <button
-                    type="submit"
-                    className="w-full py-3 bg-gradient-to-b from-[#AC72A1] to-[#3B1E54] text-white font-medium rounded-full shadow-[0px_4px_10px_rgba(0,0,0,0.4)] hover:brightness-110 transition-all text-xl"
+                  <div
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
+                    onClick={() => setShowPassword(!showPassword)}
                   >
-                    Sign up
-                  </button>
+                    {showPassword ? (
+                      <RiEyeLine size={20} />
+                    ) : (
+                      <RiEyeOffLine size={20} />
+                    )}
+                  </div>
                 </div>
+                {/* Dòng nhắc nhở cập nhật lên 8 ký tự */}
+                <p className="text-[12px] text-red-500 mt-2 ml-4 italic">
+                  * Phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số.
+                </p>
+              </div>
 
-                {/* Footer Links */}
-                <div className="flex justify-between mt-6 px-4 text-xs font-black text-black">
-                  <Link to="/login" className="hover:underline">
-                    Login
-                  </Link>
-                  <a href="#" className="hover:underline">
-                    Forget pass ?
-                  </a>
+              {/* Phần hiển thị thông báo lỗi */}
+              {error && (
+                <div className="bg-red-50 border border-red-100 rounded-2xl py-3 px-4 mb-4 transition-all">
+                  <p className="text-red-600 text-[13px] font-black text-center leading-tight">
+                    {error}
+                  </p>
                 </div>
-              </form>
-            </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-[#7A2121] text-white font-bold rounded-full text-lg shadow-lg hover:bg-[#5a1818] transition-all uppercase mt-2"
+              >
+                Sign Up
+              </button>
+            </form>
           </div>
         </div>
       </main>
-    </div>
+    </motion.div>
   );
 };
 
