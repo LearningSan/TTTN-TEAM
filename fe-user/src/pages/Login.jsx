@@ -92,33 +92,44 @@ const Login = () => {
       `width=${width},height=${height},left=${left},top=${top}`,
     );
   };
-
+  const validatePassword = (pass) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+    return regex.test(pass);
+  };
   // 4. Hàm xử lý Login thông thường
   const handleLogin = async (e) => {
     e.preventDefault();
+    // Kiểm tra định dạng mật khẩu trước khi gọi API
+    if (!validatePassword(password)) {
+      alert("Mật khẩu phải bao gồm chữ hoa, chữ thường và số!");
+      return;
+    }
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/login`,
         {
           email: email,
           password: password,
-          deviceInfo: navigator.userAgent,
+          // deviceInfo: navigator.userAgent, // Bạn có thể bỏ dòng này nếu Backend không cần
         },
         { withCredentials: true },
       );
 
+      // Trong handleLogin
       if (response.data && (response.data.user_id || response.data.email)) {
-        localStorage.setItem("user", JSON.stringify(response.data));
+        const userData = response.data; // Giả sử API login cũng trả về Object user trực tiếp
+        localStorage.setItem("user", JSON.stringify(userData));
+
+        // QUAN TRỌNG: Kích hoạt sự kiện để MainLayout nhận diện tên ngay lập tức
+        window.dispatchEvent(new Event("storage"));
+
         alert("Đăng nhập thành công!");
         navigate("/");
       }
     } catch (error) {
+      const serverMessage = error.response?.data?.message || "Lỗi hệ thống!";
+      alert(serverMessage);
       console.error("Login error:", error);
-      if (error.response && error.response.status === 401) {
-        alert("Sai email hoặc mật khẩu!");
-      } else {
-        alert("Lỗi hệ thống. Vui lòng kiểm tra lại Backend!");
-      }
     }
   };
   return (

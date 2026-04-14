@@ -101,12 +101,12 @@ const MainLayout = () => {
           className={`flex items-center gap-6 text-[13px] font-bold uppercase ${textColor}`}
         >
           {" "}
-          {/* <Link
+          <Link
             to="/my-tickets"
             className="flex items-center gap-1 hover:text-[#8D1B1B]"
           >
             <GiTicket size={18} /> My ticket
-          </Link> */}
+          </Link>
           {/* Hiển thị tên người dùng */}
           {user ? (
             <div className="flex items-center gap-3">

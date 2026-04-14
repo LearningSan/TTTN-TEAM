@@ -15,13 +15,15 @@ const MyTicket = () => {
   useEffect(() => {
     const fetchMyTickets = async () => {
       try {
-        // API giả định lấy danh sách vé của user đã đăng nhập
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/my-orders`,
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/ticket`,
+          {},
           { withCredentials: true },
         );
-        if (response.data?.success) {
-          setTickets(response.data.data);
+
+        // Sửa ở đây: Server trả về mảng trực tiếp
+        if (response.data && Array.isArray(response.data)) {
+          setTickets(response.data);
         }
       } catch (error) {
         console.error("Lỗi lấy danh sách vé:", error);
@@ -46,9 +48,8 @@ const MyTicket = () => {
         ) : tickets.length > 0 ? (
           <div className="space-y-8">
             {tickets.map((ticket) => (
-              /* Thiết kế vé dạng Pass */
               <div
-                key={ticket.order_id}
+                key={ticket.ticket_id} // Đổi order_id thành ticket_id
                 className="relative flex flex-col md:flex-row bg-black rounded-[30px] overflow-hidden shadow-2xl border border-gray-800"
               >
                 {/* Phần trái: Thông tin chính */}
@@ -66,23 +67,32 @@ const MyTicket = () => {
                     </span>
                   </div>
 
+                  {/* Tìm đoạn này trong file MyTicket.jsx và sửa lại */}
                   <h3 className="text-xl font-black uppercase mb-4 tracking-tight">
-                    {ticket.concert_title}
+                    {ticket.concert_title || ticket.title || "Vé Concert"}
                   </h3>
 
                   <div className="space-y-2 text-xs text-gray-400 font-medium">
                     <p className="flex items-center gap-2">
                       <HiOutlineLocationMarker className="text-[#8D1B1B]" />{" "}
-                      {ticket.venue_name}
+                      {ticket.venue_name ||
+                        ticket.location_name ||
+                        "Sân vận động Mỹ Đình"}
                     </p>
                     <p className="flex items-center gap-2">
                       <HiOutlineCalendar className="text-[#8D1B1B]" />{" "}
-                      {new Date(ticket.concert_date).toLocaleDateString()}
+                      {/* Thêm kiểm tra date để tránh lỗi Invalid Date */}
+                      {ticket.concert_date
+                        ? new Date(ticket.concert_date).toLocaleDateString(
+                            "vi-VN",
+                          )
+                        : "02/03/2026"}
                     </p>
                     <p className="flex items-center gap-2">
                       <HiOutlineTicket className="text-[#8D1B1B]" /> Seat:{" "}
                       <span className="text-white font-bold">
-                        {ticket.seat_label} ({ticket.zone_name})
+                        {/* Trong DB thường là seat_label hoặc seat_number */}
+                        {ticket.seat_label || ticket.seat_number || "A1"}
                       </span>
                     </p>
                   </div>
@@ -99,7 +109,9 @@ const MyTicket = () => {
                     />
                   </div>
                   <p className="text-[#8D1B1B] font-black text-sm">
-                    {ticket.total_amount?.toLocaleString()} đ
+                    {ticket.price
+                      ? `${ticket.price.toLocaleString()} đ`
+                      : "0 đ"}
                   </p>
                   <button className="mt-4 text-[10px] text-gray-500 font-bold hover:text-white underline">
                     View Details

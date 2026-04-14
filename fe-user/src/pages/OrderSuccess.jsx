@@ -31,12 +31,12 @@ const OrderSuccess = () => {
 
         {/* Nút bấm điều hướng */}
         <div className="space-y-4">
-          {/* <button
+          <button
             onClick={() => navigate("/my-tickets")}
-            className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-green-500 hover:text-white transition-all uppercase"
+            className="w-full bg-green-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-green-600 transition-all uppercase shadow-lg shadow-green-500/20"
           >
             <HiOutlineTicket size={20} /> Xem vé của tôi
-          </button> */}
+          </button>
 
           <button
             onClick={() => navigate("/")}
