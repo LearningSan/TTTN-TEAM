@@ -30,7 +30,7 @@ const SeatMapBuilder = ({ form }) => {
         marginBottom: 20,
         boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
       }}>
-        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', color: '#333', fontWeight: 'bold', fontSize: 20, opacity: 0.5 }}>STAGE AREA</div>
+        {/* <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', color: '#333', fontWeight: 'bold', fontSize: 20, opacity: 0.5 }}>STAGE AREA</div> */}
 
         {/* =============== RENDER SÂN KHẤU ================= */}
         {stages.map((stg, idx) => (
