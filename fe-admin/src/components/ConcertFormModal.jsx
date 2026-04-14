@@ -42,7 +42,7 @@ const ConcertFormModal = ({ open, modalId, onCancel, form, onFinish, loading, ve
       footer={null} width={1100} destroyOnClose
     >
       <Form layout="vertical" form={form} onFinish={onFinish}>
-        <SeatMapBuilder form={form} />
+        
         
         <Divider orientation="left">1. Thông tin chung</Divider>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px' }}>
@@ -164,6 +164,7 @@ const ConcertFormModal = ({ open, modalId, onCancel, form, onFinish, loading, ve
           <Form.Item name="status" label="Trạng thái"><Select options={['DRAFT', 'ON_SALE', 'COMPLETED', 'CANCELLED'].map(v => ({value:v, label:v}))} /></Form.Item>
         </div>
         <Form.Item name="description" label="Mô tả"><Input.TextArea rows={3} /></Form.Item>
+        <SeatMapBuilder form={form} />
         <Button type="primary" htmlType="submit" block size="large" loading={loading} style={{height: 50, fontSize: 16}}>XÁC NHẬN</Button>
       </Form>
     </Modal>

@@ -50,7 +50,7 @@ const OrderDetailModal = ({ orderId, open, onCancel }) => {
               <Descriptions.Item label="Khách hàng"><b>{data.userName}</b> ({data.userEmail})</Descriptions.Item>
               <Descriptions.Item label="Trạng thái"><Tag color="green">{data.orderStatus}</Tag></Descriptions.Item>
               <Descriptions.Item label="Ngày tạo">{dayjs(data.createdAt).format('DD/MM/YYYY HH:mm:ss')}</Descriptions.Item>
-              <Descriptions.Item label="Thanh toán lúc">{data.paidAt ? dayjs(data.paidAt).format('DD/MM/YYYY HH:mm:ss') : 'Chưa thanh toán'}</Descriptions.Item>
+              <Descriptions.Item label="Thanh toán lúc">{data.paidAt ? dayjs(data.paidAt).format('DD/MM/YYYY HH:mm:ss') : '---'}</Descriptions.Item>
               <Descriptions.Item label="Ghi chú" span={2}>{data.note || 'Không có ghi chú'}</Descriptions.Item>
             </Descriptions>
 

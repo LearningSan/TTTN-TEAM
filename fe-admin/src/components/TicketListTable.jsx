@@ -27,7 +27,7 @@ const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId
         </Space>
       )
     },
-    { title: 'Địa chỉ Ví (Wallet)', dataIndex: 'walletAddress', render: (w) => <Text copyable style={{fontSize: 12, fontFamily: 'monospace'}}>{w || 'N/A'}</Text> },
+    
     { title: 'Khu vực & Vị trí', render: (_, r) => <Space><Tag color="geekblue">{r.zoneName}</Tag>{r.seatLabel && <Tag>{r.seatLabel}</Tag>}</Space> },
     { title: 'Ngày mua', dataIndex: 'purchaseDate', render: (d) => d ? dayjs(d).format('DD/MM/YYYY HH:mm') : '-' },
     { 
