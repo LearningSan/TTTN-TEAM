@@ -60,3 +60,4 @@ export async function getSpecificSeat(seat_id: string) {
 
   return await getSeatById(seat_id);
 }
+

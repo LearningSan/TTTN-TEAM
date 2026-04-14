@@ -90,3 +90,24 @@ export async function updatePassword(user_id: string, password_hash: string) {
       WHERE user_id = @user_id
     `);
 }
+export async function updateWalletAddress(user_id: string, wallet_address: string) {
+  try {
+    const db = await connectDB();
+
+    const request = db.request()
+      .input("user_id", user_id)
+      .input("wallet_address", wallet_address);
+
+    const result = await request.query(`
+      UPDATE users
+      SET wallet_address = @wallet_address,
+          updated_at = GETDATE()
+      WHERE user_id = @user_id
+    `);
+
+    return result;
+  } catch (error: any) {
+    console.error("updateWalletAddress error:", error);
+    throw new Error("FAILED_TO_UPDATE_WALLET_ADDRESS");
+  }
+}

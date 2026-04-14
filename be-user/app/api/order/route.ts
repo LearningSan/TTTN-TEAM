@@ -128,6 +128,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/app/helper/authenHelper";
 import { createOrder } from "@/app/helper/orderHelper";
+import { getUser } from "@/app/lib/user";
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get("access_token")?.value;
@@ -142,7 +143,11 @@ export async function POST(req: NextRequest) {
     }
 
     const user_id = decoded.user_id;
-
+    const user = await getUser(decoded.email);
+    if (!user) {
+  return NextResponse.json({ message: "User not found" }, { status: 404 });
+}
+    const wallet_address=decoded.wallet_address;
     const body = await req.json();
     const { concert_id, items, currency, note } = body;
 
@@ -159,6 +164,7 @@ export async function POST(req: NextRequest) {
       items,
       currency,
       note,
+      wallet_address
     });
 
     return NextResponse.json({

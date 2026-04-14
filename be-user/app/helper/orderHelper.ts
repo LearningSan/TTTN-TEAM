@@ -7,11 +7,13 @@ import { insertOrder, insertOrderItem,getOrderById } from "../lib/order";
   items: any[];
   currency: string;
   note?: string;
+  wallet_address: string;
 };
 export async function createOrder(data: CreateOrderInput) {
-  const { user_id, concert_id, items, currency, note } = data;
+  const { user_id, concert_id, items, currency, note, wallet_address } = data;
 
   await validateSeats(concert_id, items);
+  await lockSeats(user_id, items);
 
   let total_amount = 0;
   const orderItems: any[] = [];
@@ -30,7 +32,7 @@ export async function createOrder(data: CreateOrderInput) {
         );
       }
 
-      unit_price = zone.price;
+      unit_price = zone.price;  
     }
 
 
@@ -65,6 +67,7 @@ export async function createOrder(data: CreateOrderInput) {
     total_amount,
     currency,
     note,
+    wallet_address
   });
 
   for (const item of orderItems) {

@@ -4,42 +4,45 @@ export async function insertOrder(data: any): Promise<string> {
   const db = await connectDB();
 
   try {
-    const request = db.request()
-      .input("user_id", data.user_id)
-      .input("concert_id", data.concert_id)
-      .input("total_amount", data.total_amount)
-      .input("currency", data.currency)
-      .input("note", data.note || null);
+   const request = db.request()
+    .input("user_id", data.user_id)
+    .input("concert_id", data.concert_id)
+    .input("total_amount", data.total_amount)
+    .input("currency", data.currency)
+    .input("note", data.note || null)
+    .input("wallet_address", data.wallet_address);
 
-    const query = `
-      INSERT INTO orders (
-        user_id,
-        concert_id,
-        total_amount,
-        currency,
-        order_status,
-        note,
-        created_at,
-        expires_at,
-        updated_at
-      )
-      OUTPUT INSERTED.order_id
-      VALUES (
-        @user_id,
-        @concert_id,
-        @total_amount,
-        @currency,
-        'PENDING',
-        @note,
-        GETDATE(),
-        DATEADD(MINUTE, 15, GETDATE()),
-        GETDATE()
-      )
-    `;
+  const query = `
+    INSERT INTO orders (
+      user_id,
+      concert_id,
+      wallet_address,
+      total_amount,
+      currency,
+      order_status,
+      note,
+      created_at,
+      expires_at,
+      updated_at
+    )
+    OUTPUT INSERTED.order_id
+    VALUES (
+      @user_id,
+      @concert_id,
+      @wallet_address,
+      @total_amount,
+      @currency,
+      'PENDING',
+      @note,
+      GETDATE(),
+      DATEADD(MINUTE, 15, GETDATE()),
+      GETDATE()
+    )
+  `;
 
-    const result = await request.query(query);
+  const result = await request.query(query);
 
-    return result.recordset[0].order_id;
+  return result.recordset[0].order_id;
 
   } catch (error) {
     console.error("insertOrder DB error:", error);

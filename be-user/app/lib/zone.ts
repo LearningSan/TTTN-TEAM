@@ -81,3 +81,58 @@ export async function getZonesByConcertId(concert_id: string) {
     throw new Error("Database error while fetching zones");
   }
 }
+
+export async function lockZoneCapacityV2(
+  zone_id: string,
+  quantity: number,
+  order_id: string
+) {
+  const db = await connectDB();
+
+  try {
+    const request = db.request()
+      .input("zone_id", zone_id)
+      .input("quantity", quantity)
+      .input("order_id", order_id);
+
+    // 🔥 atomic update chống oversell
+    const result = await request.query(`
+      UPDATE zones
+      SET 
+        available_seats = available_seats - @quantity,
+        sold_seats = sold_seats + @quantity
+      WHERE zone_id = @zone_id
+        AND available_seats >= @quantity
+    `);
+
+    if (result.rowsAffected[0] === 0) {
+      throw new Error(
+        `Not enough tickets available in zone ${zone_id}`
+      );
+    }
+
+    // 🧾 insert hold record (rollback support)
+    // await db.request()
+    //   .input("zone_id", zone_id)
+    //   .input("quantity", quantity)
+    //   .input("order_id", order_id)
+    //   .query(`
+    //     INSERT INTO zone_holds(zone_id, quantity, order_id, status, expires_at)
+    //     VALUES (@zone_id, @quantity, @order_id, 'HELD', DATEADD(MINUTE, 10, GETDATE()))
+    //   `);
+
+    return true;
+
+  } catch (error: any) {
+    console.error("lockZoneCapacityV2 error:", {
+      zone_id,
+      quantity,
+      order_id,
+      error: error.message,
+    });
+
+    throw new Error(
+      `Failed to lock zone ${zone_id}: ${error.message}`
+    );
+  }
+}

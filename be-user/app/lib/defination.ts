@@ -172,6 +172,7 @@ export type tickets = {
   used_at: string | null;
   created_at: string;
   updated_at: string;
+  tier_id: string | null;
 };
 export type payment_transactions = {
   payment_id: string;

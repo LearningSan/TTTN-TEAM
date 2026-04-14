@@ -3,6 +3,24 @@
 import { getTickets, getTicketById } from "@/app/lib/ticket";
 import { getOrderItems } from "../lib/order";
 import { createTicket } from "@/app/lib/ticket";
+import { ethers } from "ethers";
+import { abi } from "../lib/abi";
+
+
+function getContract() {
+  const rpc = process.env.RPC_URL;
+  const key = process.env.PRIVATE_KEY;
+  const address = process.env.CONTRACT_ADDRESS;
+
+  if (!rpc || !key || !address) {
+    throw new Error("Missing env RPC_URL / PRIVATE_KEY / CONTRACT_ADDRESS");
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpc);
+  const wallet = new ethers.Wallet(key, provider);
+
+  return new ethers.Contract(address, abi, wallet);
+}
 export async function getTicketsService() {
   try {
     const tickets = await getTickets();
@@ -26,34 +44,53 @@ export async function getTicketByIdService(ticket_id: string) {
   }
 }
 
+export async function createTicketsFromOrder(payment: any) {
+  const { order_id, user_id, concert_id, payment_id, from_wallet } = payment;
 
-
-
-export async function createTicketsFromOrder(payment: any, transaction?: any) {
-  const { order_id, user_id, concert_id, payment_id } = payment;
   const items = await getOrderItems(order_id);
+
+  const contract = getContract();
+
+  const createdTickets: any[] = [];
+
   for (const item of items) {
     for (let i = 0; i < item.quantity; i++) {
-      try {
-        await createTicket(
-          {
-            order_id,
-            order_item_id: item.order_item_id,
-            user_id,
-            concert_id,
-            zone_id: item.zone_id,
-            seat_id: item.seat_id,
-            payment_id,
-          },
-          transaction
-        );
-      } catch (error: any) {
-        if (error.message.includes("Violation of UNIQUE KEY constraint")) {
-          console.warn(`Duplicate ticket detected for order_item_id=${item.order_item_id}, skipping.`);
-        } else {
-          throw error; 
-        }
-      }
+
+      const tx = await contract.mint(from_wallet);
+      const receipt = await tx.wait();
+
+      const parsed = receipt.logs
+        .map((log: any) => {
+          try {
+            return contract.interface.parseLog(log);
+          } catch {
+            return null;
+          }
+        })
+        .find((e: any) => e && e.name === "Transfer");
+
+      if (!parsed) throw new Error("Cannot get tokenId");
+
+      const tokenId = parsed.args.tokenId.toString();
+
+      const ticketId = await createTicket({
+        order_id,
+        order_item_id: item.order_item_id,
+        user_id,
+        concert_id,
+        zone_id: item.zone_id,
+        seat_id: item.seat_id,
+        payment_id,
+        wallet_address: from_wallet,
+        tier_id: item.tier_id,
+        token_id: tokenId,
+        mint_tx_hash: tx.hash,
+        contract_address: process.env.CONTRACT_ADDRESS!,
+      });
+
+      createdTickets.push({ ticketId, tokenId });
     }
   }
+
+  return createdTickets;
 }

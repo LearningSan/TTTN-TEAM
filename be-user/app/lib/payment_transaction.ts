@@ -103,24 +103,33 @@ export async function getPaymentById(payment_id: string) {
   }
 }
 
-export async function markPaymentSuccess(payment_id: string, hash: string, transaction?: any) {
+export async function markPaymentSuccess(
+  payment_id: string,
+  hash: string,
+  block_number?: number,
+  transaction?: any
+) {
   try {
-    const request = transaction ? transaction.request() : (await connectDB()).request();
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
 
     await request
       .input("payment_id", payment_id)
       .input("hash", hash)
+      .input("block_number", block_number)
       .query(`
         UPDATE payment_transactions
         SET 
           payment_status = 'SUCCESS',
           transaction_hash = @hash,
+          block_number = @block_number,
           confirmed_at = GETDATE(),
           updated_at = GETDATE()
         WHERE payment_id = @payment_id
       `);
   } catch (error) {
     console.error("Error in markPaymentSuccess:", error);
-    throw new Error("Cập nhật payment thành công thất bại");
+    throw new Error("Cập nhật payment thất bại");
   }
 }

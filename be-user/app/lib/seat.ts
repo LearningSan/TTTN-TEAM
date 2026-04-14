@@ -180,48 +180,120 @@ export async function lockSeats(user_id: string, items: any[]) {
       .input("seat_id", item.seat_id)
       .input("user_id", user_id);
 
-    const query = `
+    const result = await request.query(`
       UPDATE seats
       SET 
         status = 'LOCKED',
         locked_by_user_id = @user_id,
         locked_at = GETDATE(),
-        lock_expires_at = DATEADD(MINUTE, 15, GETDATE())
+        lock_expires_at = DATEADD(MINUTE, 10, GETDATE())
       WHERE seat_id = @seat_id
-      AND (
-        status = 'AVAILABLE'
-        OR (
-          status = 'LOCKED'
-          AND lock_expires_at < GETDATE()
-        )
-      )
-    `;
-
-    const result = await request.query(query);
+        AND status = 'AVAILABLE'
+    `);
 
     if (result.rowsAffected[0] === 0) {
-      throw new Error("Seat already locked or sold");
+      throw new Error(`Seat ${item.seat_id} already locked or booked`);
     }
   }
 }
-export async function markSeatsBookedByOrder(order_id: string, transaction?: any) {
+export async function markSeatsBookedByOrder(
+  order_id: string,
+  transaction?: any
+) {
   try {
-    const request = transaction ? transaction.request() : (await connectDB()).request();
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
 
-    await request
-      .input("order_id", order_id)
-      .query(`
-        UPDATE s
-        SET 
-          s.status = 'BOOKED',
-          s.updated_at = GETDATE()
-        FROM seats s
-        INNER JOIN order_items oi 
-          ON s.seat_id = oi.seat_id
-        WHERE oi.order_id = @order_id
-      `);
+    await request.input("order_id", order_id).query(`
+      UPDATE s
+      SET 
+        s.status = 'BOOKED',
+        s.locked_by_user_id = NULL,
+        s.locked_at = NULL,
+        s.lock_expires_at = NULL
+      FROM seats s
+      INNER JOIN order_items oi 
+        ON s.seat_id = oi.seat_id
+      WHERE oi.order_id = @order_id
+        AND s.status IN ('LOCKED', 'AVAILABLE')
+    `);
   } catch (error) {
-    console.error("Error in markSeatsBookedByOrder:", error);
-    throw new Error("Đánh dấu ghế BOOKED thất bại");
+    console.error("markSeatsBookedByOrder error:", error);
+    throw new Error("Failed to mark seats BOOKED");
+  }
+}
+export async function lockSingleSeat(
+  seat_id: string,
+  user_id: string,
+  order_id: string
+) {
+  const db = await connectDB();
+
+  try {
+    const request = db.request()
+      .input("seat_id", seat_id)
+      .input("user_id", user_id)
+      .input("order_id", order_id);
+
+    const result = await request.query(`
+      UPDATE seats
+      SET 
+        status = 'LOCKED',
+        locked_by_user_id = @user_id,
+        locked_at = GETDATE(),
+        lock_expires_at = DATEADD(MINUTE, 10, GETDATE())
+      WHERE seat_id = @seat_id
+        AND status = 'AVAILABLE'
+    `);
+
+    if (result.rowsAffected[0] === 0) {
+      throw new Error(`Seat ${seat_id} is already locked or booked`);
+    }
+
+    return true;
+
+  } catch (error: any) {
+    console.error("lockSingleSeat error:", {
+      seat_id,
+      user_id,
+      order_id,
+      error: error.message,
+    });
+
+    throw new Error(
+      `Failed to lock seat ${seat_id}: ${error.message}`
+    );
+  }
+}
+
+export async function unlockSeat(seat_id: string) {
+  const db = await connectDB();
+
+  try {
+    const result = await db.request()
+      .input("seat_id", seat_id)
+      .query(`
+        UPDATE seats
+        SET 
+          status = 'AVAILABLE',
+          locked_by_user_id = NULL,
+          locked_at = NULL,
+          lock_expires_at = NULL
+        WHERE seat_id = @seat_id
+          AND status = 'LOCKED'
+      `);
+
+    return result.rowsAffected[0] > 0;
+
+  } catch (error: any) {
+    console.error("unlockSeat error:", {
+      seat_id,
+      error: error.message,
+    });
+
+    throw new Error(
+      `Failed to unlock seat ${seat_id}: ${error.message}`
+    );
   }
 }
