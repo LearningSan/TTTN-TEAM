@@ -185,7 +185,7 @@ const ConcertDetail = () => {
 
               {/* RIGHT SIDE */}
               <div className="flex-1 p-8 flex flex-col justify-between bg-[#0a0a0a]">
-                <div className="w-full h-[280px] rounded-[40px] overflow-hidden border border-gray-800 shadow-2xl">
+                <div className="w-full h-70 rounded-[40px] overflow-hidden border border-gray-800 shadow-2xl">
                   <img
                     src={
                       concert.banner_url ||
@@ -199,7 +199,7 @@ const ConcertDetail = () => {
                 <div className="flex items-center justify-center w-full mt-4">
                   <div className="flex items-center gap-3 px-6 py-2   shadow-inner">
                     {/* Icon đô la */}
-                    <div className="flex items-center justify-center border-[1.5px] border-gray-500 rounded-sm px-1 py-0.5 min-w-[24px]">
+                    <div className="flex items-center justify-center border-[1.5px] border-gray-500 rounded-sm px-1 py-0.5 min-w-6">
                       <span className="text-[6px] text-gray-500 mr-1">•</span>
                       <span className="text-[10px] font-bold text-gray-400">
                         $

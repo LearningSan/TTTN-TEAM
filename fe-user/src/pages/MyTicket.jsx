@@ -100,21 +100,21 @@ const MyTicket = () => {
 
                 {/* Phần phải: QR Code / Price */}
                 <div className="w-full md:w-48 bg-[#1A1A1A] p-6 flex flex-col items-center justify-center border-l border-black">
-                  <div className="w-24 h-24 bg-white p-2 rounded-lg mb-4">
-                    {/* Demo QR Code - Dinh có thể dùng thư viện qrcode.react */}
-                    <img
+                  {/* <div className="w-24 h-24 bg-white p-2 rounded-lg mb-4"> */}
+                  {/* Demo QR Code - Dinh có thể dùng thư viện qrcode.react */}
+                  {/* <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${ticket.order_id}`}
                       alt="QR"
                       className="w-full h-full"
-                    />
-                  </div>
+                    /> */}
+                  {/* </div> */}
                   <p className="text-[#8D1B1B] font-black text-sm">
                     {ticket.price
                       ? `${ticket.price.toLocaleString()} đ`
                       : "0 đ"}
                   </p>
                   <button className="mt-4 text-[10px] text-gray-500 font-bold hover:text-white underline">
-                    View Details
+                    {/* View Details */}
                   </button>
                 </div>
               </div>
