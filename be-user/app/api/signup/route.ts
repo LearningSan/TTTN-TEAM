@@ -72,7 +72,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    let { email, password, name } = body;
+    let { email, password,phone, name } = body;
 
     // ===== Trim =====
     email = email?.trim();
@@ -111,8 +111,16 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    const newUser = await createUser(email, password, name);
+   if (phone) {
+const phoneRegex = /^0\d{9,10}$/;
+      if (!phoneRegex.test(phone)) {
+        return NextResponse.json(
+          { message: "Invalid phone number format" },
+          { status: 400 }
+        );
+      }
+    }
+    const newUser = await createUser(email, password, name,phone);
 
     if (!newUser) {
       return NextResponse.json(
@@ -121,7 +129,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ===== Tạo token verify =====
     const token = crypto.randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + 15 * 60 * 1000);
 

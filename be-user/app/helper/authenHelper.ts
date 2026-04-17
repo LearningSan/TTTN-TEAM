@@ -12,12 +12,20 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "supersecret";
 
 
 export async function authenticateUser(email: string, password: string) {
-  const user = await getUser(email);
+  try {
+    const user = await getUser(email);
   if (!user || !user.password_hash) return null;
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) return null;
-
+  if(user.status ==="LOCKED"){
+    throw new Error("User account is locked");
+  }
   return await sanitizeUser(user)
+  } catch (error) {
+    console.error("Authentication failed:", error);
+    throw new Error("Authentication failed");
+  }
+  
 }
 
 export async function createToken(
@@ -25,8 +33,8 @@ export async function createToken(
   deviceInfo: string = "unknown",
   ipAddress: string = "0.0.0.0"
 ) {
-
-  if (!user.user_id) throw new Error("User ID is required");
+try {
+   if (!user.user_id) throw new Error("User ID is required");
   //tao access token
   const accessToken = jwt.sign({ user_id: user.user_id, email: user.email }, JWT_SECRET, { expiresIn: "1h" });
   //Ngày hết hạn
@@ -44,6 +52,11 @@ export async function createToken(
   return {
 accessToken,refreshToken
   };
+} catch (error) {
+    console.error("Token creation failed:", error);
+    throw new Error("Token creation failed");
+}
+ 
 }
   
 export async function verifyToken(token: string) {

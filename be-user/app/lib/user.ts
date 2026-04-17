@@ -27,7 +27,8 @@ export async function createUser(
   email: string,
   password: string | null,
   name: string,
-  avatar_url?: string 
+  phone?: string ,
+  avatar_url?: string
 ): Promise<users | null> {
   try {
     const existingUser = await getUser(email);
@@ -44,11 +45,12 @@ export async function createUser(
     await db.request()
       .input("email", email)
       .input("password_hash", password_hash)
+      .input("phone", phone ?? null)
       .input("name", name)
       .input("avatar_url", avatar_url ?? null) 
       .query(`
-        INSERT INTO users (email, password_hash, name, avatar_url) 
-        VALUES (@email, @password_hash, @name, @avatar_url)
+        INSERT INTO users (email, password_hash, phone, name, avatar_url) 
+        VALUES (@email, @password_hash, @phone, @name, @avatar_url)
       `);
 
     const user = await getUser(email);
@@ -79,7 +81,8 @@ export async function activateUser(userId: string): Promise<void> {
   }
 }
 export async function updatePassword(user_id: string, password_hash: string) {
-  const db = await connectDB();
+  try {
+    const db = await connectDB();
 
   return await db.request()
     .input("user_id", user_id)
@@ -89,6 +92,11 @@ export async function updatePassword(user_id: string, password_hash: string) {
       SET password_hash = @password_hash
       WHERE user_id = @user_id
     `);
+  } catch (error) {
+    console.error("Failed to update password", error);
+    throw new Error("Failed to update password");
+  }
+  
 }
 export async function updateWalletAddress(user_id: string, wallet_address: string) {
   try {
@@ -109,5 +117,27 @@ export async function updateWalletAddress(user_id: string, wallet_address: strin
   } catch (error: any) {
     console.error("updateWalletAddress error:", error);
     throw new Error("FAILED_TO_UPDATE_WALLET_ADDRESS");
+  }
+}
+export async function updatePersonalInfo(name:string,avatar_url:string,phone:string,email:string) {
+  try {
+    const db=await connectDB();
+    const request= db.request()
+    .input("name", name)
+    .input("avatar_url", avatar_url)
+    .input("phone", phone)
+    .input("email", email);
+      const result = await request.query(`
+      UPDATE users
+      SET name = @name,
+          avatar_url = @avatar_url,
+          phone = @phone,
+          updated_at = GETDATE()
+      WHERE email = @email
+    `);
+    return result;
+  } catch (error) {
+    console.error("updatePersonalInfo error:", error);
+    throw new Error("FAILED_TO_UPDATE_PERSONAL_INFO");
   }
 }

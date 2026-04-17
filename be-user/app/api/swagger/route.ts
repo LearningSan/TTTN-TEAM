@@ -17,6 +17,7 @@ export async function GET() {
       {name:"Tickets", description: "API liên quan đến vé"},
       {name:"Zone", description: "API liên quan đến zone"},
       { name: "Seat", description: "API liên quan đến ghế ngồi" },
+      { name: "User", description: "API liên quan đến người dùng" },
       ]
     },
     apis: ["./app/api/**/*.ts"],
