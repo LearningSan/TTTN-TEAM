@@ -10,53 +10,88 @@ export default function PaymentTestPage() {
   const [loading, setLoading] = useState(false);
 
   // =========================
-  // CONNECT METAMASK
+  // CONNECT METAMASK + SAVE WALLET
   // =========================
-  const connectWallet = async () => {
-    try {
-      const ethereum = (window as any).ethereum;
+ const connectWallet = async () => {
+  try {
+    const ethereum = (window as any).ethereum;
 
-      if (!ethereum) {
-        alert("MetaMask not found");
-        return;
-      }
-
-      // 🔥 ép về Sepolia
-      await ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0xaa36a7" }], // 11155111
-      });
-
-      // 🔥 lấy account
-      const accounts = await ethereum.request({
-        method: "eth_requestAccounts",
-      });
-
-      const newProvider = new ethers.BrowserProvider(ethereum);
-      setProvider(newProvider);
-
-      const signer = await newProvider.getSigner();
-      const address = await signer.getAddress();
-
-      console.log("CONNECTED:", address);
-
-      setWallet(address);
-    } catch (err) {
-      console.error(err);
+    if (!ethereum) {
+      alert("MetaMask not found");
+      return;
     }
-  };
 
+    await ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0xaa36a7" }],
+    });
+
+    const accounts = await ethereum.request({
+      method: "eth_requestAccounts",
+    });
+
+    const address = accounts[0];
+
+    // ✅ FIX: set provider
+    const newProvider = new ethers.BrowserProvider(ethereum);
+    setProvider(newProvider);
+
+    setWallet(address);
+
+    // ===== nonce → sign → verify =====
+    const nonceRes = await fetch("/api/wallet/nonce", {
+      credentials: "include",
+    });
+
+    const { message } = await nonceRes.json();
+
+    const signature = await ethereum.request({
+      method: "personal_sign",
+      params: [message, address],
+    });
+
+    const verifyRes = await fetch("/api/wallet/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        wallet_address: address,
+        signature,
+        message,
+      }),
+    });
+
+    const verifyData = await verifyRes.json();
+
+    if (!verifyRes.ok) {
+      alert(verifyData.message);
+      return;
+    }
+
+    alert("Kết nối ví thành công");
+
+  } catch (err) {
+    console.error(err);
+  }
+};
   // =========================
-  // CREATE PAYMENT (API)
+  // CREATE PAYMENT
   // =========================
   const createPayment = async () => {
+    if (!wallet) {
+      alert("Connect wallet first");
+      return;
+    }
+
     const res = await fetch("/api/payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        order_id: "D67E1869-29FA-48B0-91AD-933DC1EBA3CF",
-        from_wallet: wallet, // ✅ KHÔNG hardcode
+        order_id: "D612FAA1-FEB7-4430-8917-BAA62173A43B",
+        from_wallet: wallet,
         to_wallet: process.env.NEXT_PUBLIC_SYSTEM_WALLET,
       }),
     });
@@ -79,9 +114,13 @@ export default function PaymentTestPage() {
         return;
       }
 
+      if (!paymentId) {
+        alert("Create payment first");
+        return;
+      }
+
       const ethereum = (window as any).ethereum;
 
-      // 🔥 ép lại Sepolia trước khi send
       await ethereum.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: "0xaa36a7" }],
@@ -90,31 +129,33 @@ export default function PaymentTestPage() {
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
 
-      // ================= DEBUG =================
-      console.log("SIGNER:", address);
-
       const network = await provider.getNetwork();
-      console.log("CHAIN ID:", network.chainId);
-
       const balance = await provider.getBalance(address);
+
+      console.log("CHAIN:", network.chainId);
       console.log("BALANCE:", ethers.formatEther(balance));
-      // ========================================
 
-      // ❌ sai network → chặn luôn
-   if (Number(network.chainId) !== 11155111) {
-  alert("Please switch to Sepolia");
-  return;
-}
-
-      // ❌ không đủ tiền
-      if (balance < ethers.parseEther("0.00002")) {
-        alert("Not enough ETH");
+      if (Number(network.chainId) !== 11155111) {
+        alert("Please switch to Sepolia");
         return;
       }
 
-      console.log("STEP 1 - before send tx");
-      console.log("FROM:", address);
-      console.log("TO:", process.env.NEXT_PUBLIC_SYSTEM_WALLET);
+      // ================= CHECK BALANCE API =================
+      const checkRes = await fetch("/api/check-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from_wallet: address,
+          amount: ethers.parseEther("0.00001").toString(),
+        }),
+      });
+
+      const checkData = await checkRes.json();
+
+      if (!checkData.has_enough_balance) {
+        alert("Not enough ETH (including gas)");
+        return;
+      }
 
       // ================= SEND TX =================
       const tx = await signer.sendTransaction({
@@ -122,13 +163,11 @@ export default function PaymentTestPage() {
         value: ethers.parseEther("0.00001"),
       });
 
-      console.log("TX SENT:", tx.hash);
+      console.log("TX:", tx.hash);
 
       const receipt = await tx.wait();
 
-      console.log("MINED:", receipt.hash);
-
-      // ================= CONFIRM API =================
+      // ================= CONFIRM =================
       await fetch("/api/confirm-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -140,7 +179,7 @@ export default function PaymentTestPage() {
 
       alert("Payment success!");
     } catch (err) {
-      console.error("PAY ERROR:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -151,7 +190,7 @@ export default function PaymentTestPage() {
   // =========================
   return (
     <div style={{ padding: 20 }}>
-      <h2>💳 Payment Test (Sepolia FIXED)</h2>
+      <h2>💳 Payment Test (Full Flow)</h2>
 
       <button onClick={connectWallet}>
         🔗 Connect MetaMask
