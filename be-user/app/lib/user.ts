@@ -119,6 +119,25 @@ export async function updateWalletAddress(user_id: string, wallet_address: strin
     throw new Error("FAILED_TO_UPDATE_WALLET_ADDRESS");
   }
 }
+export async function getUserByWalletAddress(wallet_address: string): Promise<users | undefined> {
+  try {
+    const db = await connectDB();
+
+    const result = await db.request()
+      .input("wallet_address", wallet_address)
+      .query(`
+        SELECT * 
+        FROM users 
+        WHERE wallet_address = @wallet_address
+      `);
+
+    return result.recordset[0] as users | undefined;
+
+  } catch (error) {
+    console.error('Failed to fetch user by wallet:', error);
+    throw new Error('Failed to fetch user by wallet.');
+  }
+}
 export async function updatePersonalInfo(name:string,avatar_url:string,phone:string,email:string) {
   try {
     const db=await connectDB();

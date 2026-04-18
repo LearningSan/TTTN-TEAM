@@ -1,7 +1,34 @@
+version: "3.8"
+
 services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - app-network
+
   be:
     image: onlysan/be-user
+    container_name: be-user
     ports:
       - "3000:3000"
     env_file:
       - .env
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+
+volumes:
+  es_data:
+
+networks:
+  app-network:

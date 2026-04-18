@@ -4,9 +4,8 @@
  *   post:
  *     summary: Tạo giao dịch thanh toán cho order
  *     description: |
- *       ⚠️ Hiện tại hệ thống CHƯA tích hợp ví (wallet).
- *       - from_wallet và to_wallet  set = null thủ công trong DB.
- *       - Mỗi lần tạo order chỉ được 1 cái thôi, tại cái transaction_hash chỉ đc null 1 lần, nên hãy vô DB xóa dữ liệu khi test cái mới
+ *       Sau khi tạo payment thành công, frontend **PHẢI gọi API `/api/check-balance`**
+ *       để kiểm tra ví có đủ số dư trước khi gửi transaction blockchain.
  *     tags:
  *       - Payment
 *     security:
