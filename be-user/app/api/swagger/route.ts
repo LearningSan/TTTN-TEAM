@@ -18,6 +18,7 @@ export async function GET() {
       {name:"Zone", description: "API liên quan đến zone"},
       { name: "Seat", description: "API liên quan đến ghế ngồi" },
       { name: "User", description: "API liên quan đến người dùng" },
+      { name: "Wallet", description: "API liên quan đến ví điện tử (MetaMask)" },
       ]
     },
     apis: ["./app/api/**/*.ts"],
