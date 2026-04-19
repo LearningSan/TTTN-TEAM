@@ -4,6 +4,7 @@ import { getOrderById,markOrderPaid } from "../lib/order";
 import { createTicketsFromOrder } from "./ticketHelper";
 import { markSeatsBookedByOrder } from "../lib/seat";
 import { updateTicketQR } from "../lib/ticket";
+import { updateZoneAfterPayment } from "../lib/zone";
 import QRCode from "qrcode";
 
 import { ethers } from "ethers";
@@ -74,7 +75,7 @@ export async function confirmPaymentService(payment_id: string, tx_hash: string)
     );
 
     await markOrderPaid(payment.order_id, transaction);
-
+     await updateZoneAfterPayment(payment.order_id, transaction);
     await transaction.commit();
 
   } catch (err) {

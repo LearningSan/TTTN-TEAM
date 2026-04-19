@@ -129,14 +129,44 @@ export async function validateSeats(concert_id: string, items: any[]) {
 
   try {
     for (const item of items) {
-
       const zone = await getZoneById(item.zone_id);
 
-    
+     
       if (!zone.has_seat_map) {
         if (item.seat_id) {
           throw new Error(`Zone ${item.zone_id} does not accept seat_id`);
         }
+
+        const request = db.request()
+          .input("zone_id", item.zone_id)
+          .input("concert_id", concert_id);
+
+        const result = await request.query(`
+          SELECT 
+            z.total_seats,
+            z.sold_seats,
+            ISNULL(SUM(oi.quantity), 0) AS pending_locked
+          FROM zones z
+          LEFT JOIN order_items oi ON z.zone_id = oi.zone_id
+          LEFT JOIN orders o ON oi.order_id = o.order_id
+            AND o.order_status = 'PENDING'
+            AND o.expires_at > GETDATE()
+          WHERE z.zone_id = @zone_id
+            AND z.concert_id = @concert_id
+          GROUP BY z.total_seats, z.sold_seats
+        `);
+
+        const row = result.recordset[0];
+
+        const available =
+          row.total_seats - row.sold_seats - row.pending_locked;
+
+        if (item.quantity > available) {
+          throw new Error(
+            `Zone ${item.zone_id} not enough tickets. Available: ${available}`
+          );
+        }
+
         continue;
       }
 
@@ -152,7 +182,7 @@ export async function validateSeats(concert_id: string, items: any[]) {
         SELECT seat_id
         FROM seats
         WHERE seat_id = @seat_id
-        AND concert_id = @concert_id
+          AND concert_id = @concert_id
       `;
 
       const result = await request.query(query);
@@ -174,13 +204,27 @@ export async function validateSeats(concert_id: string, items: any[]) {
 
 export async function lockSeats(user_id: string, items: any[]) {
   const db = await connectDB();
+  try {
+    for (const item of items) {
+      const zone = await getZoneById(item.zone_id);
 
-  for (const item of items) {
-    const request = db.request()
-      .input("seat_id", item.seat_id)
-      .input("user_id", user_id);
 
-    const result = await request.query(`
+      if (!zone.has_seat_map) {
+        if (item.seat_id) {
+          throw new Error(`Zone ${item.zone_id} does not accept seat_id`);
+        }
+        continue;
+      }
+
+      if (!item.seat_id) {
+        throw new Error(`seat_id required for zone ${item.zone_id}`);
+      }
+
+      const request = db.request()
+        .input("seat_id", item.seat_id)
+        .input("user_id", user_id);
+
+      const result = await request.query(`
       UPDATE seats
       SET 
         status = 'LOCKED',
@@ -191,10 +235,15 @@ export async function lockSeats(user_id: string, items: any[]) {
         AND status = 'AVAILABLE'
     `);
 
-    if (result.rowsAffected[0] === 0) {
-      throw new Error(`Seat ${item.seat_id} already locked or booked`);
+      if (result.rowsAffected[0] === 0) {
+        throw new Error(`Seat ${item.seat_id} already locked or booked`);
+      }
     }
+  } catch (error) {
+    console.error("lockSeats error:", error);
+    throw error;
   }
+
 }
 export async function markSeatsBookedByOrder(
   order_id: string,
