@@ -1,6 +1,6 @@
 
 
-import { getTickets, getTicketById } from "@/app/lib/ticket";
+import { getTickets, getTicketById,getTicketsByUserId } from "@/app/lib/ticket";
 import { getOrderItems } from "../lib/order";
 import { createTicket } from "@/app/lib/ticket";
 import { ethers } from "ethers";
@@ -43,6 +43,21 @@ export async function getTicketByIdService(ticket_id: string) {
     throw new Error(error.message || "Failed to fetch ticket by ID");
   }
 }
+export async function getTicketByUserIdService(user_id: string) {
+  try {
+    const tickets = await getTicketsByUserId(user_id);
+
+    if (!tickets  ) {
+      throw new Error(`Tickets not found for user: ${user_id}`);
+    }
+
+    return tickets;
+  } catch (error: any) {
+    console.error("getTicketByUserIdService error:", error);
+    throw new Error(error.message || "Failed to fetch tickets by User ID");
+  }
+}
+
 
 export async function createTicketsFromOrder(payment: any) {
   const { order_id, user_id, concert_id, payment_id, from_wallet } = payment;

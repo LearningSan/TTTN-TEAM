@@ -99,7 +99,212 @@ export async function getTicketById(ticket_id: string) {
     throw new Error(error.message || "Failed to fetch ticket by ID");
   }
 }
+export async function getTicketsByUserId(
+  user_id: string,
+  page: number = 1,
+  pageSize: number = 10,
+  status?: string
+) {
+  try {
+    const db = await connectDB();
 
+    const offset = (page - 1) * pageSize;
+
+   let query = `
+SELECT 
+  -- 🎫 TICKET
+  t.ticket_id,
+  t.order_id,
+  t.order_item_id,
+  t.user_id,
+  t.status,
+  t.purchase_date,
+  t.used_at,
+  t.qr_url,
+  t.token_id,
+
+  o.total_amount,
+  o.currency,
+  o.order_status,
+  o.paid_at,
+
+  oi.quantity,
+  oi.unit_price,
+  oi.subtotal,
+
+  -- 🎤 CONCERT
+  c.concert_id,
+  c.title,
+  c.artist,
+  c.concert_date,
+  c.banner_url,
+
+  v.venue_id,
+  v.name AS venue_name,
+  v.city,
+  v.country,
+
+  z.zone_id,
+  z.zone_name,
+  z.price AS zone_price,
+  z.has_seat_map,
+  z.color_code,
+
+  s.seat_id,
+  s.row_label,
+  s.seat_number,
+  s.seat_label,
+
+  st.tier_id,
+  st.tier_name,
+  st.price AS tier_price,
+
+  p.payment_status,
+  p.transaction_hash,
+  p.confirmed_at,
+
+  COUNT(*) OVER() AS total
+
+FROM tickets t
+
+LEFT JOIN orders o 
+  ON t.order_id = o.order_id
+
+LEFT JOIN order_items oi 
+  ON t.order_item_id = oi.order_item_id
+
+LEFT JOIN concerts c 
+  ON t.concert_id = c.concert_id
+
+LEFT JOIN venues v 
+  ON c.venue_id = v.venue_id
+
+LEFT JOIN zones z 
+  ON t.zone_id = z.zone_id
+
+LEFT JOIN seats s 
+  ON t.seat_id = s.seat_id
+
+LEFT JOIN seat_tiers st 
+  ON t.tier_id = st.tier_id
+
+LEFT JOIN payment_transactions p 
+  ON t.payment_id = p.payment_id
+
+WHERE t.user_id = @user_id
+`;
+
+if (status) {
+  query += ` AND t.status = @status`;
+}
+
+query += `
+  ORDER BY t.created_at DESC
+  OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
+`;
+
+    const request = db.request()
+      .input("user_id", user_id)
+      .input("offset", offset)
+      .input("pageSize", pageSize);
+
+    if (status) {
+      request.input("status", status);
+    }
+
+    const result = await request.query(query);
+    const rows = result.recordset;
+
+    if (!rows.length) {
+      return {
+        total: 0,
+        data: []
+      };
+    }
+
+    // 🔥 GROUP BY ORDER_ID
+   const grouped: any = {};
+
+rows.forEach(row => {
+  if (!grouped[row.order_id]) {
+    grouped[row.order_id] = {
+      order_id: row.order_id,
+
+      order: {
+        total_amount: row.total_amount,
+        currency: row.currency,
+        status: row.order_status,
+        paid_at: row.paid_at
+      },
+
+      concert: {
+        concert_id: row.concert_id,
+        title: row.title,
+        artist: row.artist,
+        concert_date: row.concert_date,
+        banner_url: row.banner_url
+      },
+
+      venue: {
+        venue_id: row.venue_id,
+        name: row.venue_name,
+        city: row.city,
+        country: row.country
+      },
+
+      tickets: []
+    };
+  }
+
+  grouped[row.order_id].tickets.push({
+    ticket_id: row.ticket_id,
+    status: row.status,
+    qr_url: row.qr_url,
+
+    zone: {
+      zone_id: row.zone_id,
+      zone_name: row.zone_name,
+      price: row.zone_price,
+      color: row.color_code
+    },
+
+    seat: row.seat_id ? {
+      seat_id: row.seat_id,
+      row: row.row_label,
+      number: row.seat_number,
+      label: row.seat_label
+    } : null,
+
+    tier: row.tier_id ? {
+      tier_id: row.tier_id,
+      name: row.tier_name,
+      price: row.tier_price
+    } : null,
+
+    payment: {
+      status: row.payment_status,
+      tx_hash: row.transaction_hash,
+      confirmed_at: row.confirmed_at
+    },
+
+    price: {
+      unit_price: row.unit_price,
+      quantity: row.quantity,
+      subtotal: row.subtotal
+    }
+  });
+});
+
+  return {
+  total: Object.keys(grouped).length, 
+  data: Object.values(grouped)
+};
+
+  } catch (error: any) {
+    console.error("getTicketsByUserId error:", error);
+    throw new Error(error.message || "Failed to fetch tickets by user ID");
+  }
+}
 export async function updateTicketQR(
   ticket_id: string,
   qr_code: string,

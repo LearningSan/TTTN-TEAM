@@ -1,6 +1,6 @@
 /**
  * @swagger
- * /api/personal-info:
+ * /api/update/personal-info:
  *   post:
  *     summary: Cập nhật thông tin cá nhân
  *     tags:
