@@ -90,7 +90,7 @@ export default function PaymentTestPage() {
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        order_id: "D612FAA1-FEB7-4430-8917-BAA62173A43B",
+        order_id: "282D78FD-02A7-4A4B-A7CD-DD45CAEDEA13",
         from_wallet: wallet,
         to_wallet: process.env.NEXT_PUBLIC_SYSTEM_WALLET,
       }),

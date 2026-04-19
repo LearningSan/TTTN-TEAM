@@ -136,3 +136,30 @@ export async function lockZoneCapacityV2(
     );
   }
 }
+export async function updateZoneAfterPayment(
+  order_id: string,
+  transaction: any
+) {
+  try {
+     await transaction.request()
+    .input("order_id", order_id)
+    .query(`
+      UPDATE z
+      SET 
+        z.sold_seats = z.sold_seats + oi.quantity,
+        z.available_seats = z.available_seats - oi.quantity
+      FROM zones z
+      INNER JOIN order_items oi 
+        ON z.zone_id = oi.zone_id
+      WHERE oi.order_id = @order_id
+        AND z.has_seat_map = 0
+    `);
+  } catch (error) {
+    console.error("updateZoneAfterPayment error:", {
+      order_id,
+      error,
+    });
+    throw new Error("Failed to update zone after payment");
+  }
+ 
+}
