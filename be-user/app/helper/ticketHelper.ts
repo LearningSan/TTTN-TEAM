@@ -21,10 +21,14 @@ function getContract() {
 
   return new ethers.Contract(address, abi, wallet);
 }
-export async function getTicketsService() {
+
+export async function getTicketsService(params: {
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}) {
   try {
-    const tickets = await getTickets();
-    return tickets;
+    return await getTickets(params);
   } catch (error: any) {
     console.error("getTicketsService error:", error);
     throw new Error(error.message || "Failed to fetch tickets");

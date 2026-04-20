@@ -160,3 +160,23 @@ export async function updatePersonalInfo(name:string,avatar_url:string,phone:str
     throw new Error("FAILED_TO_UPDATE_PERSONAL_INFO");
   }
 }
+
+export async function getUserById(user_id: string, transaction?: any) {
+  try {
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
+
+    const result = await request
+      .input("user_id", user_id)
+      .query(`
+        SELECT * FROM users WHERE user_id = @user_id
+      `);
+
+    return result.recordset[0];
+
+  } catch (error) {
+    console.error("Error in getUserById:", error);
+    throw new Error("Lấy thông tin user thất bại");
+  }
+}
