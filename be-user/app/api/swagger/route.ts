@@ -19,6 +19,7 @@ export async function GET() {
       { name: "Seat", description: "API liên quan đến ghế ngồi" },
       { name: "User", description: "API liên quan đến người dùng" },  
       { name: "Wallet", description: "API liên quan đến ví điện tử (MetaMask)" },
+      { name: "Resale", description: "API liên quan đến bán lại vé (resale marketplace)" },
       ]
     },
     apis: ["./app/api/**/*.ts"],

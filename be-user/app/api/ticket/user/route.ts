@@ -16,6 +16,7 @@
  *     parameters:
  *       - in: query
  *         name: page
+ *         required: false
  *         schema:
  *           type: integer
  *           example: 1
@@ -23,6 +24,7 @@
  *
  *       - in: query
  *         name: pageSize
+ *         required: false
  *         schema:
  *           type: integer
  *           example: 10
@@ -30,11 +32,20 @@
  *
  *       - in: query
  *         name: status
+ *         required: false
  *         schema:
  *           type: string
  *           enum: [CANCELLED, TRANSFERRED, USED, ACTIVE, MINTING]
- *         example: ACTIVE
- *         description: Lọc theo trạng thái vé
+ *         example: TRANSFERRED
+ *         description: |
+ *           Lọc theo trạng thái vé:
+ *           
+ *           🔥 TRANSFERRED = vé đang được đăng bán (resale marketplace)
+ *
+ *           ACTIVE = vé bình thường đang sở hữu
+ *           USED = vé đã check-in
+ *           CANCELLED = vé huỷ
+ *           MINTING = đang mint NFT
  *
  *     responses:
  *       200:
