@@ -65,11 +65,6 @@ public class Seat {
     @JoinColumn(name = "zone_id", nullable = false)
     private Zone zone; // Ghế này thuộc khu vực nào
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "concert_id", nullable = false)
-    private Concert concert; // Ghế này thuộc concert nào
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tier_id")
     private SeatTier seatTier;

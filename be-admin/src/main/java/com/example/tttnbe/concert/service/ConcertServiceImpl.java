@@ -222,7 +222,6 @@ public class ConcertServiceImpl implements ConcertService {
                         // 1. Tạo và lưu Hạng vé (Tier)
                         com.example.tttnbe.seat.entity.SeatTier tier = new com.example.tttnbe.seat.entity.SeatTier();
                         tier.setZone(savedZone);
-                        tier.setConcert(savedConcert);
                         tier.setTierName(tReq.getTierName());
                         tier.setPrice(tReq.getPrice());
                         tier.setCurrency(tReq.getCurrency() != null ? tReq.getCurrency() : "USDT");
@@ -246,7 +245,6 @@ public class ConcertServiceImpl implements ConcertService {
                             for (int j = 1; j <= tReq.getSeatsPerRow(); j++) {
                                 Seat seat = new Seat();
                                 seat.setZone(savedZone);
-                                seat.setConcert(savedConcert);
                                 seat.setSeatTier(savedTier); // 👈 Quan trọng: Gắn ghế vào Tier
                                 seat.setRowLabel(currentRow);
                                 seat.setSeatNumber(j);
@@ -375,15 +373,18 @@ public class ConcertServiceImpl implements ConcertService {
                 // Đã bán vé -> Chặn đứng hành động sửa sơ đồ ghế!
                 throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Concert này đã có vé được bán ra! Bạn chỉ được sửa thông tin cơ bản, KHÔNG THỂ thay đổi sơ đồ khu vực và hạng vé.");
             } else {
-                // Chưa bán vé -> Cho phép "Đập đi xây lại"
+                // Chưa bán vé -> Cho phép "Đập đi xây lại" (Chuẩn Hibernate)
 
-                // BƯỚC 3.1: Xóa sạch dữ liệu cũ (Phải xóa từ dưới lên để không lỗi khóa ngoại)
-                seatRepository.deleteByConcert_ConcertId(concertId);
-                seatTierRepository.deleteByConcert_ConcertId(concertId);
-                zoneRepository.deleteByConcert_ConcertId(concertId);
+                // BƯỚC 1: Xóa sạch Zone cũ khỏi bộ nhớ đệm của Concert
+                if (concert.getZones() != null) {
+                    concert.getZones().clear();
+                }
 
-                // Lấy Concert sau khi đã lưu thông tin cơ bản để gắn vào Zone mới
+                // BƯỚC 2: Lưu Concert lại để Hibernate tự động kích hoạt "orphanRemoval" và xóa sạch dữ liệu cũ dưới DB
+                // (KHÔNG cần dùng hàm deleteByConcert_ConcertId nữa)
                 Concert savedConcert = concertRepository.save(concert);
+
+                // BƯỚC 3: Bắt đầu bơm danh sách Zone và Seat mới vào...
 
                 // BƯỚC 3.2: Xây lại sơ đồ mới (Copy y chang logic từ hàm Create)
                 List<Zone> zonesToSave = new ArrayList<>();
@@ -409,7 +410,6 @@ public class ConcertServiceImpl implements ConcertService {
                         for (com.example.tttnbe.seat.dto.TierRequest tReq : zReq.getTiers()) {
                             com.example.tttnbe.seat.entity.SeatTier tier = new com.example.tttnbe.seat.entity.SeatTier();
                             tier.setZone(savedZone);
-                            tier.setConcert(savedConcert);
                             tier.setTierName(tReq.getTierName());
                             tier.setPrice(tReq.getPrice());
                             tier.setCurrency(tReq.getCurrency() != null ? tReq.getCurrency() : "USDT");
@@ -430,7 +430,6 @@ public class ConcertServiceImpl implements ConcertService {
                                 for (int j = 1; j <= tReq.getSeatsPerRow(); j++) {
                                     Seat seat = new Seat();
                                     seat.setZone(savedZone);
-                                    seat.setConcert(savedConcert);
                                     seat.setSeatTier(savedTier);
                                     seat.setRowLabel(currentRow);
                                     seat.setSeatNumber(j);
@@ -490,12 +489,7 @@ public class ConcertServiceImpl implements ConcertService {
         long soldTickets = ticketRepository.countByConcert_ConcertId(concertId);
 
         if (soldTickets == 0) {
-            // ==========================================
-            // TRƯỜNG HỢP 1: CHƯA BÁN VÉ -> HARD DELETE
-            // ==========================================
-            // Quét sạch rác trong DB từ dưới lên trên để không lỗi khóa ngoại
-            seatRepository.deleteByConcert_ConcertId(concertId);
-            seatTierRepository.deleteByConcert_ConcertId(concertId);
+
             zoneRepository.deleteByConcert_ConcertId(concertId);
 
             // Cuối cùng là xóa luôn Concert này cho DB sạch sẽ
