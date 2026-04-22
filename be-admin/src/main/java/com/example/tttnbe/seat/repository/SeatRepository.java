@@ -33,9 +33,6 @@ public interface SeatRepository extends JpaRepository<Seat, UUID> {
             "ORDER BY LEN(row_label) ASC, row_label ASC", nativeQuery = true)
     String findFirstRowLabelByTierId(@Param("tierId") UUID tierId);
 
-    // Xóa sạch ghế của một Concert
-    void deleteByConcert_ConcertId(UUID concertId);
-
     // 5. Đếm TỔNG SỐ GHẾ của một Hạng vé
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.seatTier.tierId = :tierId")
     Integer countTotalSeatsByTierId(@Param("tierId") UUID tierId);
