@@ -43,7 +43,7 @@ public class UserServiceImpl implements UserService{
     public UserResponse changeUserStatus(UUID targetUserId, String newStatus) {
 
         // Kiểm tra xem trạng thái truyền lên có hợp lệ không
-        if (!newStatus.equals("ACTIVE") && !newStatus.equals("BANNED")) {
+        if (!newStatus.equals("ACTIVE") && !newStatus.equals("LOCKED")) {
             throw new CustomException(400, "Trạng thái không hợp lệ. Chỉ chấp nhận ACTIVE hoặc BANNED");
         }
 

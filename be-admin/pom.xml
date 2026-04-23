@@ -35,6 +35,12 @@
     <!-- ===== Dependencies ===== -->
     <dependencies>
 
+        <dependency>
+            <groupId>org.web3j</groupId>
+            <artifactId>core</artifactId>
+            <version>4.10.0</version>
+        </dependency>
+
         <!-- Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -29,10 +29,6 @@ public class SeatTier {
     @JoinColumn(name = "zone_id", nullable = false)
     private Zone zone;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "concert_id", nullable = false)
-    private Concert concert;
-
     @Column(name = "tier_name", nullable = false, length = 20)
     private String tierName;
 
