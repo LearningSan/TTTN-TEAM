@@ -41,7 +41,7 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
                   overflow: 'hidden', 
                   boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)' 
                 }}>
-                  <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', color: '#333', fontWeight: 'bold', fontSize: 20, opacity: 0.5 }}>STAGE AREA</div>
+                  {/* <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', color: '#333', fontWeight: 'bold', fontSize: 20, opacity: 0.5 }}>STAGE AREA</div> */}
 
                    {stages.map((stg, i) => {
                       const layout = stg.layoutConfig || {};
@@ -97,12 +97,10 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
             <Descriptions.Item label="Địa điểm" span={2}>
               {data.venueName || venues.find(v => (v.venueId || v.venue_id) === data.venueId)?.name || 'Chưa cập nhật'}
             </Descriptions.Item>
-            <Descriptions.Item label="Ngày diễn">{formatSafeDate(data.concertDate)}</Descriptions.Item>
-            <Descriptions.Item label="Kết thúc">{formatSafeDate(data.endDate)}</Descriptions.Item>
             <Descriptions.Item label="Mở bán vé">{formatSafeDate(data.saleStartAt)}</Descriptions.Item>
             <Descriptions.Item label="Đóng bán vé">{formatSafeDate(data.saleEndAt)}</Descriptions.Item>
-            
-            {/* 🚀 Đoạn này render Mô tả đã gọn gàng hơn rất nhiều vì chỉ cần đọc chữ thuần */}
+            <Descriptions.Item label="Ngày diễn">{formatSafeDate(data.concertDate)}</Descriptions.Item>
+            <Descriptions.Item label="Kết thúc">{formatSafeDate(data.endDate)}</Descriptions.Item>
             <Descriptions.Item label="Mô tả" span={2}>
               <div style={{ whiteSpace: 'pre-wrap' }}>{data.description || 'Không có mô tả'}</div>
             </Descriptions.Item>

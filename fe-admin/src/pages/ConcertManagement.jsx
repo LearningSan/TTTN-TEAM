@@ -106,62 +106,85 @@ const ConcertManagement = () => {
   };
 
   const handleFinish = async (values) => {
-    setLoading(true);
-    try {
-      const layoutConfigObj = { 
-        canvasConfig: {
-          width: 1100, 
-          height: 550  
-        },
-        stages: values.stages || [],
-        zoneLayouts: values.zones?.map(z => ({
-          zoneName: z.zoneName, 
-          layoutConfig: z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 }
-        }))
-      };
+  setLoading(true);
+  try {
+    const layoutConfigObj = { 
+      canvasConfig: { width: 1100, height: 550 },
+      stages: values.stages || [],
+      zoneLayouts: values.zones?.map(z => ({
+        zoneName: z.zoneName, 
+        layoutConfig: z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 }
+      }))
+    };
 
-      const payload = {
-        ...values,
-        layoutConfig: JSON.stringify(layoutConfigObj),
-        concertDate: values.concertDate ? values.concertDate.toISOString() : null,
-        endDate: values.endDate ? values.endDate.toISOString() : null,
-        saleStartAt: values.saleStartAt ? values.saleStartAt.toISOString() : null,
-        saleEndAt: values.saleEndAt ? values.saleEndAt.toISOString() : null,
-        zones: values.zones?.map((z, i) => {
-          const isSeated = z.hasSeatMap;
-          let calculatedTotal = 0; 
-          const mappedTiers = isSeated ? z.tiers?.map((t, j) => {
-            const rCount = t.rowCount || 1;
-            const sCount = t.seatsPerRow || 1;
-            calculatedTotal += (rCount * sCount);
-            return {
-              ...t, tierName: t.tierName || 'STANDARD', displayOrder: j + 1,
-              currency: z.currency || 'USDT', colorCode: z.colorCode || ZONE_COLORS[0].value,
-              rowPrefix: t.rowPrefix?.toUpperCase(), rowCount: rCount, seatsPerRow: sCount
-            };
-          }) || [] : [];
+    const payload = {
+      // Bốc đích danh các trường của ConcertRequest, KHÔNG dùng ...values để tránh gửi nhầm trường stages
+      title: values.title,
+      artist: values.artist,
+      description: values.description,
+      bannerURL: values.bannerURL,
+      venueId: values.venueId,
+      status: values.status,
+      layoutConfig: JSON.stringify(layoutConfigObj),
+      
+      // Xử lý ngày tháng như đệ đã làm chuẩn
+      concertDate: values.concertDate ? values.concertDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+      endDate: values.endDate ? values.endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+      saleStartAt: values.saleStartAt ? values.saleStartAt.format('YYYY-MM-DDTHH:mm:ss') : null,
+      saleEndAt: values.saleEndAt ? values.saleEndAt.format('YYYY-MM-DDTHH:mm:ss') : null,
+      
+      zones: values.zones?.map((z, i) => {
+        const isSeated = z.hasSeatMap;
+        let calculatedTotal = 0; 
+        
+        const mappedTiers = isSeated ? z.tiers?.map((t, j) => {
+          const rCount = t.rowCount || 1;
+          const sCount = t.seatsPerRow || 1;
+          calculatedTotal += (rCount * sCount);
+          
+          // 🚀 Chỉ gửi đúng những gì TierRequest cần + tierId (để Update)
           return {
-            ...z, zoneName: z.zoneName?.trim() || `Khu vực ${i+1}`, displayOrder: i + 1,
-            colorCode: z.colorCode || ZONE_COLORS[i % ZONE_COLORS.length].value,
-            totalSeats: isSeated ? calculatedTotal : (z.totalSeats || 1), tiers: mappedTiers
+            tierId: t.tierId, // Rất quan trọng khi SỬA
+            tierName: t.tierName || 'STANDARD', 
+            price: t.price,
+            currency: z.currency || 'USDT', 
+            colorCode: t.colorCode || z.colorCode || ZONE_COLORS[0].value,
+            displayOrder: j + 1,
+            rowPrefix: t.rowPrefix?.toUpperCase(), 
+            rowCount: rCount, 
+            seatsPerRow: sCount
           };
-        }) || []
-      };
+        }) || [] : [];
 
-      if (modalState.id) {
-        await API.put(`/admin/concerts/${modalState.id}`, payload);
-        message.success('Cập nhật Concert thành công!');
-      } else {
-        await API.post('/admin/concerts', payload);
-        message.success('Tạo Concert thành công!');
-      }
-      setModalState({ open: false, id: null });
-      fetchData(pagination.current);
-    } catch (error) {
-      const backendMsg = error.response?.data?.message || 'Có lỗi xảy ra!';
-      message.error(`Lưu thất bại: ${backendMsg}`);
-    } finally { setLoading(false); }
-  };
+        // 🚀 Chỉ gửi đúng những gì ZoneRequest cần + zoneId (để Update)
+        return {
+          zoneId: z.zoneId, // Rất quan trọng khi SỬA
+          zoneName: z.zoneName?.trim() || `Khu vực ${i+1}`, 
+          price: z.price,
+          currency: z.currency,
+          colorCode: z.colorCode || ZONE_COLORS[i % ZONE_COLORS.length].value,
+          hasSeatMap: isSeated,
+          displayOrder: i + 1,
+          totalSeats: isSeated ? calculatedTotal : (z.totalSeats || 1), 
+          tiers: mappedTiers
+        };
+      }) || []
+    };
+
+    if (modalState.id) {
+      await API.put(`/admin/concerts/${modalState.id}`, payload);
+      message.success('Cập nhật Concert thành công!');
+    } else {
+      await API.post('/admin/concerts', payload);
+      message.success('Tạo Concert thành công!');
+    }
+    setModalState({ open: false, id: null });
+    fetchData(pagination.current);
+  } catch (error) {
+    const backendMsg = error.response?.data?.message || 'Có lỗi xảy ra!';
+    message.error(`Lưu thất bại: ${backendMsg}`);
+  } finally { setLoading(false); }
+};
 
   const handleOpenEdit = async (record) => {
     setLoading(true);
@@ -266,6 +289,7 @@ const ConcertManagement = () => {
               { value: 'DRAFT', label: 'DRAFT' },
               { value: 'COMPLETED', label: 'COMPLETED' },
               { value: 'CANCELLED', label: 'CANCELLED' },
+              { value: 'SOLD_OUT', label: 'SOLD_OUT' },
             ]}
           />
         </div>

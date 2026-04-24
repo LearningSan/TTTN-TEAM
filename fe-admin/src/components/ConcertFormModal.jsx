@@ -161,7 +161,7 @@ const ConcertFormModal = ({ open, modalId, onCancel, form, onFinish, loading, ve
         <Divider orientation="left">4. Khác</Divider>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <Form.Item name="bannerURL" label="Ảnh Banner"><Input /></Form.Item>
-          <Form.Item name="status" label="Trạng thái"><Select options={['DRAFT', 'ON_SALE', 'COMPLETED', 'CANCELLED'].map(v => ({value:v, label:v}))} /></Form.Item>
+          <Form.Item name="status" label="Trạng thái"><Select options={['DRAFT', 'ON_SALE', 'COMPLETED', 'CANCELLED', 'SOLD_OUT'].map(v => ({value:v, label:v}))} /></Form.Item>
         </div>
         <Form.Item name="description" label="Mô tả"><Input.TextArea rows={3} /></Form.Item>
         <SeatMapBuilder form={form} />
