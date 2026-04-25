@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { HiOutlineChevronLeft } from "react-icons/hi";
 
 const SeatSelection = () => {
-  const { concertId, zoneId } = useParams();
+  const { concertId } = useParams(); // Bạn chỉ lấy concertId từ URL
   const navigate = useNavigate();
+  const location = useLocation();
   const [seats, setSeats] = useState({});
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,34 +25,29 @@ const SeatSelection = () => {
         );
 
         if (zonesRes.data?.success) {
-          // Dữ liệu zone thường nằm trong data.data hoặc data
           const allZones = zonesRes.data.data || [];
 
-          // Bước 2: Gọi API lấy ghế cho TỪNG zone một lúc
+          // Bước 2: Gọi API lấy ghế cho TỪNG zone
           const seatRequests = allZones.map((zone) =>
             axios.post(`${import.meta.env.VITE_API_URL}/seat`, {
               concert_id: concertId,
-              zone_id: zone.zone_id, // Gửi từng zone_id theo yêu cầu của BE
+              zone_id: zone.zone_id,
             }),
           );
 
           const seatResponses = await Promise.all(seatRequests);
 
-          // Bước 3: Gộp tất cả kết quả vào một Object duy nhất để render
+          // Bước 3: Gộp kết quả
           let combinedSeats = {};
-          // SeatSelection.jsx
-
           seatResponses.forEach((res, index) => {
             if (res.data?.success) {
-              // Lấy zone_id thực tế mà bạn đã dùng để gửi yêu cầu (Chắc chắn có dữ liệu)
               const currentZoneId = allZones[index].zone_id;
-
-              // Duyệt qua dữ liệu ghế trả về và ép zone_id vào từng ghế
               const tiersWithFixedZone = {};
+
               Object.entries(res.data.data).forEach(([tierName, seatList]) => {
                 tiersWithFixedZone[tierName] = seatList.map((seat) => ({
                   ...seat,
-                  zone_id: currentZoneId, // Bổ sung zone_id vào đối tượng ghế
+                  zone_id: currentZoneId,
                 }));
               });
 
@@ -62,7 +58,7 @@ const SeatSelection = () => {
           setSeats(combinedSeats);
         }
 
-        // 3. Lấy thông tin Concert (giữ nguyên code cũ của bạn)
+        // Bước 4: Lấy thông tin Concert
         const concertRes = await axios.post(
           `${import.meta.env.VITE_API_URL}/concert/${concertId}`,
           { concert_id: concertId },
@@ -72,6 +68,7 @@ const SeatSelection = () => {
           setConcertDetail({
             ...apiData.concert,
             venue_name: apiData.venue?.name,
+            date: apiData.concert?.concert_date,
           });
         }
       } catch (error) {
@@ -81,11 +78,10 @@ const SeatSelection = () => {
       }
     };
     fetchData();
-  }, [concertId]); // Bỏ zoneId khỏi dependency để không bị load lại khi đổi zone trên URL
-  // Xử lý chọn/bỏ chọn ghế
-  const toggleSeat = (seat) => {
-    if (seat.status !== "AVAILABLE") return; // Ghế đã bị khóa hoặc đã bán thì không chọn được
+  }, [concertId]);
 
+  const toggleSeat = (seat) => {
+    if (seat.status !== "AVAILABLE") return;
     setSelectedSeats((prev) =>
       prev.find((s) => s.seat_id === seat.seat_id)
         ? prev.filter((s) => s.seat_id !== seat.seat_id)
@@ -93,33 +89,34 @@ const SeatSelection = () => {
     );
   };
 
-  // SeatSelection.jsx - Dòng 83
+  // HÀM XỬ LÝ ĐẶT VÉ (Đã gộp và sửa lỗi biến)
   const handleBooking = () => {
-    if (selectedSeats.length === 0) return alert("Vui lòng chọn ghế!");
+    // 1. KIỂM TRA ĐĂNG NHẬP
+    const savedUser = JSON.parse(localStorage.getItem("user"));
 
-    navigate(`/checkout`, {
+    if (!savedUser || !savedUser.user_id) {
+      alert("Vui lòng đăng nhập để thực hiện đặt vé!");
+      // Chuyển hướng và lưu lại đường dẫn hiện tại
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+
+    // 2. KIỂM TRA CHỌN GHẾ
+    if (selectedSeats.length === 0) {
+      alert("Vui lòng chọn ít nhất một ghế!");
+      return;
+    }
+
+    // 3. CHUYỂN SANG CHECKOUT (Sử dụng đúng concertDetail)
+    navigate(`/concert/${concertId}/checkout`, {
       state: {
+        selectedSeats: selectedSeats,
         concertId: concertId,
-        selectedSeats: selectedSeats.map((s) => ({
-          seat_id: s.seat_id,
-          seat_label: s.seat_label,
-          price: s.price,
-          tier_id: s.tier_id,
-          zone_id: s.zone_id, // Bây giờ sẽ lấy giá trị từ s đã được ép ở Bước 1
-        })),
-        concert: {
-          title: concertDetail?.title || "Tên buổi hòa nhạc",
-          location: concertDetail?.venue_name || "Địa điểm tổ chức",
-          date: concertDetail?.concert_date
-            ? new Date(concertDetail.concert_date).toLocaleString("vi-VN")
-            : "Thời gian diễn ra",
-        },
+        concert: concertDetail,
       },
     });
   };
 
-  // Tìm đến đoạn Render giá (khoảng dòng 170)
-  // Sửa hiển thị giá từ USDT sang VND nếu bạn muốn khớp với giao diện đỏ TicketX
   const formatPrice = (price) => {
     return price ? `${price.toLocaleString()} đ` : "N/A";
   };

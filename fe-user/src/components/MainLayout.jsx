@@ -111,6 +111,12 @@ const MainLayout = () => {
           {user ? (
             <div className="flex items-center gap-3">
               {/* Thay 'flex-col' thành 'flex-row' hoặc xóa hẳn 'flex-col' đi */}
+              <Link
+                to="/resale-market"
+                className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-1 rounded font-bold hover:bg-gray-200 transition-colors"
+              >
+                Mua bán lại vé
+              </Link>
               <div className="flex flex-row items-center gap-1">
                 <span className="text-[#8D1B1B] text-[11px] font-black whitespace-nowrap">
                   WELCOME,
@@ -119,6 +125,13 @@ const MainLayout = () => {
                   {user.name || user.email}
                 </span>
               </div>
+              <Link
+                to="/profile"
+                className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-1 rounded font-bold hover:bg-gray-200 transition-colors"
+              >
+                Profile
+              </Link>
+
               <button
                 onClick={handleLogout}
                 className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-1 rounded font-bold hover:bg-gray-200 transition-colors"
