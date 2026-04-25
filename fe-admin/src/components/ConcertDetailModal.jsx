@@ -1,9 +1,40 @@
-import React from 'react';
-import { Modal, Descriptions, Tag, Divider, Table, Space, Typography, Button } from 'antd';
-
+import React, { useState, useEffect } from 'react';
+import { Modal, Descriptions, Tag, Divider, Table, Space, Typography, Button,Spin } from 'antd';
+import API from '../api/config';
 const { Text } = Typography;
 
 const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeDate }) => {
+  // 🚀 TẠO STATE LƯU MẢNG GHẾ ĐÃ BÁN
+  const [bookedSeats, setBookedSeats] = useState([]);
+  const [loadingSeats, setLoadingSeats] = useState(false);
+
+  // 🚀 GỌI API LẤY VÉ KHI MỞ MODAL
+  useEffect(() => {
+    if (open && data?.concertId) {
+      const fetchBookedSeats = async () => {
+        setLoadingSeats(true);
+        try {
+          // Gọi API lấy maximum vé (ví dụ size=5000) để map lên sơ đồ
+          const res = await API.get(`/admin/concerts/${data.concertId}/tickets?size=5000`);
+          const tickets = res.data?.content || [];
+          
+          // Lọc ra các vé không bị Hủy và gom seatLabel vào 1 mảng
+          const seats = tickets
+            .filter(t => t.status !== 'CANCELLED' && t.seatLabel)
+            .map(t => t.seatLabel);
+            
+          setBookedSeats(seats);
+        } catch (error) {
+          console.error("Lỗi lấy danh sách ghế:", error);
+        } finally {
+          setLoadingSeats(false);
+        }
+      };
+      fetchBookedSeats();
+    } else {
+      setBookedSeats([]); // Reset khi đóng modal
+    }
+  }, [open, data]);
   return (
     <Modal 
       title={<b style={{fontSize: 20}}>CHI TIẾT: {data?.title}</b>} 
@@ -31,6 +62,7 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
              const zones = data.zones || [];
 
              return (
+              <Spin spinning={loadingSeats} tip="Đang đồng bộ dữ liệu ghế...">
                 <div style={{ 
                   position: 'relative', 
                   width: '100%', 
@@ -69,25 +101,97 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
                    {zones.map((z, i) => {
                       const matchedZone = zoneLayouts.find(layoutObj => layoutObj.zoneName === z.zoneName);
                       const layout = matchedZone ? matchedZone.layoutConfig : { x: 0, y: 0, w: 0, h: 0 };
+                      
                       return (
                          <div 
                           key={`view-zone-${i}`} 
                           style={{ position: 'absolute', left: layout.x, top: layout.y, width: layout.w, height: layout.h, zIndex: 20 }}
                          >
-                            <div style={{ 
-                              background: z.colorCode || '#1890ff', color: '#fff', width: '100%', height: '100%', borderRadius: 6,
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 10, fontWeight: 'bold', border: '2px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                            }}>
-                              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', width: '90%', textAlign: 'center' }}>
-                                {z.zoneName}
+                            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                              
+                              {/* TÊN ZONE NẰM TRÊN CÙNG */}
+                              <div style={{ position: 'absolute', top: -20, left: 0, width: '100%', textAlign: 'center', color: '#fff', fontSize: 12, fontWeight: 'bold', textShadow: '0px 1px 4px rgba(0,0,0,0.8)', whiteSpace: 'nowrap', zIndex: 30 }}>
+                                {z.zoneName} ({z.availableSeats}/{z.totalSeats})
                               </div>
-                              <div style={{ fontSize: 9 }}>{z.availableSeats} / {z.totalSeats}</div>
+
+                              <div style={{ 
+                                background: z.colorCode || '#1890ff', width: '100%', height: '100%', borderRadius: 6,
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                border: '2px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.3)', padding: '6px', overflow: 'hidden'
+                              }}>
+                                
+                                {/* 🚀 RENDER LƯỚI GHẾ NẾU LÀ VÉ NGỒI */}
+                                {z.hasSeatMap && z.tiers && z.tiers.length > 0 ? (
+                                  <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', opacity: 0.9 }}>
+                                    {z.tiers.map((tier, tIdx) => {
+                                      // HÀM TÍNH KÝ TỰ HÀNG (A, B, C...)
+                                      const getLabel = (index) => {
+                                        const prefix = tier.rowPrefix || 'A';
+                                        let num = 0;
+                                        for (let i = 0; i < prefix.length; i++) num = num * 26 + (prefix.charCodeAt(i) - 64);
+                                        let currentNum = num + index;
+                                        let label = '';
+                                        while (currentNum > 0) {
+                                          let mod = (currentNum - 1) % 26;
+                                          label = String.fromCharCode(65 + mod) + label;
+                                          currentNum = Math.floor((currentNum - mod) / 26);
+                                        }
+                                        return label;
+                                      };
+
+                                      return (
+                                        <div key={`t-${tIdx}`} style={{
+                                          flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly',
+                                          backgroundColor: tier.colorCode ? `${tier.colorCode}66` : 'rgba(255,255,255,0.1)',
+                                          padding: '2px', borderRadius: '4px', border: `1px dashed ${tier.colorCode || 'rgba(255,255,255,0.3)'}`, width: '100%', marginBottom: 2
+                                        }}>
+                                          {Array.from({ length: tier.rowCount || 0 }).map((_, rIdx) => {
+                                            const rowLetter = getLabel(rIdx);
+                                            return (
+                                              <div key={`r-${rIdx}`} style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '4px' }}>
+                                                {/* Ký tự hàng */}
+                                                <div style={{ width: '15px', color: '#fff', fontSize: '9px', fontWeight: 'bold', textAlign: 'center', opacity: 0.8 }}>
+                                                  {rowLetter}
+                                                </div>
+                                                {/* Lưới ghế */}
+                                                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-evenly' }}>
+                                                  {Array.from({ length: tier.seatsPerRow || 0 }).map((_, sIdx) => {
+                                                    
+                                                    // 🚀 BƯỚC QUAN TRỌNG: TẠO MÃ GHẾ ĐỂ SO SÁNH (Ví dụ: A1, B2)
+                                                    const seatLabel = `${rowLetter}${sIdx + 1}`; 
+                                                    
+                                                    // 🚀 CHECK GHẾ ĐÃ BÁN (Dùng state bookedSeats từ API)
+                                                    const isBooked = bookedSeats.includes(seatLabel); 
+
+                                                    return (
+                                                      <div key={`s-${sIdx}`} style={{
+                                                        width: 5, height: 5, borderRadius: '50%',
+                                                        // Đổi thành màu Đỏ (#ff4d4f) nếu đã bán
+                                                        backgroundColor: isBooked ? '#ff4d4f' : (tier.colorCode || z.colorCode || '#fff'), 
+                                                        border: '1px solid rgba(255,255,255,0.4)',
+                                                        boxShadow: isBooked ? '0 0 4px #ff4d4f' : '0 1px 2px rgba(0,0,0,0.2)'
+                                                      }} />
+                                                    )
+                                                  })}
+                                                </div>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div style={{ color: '#fff', fontWeight: 'bold', fontSize: 10, opacity: 0.8 }}>
+                                    KHU VÉ ĐỨNG
+                                  </div>
+                                )}
+                              </div>
                             </div>
                          </div>
                       );
                    })}
-                </div>
+                </div></Spin>
              );
           })()}
 

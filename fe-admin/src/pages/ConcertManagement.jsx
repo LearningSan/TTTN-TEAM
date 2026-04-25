@@ -10,16 +10,13 @@ import ConcertDetailModal from '../components/ConcertDetailModal';
 dayjs.extend(customParseFormat);
 
 const ZONE_COLORS = [
-  { value: '#FF4D4F', label: 'Đỏ (Red)' },
-  { value: '#1890FF', label: 'Xanh dương (Blue)' },
-  { value: '#52C41A', label: 'Xanh lá (Green)' },
-  { value: '#FAAD14', label: 'Vàng (Yellow)' },
-  { value: '#FA8C16', label: 'Cam (Orange)' },
-  { value: '#722ED1', label: 'Tím (Purple)' },
-  { value: '#13C2C2', label: 'Xanh ngọc (Cyan)' },
-  { value: '#EB2F96', label: 'Hồng (Pink)' },
-  { value: '#A0D911', label: 'Xanh chanh (Lime)' },
-  { value: '#5C0011', label: 'Đỏ thẫm (Dark Red)' }
+  { value: '#81c5f0', label: 'Xanh dương' },
+  { value: '#e8eb44', label: 'Vàng' },
+  { value: '#e6b665', label: 'Cam' },
+  { value: '#bb69db', label: 'Tím' },
+  { value: '#c40e94', label: 'Hồng' },
+  { value: '#000000', label: 'Đen (Black)' },
+  { value: '#380c0c', label: 'Nâu' },
 ];
 
 const ConcertManagement = () => {
@@ -147,7 +144,7 @@ const ConcertManagement = () => {
             tierId: t.tierId, // Rất quan trọng khi SỬA
             tierName: t.tierName || 'STANDARD', 
             price: t.price,
-            currency: z.currency || 'USDT', 
+            currency: t.currency || z.currency || 'USDT',
             colorCode: t.colorCode || z.colorCode || ZONE_COLORS[0].value,
             displayOrder: j + 1,
             rowPrefix: t.rowPrefix?.toUpperCase(), 
@@ -185,7 +182,20 @@ const ConcertManagement = () => {
     message.error(`Lưu thất bại: ${backendMsg}`);
   } finally { setLoading(false); }
 };
-
+  const handleChangeStatus = async (id, newStatus) => {
+    setLoading(true);
+    try {
+      await API.patch(`/admin/concerts/${id}/status`, { status: newStatus });
+      message.success(`Đã cập nhật trạng thái thành ${newStatus}!`);
+      // Gọi lại hàm fetchData để làm mới bảng
+      fetchData(pagination.current, pagination.pageSize, keyword, filterVenueId, filterStatus);
+    } catch (error) {
+      const backendMsg = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái!';
+      message.error(`Thất bại: ${backendMsg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleOpenEdit = async (record) => {
     setLoading(true);
     try {
@@ -203,7 +213,7 @@ const ConcertManagement = () => {
       const processedZones = fullData.zones?.map((z) => {
         const matchedZone = savedZoneLayouts.find(layoutObj => layoutObj.zoneName === z.zoneName);
         const layout = matchedZone ? matchedZone.layoutConfig : { x: 50, y: 150, w: 120, h: 60 };
-        return { ...z, layoutConfig: layout };
+        return { ...z, layoutConfig: layout,area: !z.hasSeatMap ? Math.ceil((z.totalSeats || 0) / 2) : undefined };
       });
 
       form.resetFields();
@@ -223,15 +233,59 @@ const ConcertManagement = () => {
     { title: 'Địa điểm', dataIndex: 'venueId', render: (vId, record) => record.venueName || venues.find(v => (v.venueId || v.venue_id) === vId)?.name || 'Chưa cập nhật' },
     { title: 'Ngày diễn', dataIndex: 'concertDate', render: (d) => formatSafeDate(d) },
     { title: 'Trạng thái', dataIndex: 'status', width: 120, render: (status) => <Tag color={{'ON_SALE': 'green', 'DRAFT': 'blue', 'CANCELLED': 'red', 'COMPLETED': 'gray'}[status] || 'default'}>{status || 'ACTIVE'}</Tag> },
-    { title: 'Hành động', render: (_, r) => (
-        <Space>
-          <Tooltip title="Xem chi tiết"><Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(r.concertId || r.id)} /></Tooltip>
-          <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => handleOpenEdit(r)}>Sửa</Button>
-          <Popconfirm title="Xóa concert?" onConfirm={() => API.delete(`/admin/concerts/${r.concertId || r.id}`).then(() => { message.success('Thành công!'); fetchData(pagination.current); }).catch(() => message.error('Thất bại!'))}>
-            <Button size="small" danger icon={<DeleteOutlined />}>Xóa</Button>
-          </Popconfirm>
-        </Space>
-      ) 
+    { title: 'Hành động', render: (_, r) => {
+        const isDraft = r.status === 'DRAFT';
+        const isOnSale = r.status === 'ON_SALE';
+        
+        return (
+          <Space wrap>
+            <Tooltip title="Xem chi tiết">
+              <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(r.concertId || r.id)} />
+            </Tooltip>
+            
+            {/* ✏️ Sửa: Chỉ hiện khi DRAFT hoặc ON_SALE */}
+            {(isDraft || isOnSale) && (
+              <Button size="small" type="primary" ghost  onClick={() => handleOpenEdit(r)}>Sửa</Button>
+            )}
+
+            {/* 🟢 MỞ BÁN: Chỉ hiện khi sự kiện đang là DRAFT */}
+            {isDraft && (
+               <Popconfirm 
+                  title="Xác nhận mở bán?" 
+                  description="Concert sẽ chuyển sang trạng thái ON_SALE và hiển thị cho khách hàng." 
+                  onConfirm={() => handleChangeStatus(r.concertId || r.id, 'ON_SALE')}
+               >
+                 <Button size="small" style={{ borderColor: '#52c41a', color: '#52c41a' }}>Mở bán</Button>
+               </Popconfirm>
+            )}
+
+            {/* 🔴 HỦY SỰ KIỆN: Hiện khi sự kiện đang Mở bán */}
+            {isOnSale && (
+               <Popconfirm 
+                  title="HỦY SỰ KIỆN NÀY?" 
+                  description={
+                    <div style={{ maxWidth: 280 }}>
+                      Sự kiện sẽ chuyển thành <b>CANCELLED</b>.<br/>
+                      Sau khi hủy, bạn cần sang mục <b>Quản lý Đơn hàng</b> để thực hiện Refund cho các vé đã bán.
+                    </div>
+                  }
+                  onConfirm={() => handleChangeStatus(r.concertId || r.id, 'CANCELLED')}
+                  okText="Xác nhận Hủy"
+                  okButtonProps={{ danger: true }}
+               >
+                 <Button size="small" danger>Hủy</Button>
+               </Popconfirm>
+            )}
+
+            {/* 🗑️ XÓA VĨNH VIỄN: Chỉ cho phép xóa hẳn khỏi DB khi còn là DRAFT (chưa bán vé) */}
+            {isDraft && (
+              <Popconfirm title="Xóa vĩnh viễn concert này?" onConfirm={() => API.delete(`/admin/concerts/${r.concertId || r.id}`).then(() => { message.success('Đã xóa!'); fetchData(pagination.current); }).catch(() => message.error('Thất bại!'))}>
+                <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      } 
     }
   ];
 

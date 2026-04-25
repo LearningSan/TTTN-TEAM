@@ -47,7 +47,7 @@ const AdminLayout = () => {
         <Menu 
           theme="dark" 
           mode="inline" 
-          defaultSelectedKeys={[location.pathname]} 
+          selectedKeys={[location.pathname]} 
           items={menuItems} 
           onClick={({ key }) => navigate(key)} 
         />

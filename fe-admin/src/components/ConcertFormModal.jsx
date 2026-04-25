@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Form, Input, DatePicker, Select, InputNumber, Divider, Card, Tag, Space, Button, Switch, Typography } from 'antd';
+import { Modal, Form, Input, DatePicker, Select, InputNumber, Divider, Card, Tag, Space, Button, Switch, Typography,message } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import SeatMapBuilder from './SeatMapBuilder'; // Gọi trực tiếp Builder đệ đã làm
@@ -87,19 +87,75 @@ const ConcertFormModal = ({ open, modalId, onCancel, form, onFinish, loading, ve
   <Form.Item {...restZField} name={[zName, 'layoutConfig', 'h']} hidden><Input /></Form.Item>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1.5fr', gap: '12px', marginTop: 8, marginBottom: 16 }}>
                           <Form.Item {...restZField} name={[zName, 'zoneName']} label="Tên Khu vực" rules={[{ required: true }]}><Input disabled={isZoneLocked} /></Form.Item>
-                          <Form.Item {...restZField} name={[zName, 'price']} label="Giá khu vực" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
-                          <Form.Item {...restZField} name={[zName, 'currency']} label="Tiền tệ" rules={[{ required: true }]}><Select disabled={isZoneLocked} options={[{value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'},{value: 'BNB', label: 'BNB'}]} /></Form.Item>
-                          <Form.Item {...restZField} name={[zName, 'colorCode']} label="Màu khu vực" rules={[{ required: true }]}><Select disabled={isZoneLocked} options={zoneColors.map(c => ({ value: c.value, label: <Space><div style={{width: 12, height: 12, background: c.value, borderRadius: '50%'}}></div>{c.label}</Space> }))} /></Form.Item>
+                          {!hasSeatMap && (
+                            <>
+    <Form.Item {...restZField} name={[zName, 'price']} label="Giá khu vực" rules={[{ required: true }]}>
+      <InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} />
+    </Form.Item>
+    <Form.Item {...restZField} name={[zName, 'currency']} label="Tiền tệ" rules={[{ required: true }]}>
+        <Select disabled={isZoneLocked} options={[{value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'},{value: 'BNB', label: 'BNB'}]} />
+      </Form.Item>
+      </>
+  )}
+                          
+  <Form.Item {...restZField} name={[zName, 'colorCode']} label="Màu khu vực" rules={[{ required: true }]}>
+    <Select disabled={isZoneLocked} options={zoneColors.map(c => ({ value: c.value, label: <Space><div style={{width: 12, height: 12, background: c.value, borderRadius: '50%'}}></div>{c.label}</Space> }))} />
+  </Form.Item>
                         </div>
 
                         <div style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #e8e8e8' }}>
-                          <Form.Item {...restZField} name={[zName, 'hasSeatMap']} label="Tính chất Không gian" valuePropName="checked">
+                          <Form.Item {...restZField} name={[zName, 'hasSeatMap']} label="Loại khu vực" valuePropName="checked">
                             <Switch disabled={isZoneLocked} checkedChildren="🎫 VÉ NGỒI" unCheckedChildren="🏃 VÉ ĐỨNG" />
                           </Form.Item>
-
+                        {hasSeatMap && (
+    <>
+      <Form.Item {...restZField} name={[zName, 'price']} hidden><InputNumber /></Form.Item>
+      <Form.Item {...restZField} name={[zName, 'currency']} hidden><Input /></Form.Item>
+    </>
+  )}
                           {!hasSeatMap ? (
                             <div style={{ background: '#e6f7ff', padding: 12, borderRadius: 6 }}>
-                              <Form.Item {...restZField} name={[zName, 'totalSeats']} label="Tổng số vé bán ra" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={1} style={{width:'30%'}} /></Form.Item>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <Form.Item 
+          {...restZField} 
+          name={[zName, 'area']} 
+          label="Diện tích Khu vực (m²)" 
+          rules={[{ required: true, message: 'Vui lòng nhập diện tích!' }]}
+        >
+          <InputNumber 
+            disabled={isZoneLocked} min={1} style={{width:'100%'}} addonAfter="m²"
+            onChange={(val) => {
+              // Tự động ép số vé xuống mức an toàn nếu diện tích bị thu hẹp
+              const currentZones = form.getFieldValue('zones');
+              if (currentZones[zName].totalSeats > val * 2) {
+                currentZones[zName].totalSeats = val * 2;
+                form.setFieldsValue({ zones: currentZones });
+                message.info(`Hệ thống đã tự động điều chỉnh số vé xuống ${val * 2} theo diện tích mới!`);
+              }
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item 
+          {...restZField} 
+          name={[zName, 'totalSeats']} 
+          label="Tổng vé phát hành tối đa" 
+          dependencies={[['zones', zName, 'area']]}
+          rules={[
+            { required: true, message: 'Vui lòng nhập số vé!' },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const area = getFieldValue(['zones', zName, 'area']);
+                if (!area) return Promise.reject(new Error('⚠️ Phải nhập diện tích trước!'));
+                if (!value || value <= area * 2) return Promise.resolve();
+                return Promise.reject(new Error(`Vượt giới hạn an toàn! Tối đa ${area * 2} vé.`));
+              },
+            }),
+          ]}
+        >
+          <InputNumber disabled={isZoneLocked} min={1} style={{width:'100%'}} addonAfter="Vé" />
+        </Form.Item>
+      </div>
                             </div>
                           ) : (
                             <Form.List name={[zName, 'tiers']}>
@@ -109,9 +165,34 @@ const ConcertFormModal = ({ open, modalId, onCancel, form, onFinish, loading, ve
                                     <div key={tKey} style={{ background: '#fafafa', padding: 12, marginBottom: 12, borderRadius: 6, border: '1px dashed #d9d9d9' }}>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><Text strong>📌 Phân Hạng (Tier) #{index + 1}</Text>{!isZoneLocked && tierFields.length > 1 && (<Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeTier(tName)} size="small" />)}</div>
                                       <Form.Item {...restTField} name={[tName, 'tierId']} hidden><Input /></Form.Item>
-                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
                                         <Form.Item {...restTField} name={[tName, 'tierName']} label="Tên Hạng" rules={[{ required: true }]}><Select disabled={isZoneLocked} placeholder="-- Chọn hạng vé --"><Select.Option value="VIP">VIP</Select.Option><Select.Option value="MID">MID</Select.Option><Select.Option value="STANDARD">STANDARD</Select.Option></Select></Form.Item>
-                                        <Form.Item {...restTField} name={[tName, 'price']} label="Giá hạng" rules={[{ required: true }]}><InputNumber disabled={isZoneLocked} min={0} style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
+                                        <Form.Item {...restTField} name={[tName, 'price']} label="Giá hạng" rules={[{ required: true }]}>
+                  <InputNumber 
+      disabled={isZoneLocked} min={0} style={{width:'100%'}} 
+      formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 
+      onChange={(val) => {
+        // Đồng bộ Giá lên Zone nếu là Tier đầu tiên
+        if (index === 0) {
+          const currentZones = form.getFieldValue('zones');
+          currentZones[zName].price = val;
+          form.setFieldsValue({ zones: currentZones });
+        }
+      }}
+    />
+                </Form.Item>
+                <Form.Item {...restTField} name={[tName, 'currency']} label="Tiền tệ" rules={[{ required: true }]} initialValue="USDT">
+    <Select disabled={isZoneLocked} options={[{value: 'USDT', label: 'USDT'},{value: 'ETH', label: 'ETH'},{value: 'BNB', label: 'BNB'}]}
+      onChange={(val) => {
+        // Đồng bộ Tiền tệ lên Zone nếu là Tier đầu tiên
+        if (index === 0) {
+          const currentZones = form.getFieldValue('zones');
+          currentZones[zName].currency = val;
+          form.setFieldsValue({ zones: currentZones });
+        }
+      }}
+    />
+  </Form.Item>
                                         <Form.Item 
     {...restTField} 
     name={[tName, 'colorCode']} 
