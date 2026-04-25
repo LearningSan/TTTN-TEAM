@@ -1,150 +1,165 @@
-import React, { useState } from "react"; // Đã thêm useEffect
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { HiOutlineLocationMarker, HiOutlineCalendar } from "react-icons/hi";
-import { AiFillHome } from "react-icons/ai";
 import { GiTicket } from "react-icons/gi";
+import { FaWallet } from "react-icons/fa"; // 1. Thêm import icon
+import { ethers } from "ethers"; // 2. Thêm import ethers
 import axios from "axios";
 
 const Checkout = () => {
   const { state } = useLocation();
+  console.log("Dữ liệu nhận được từ Link/Navigate:", state);
   const navigate = useNavigate();
-  const orderId = state?.orderId;
-
-  const concert = state?.concert || {
-    title: "Đang tải thông tin...",
-    location: "",
-    date: "",
-  };
+  const [loading, setLoading] = useState(false);
 
   const selectedSeats = state?.selectedSeats || [];
+  const concert = state?.concert || null;
+  const concertId = state?.concertId;
 
   const subtotal = selectedSeats.reduce(
     (sum, seat) => sum + (seat.price || 0),
     0,
   );
 
-  // 1. Khởi tạo State lấy dữ liệu từ Local Storage
-  // Thay thế đoạn khởi tạo useState cũ (khoảng dòng 28-36)
+  const formatDate = (dateString) => {
+    if (!dateString) return "Đang cập nhật";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  // Khởi tạo thông tin khách hàng từ Local Storage
   const [customerInfo, setCustomerInfo] = useState(() => {
-    // Logic này chỉ chạy DUY NHẤT một lần khi component mount
     try {
       const savedUser = JSON.parse(localStorage.getItem("user"));
-      if (savedUser) {
-        return {
-          fullName:
-            savedUser.name || savedUser.full_name || savedUser.username || "",
-          email: savedUser.email || "",
-          phone: savedUser.phone || "",
-        };
-      }
-    } catch (error) {
-      console.error("Lỗi đọc dữ liệu từ localStorage:", error);
+      return {
+        fullName:
+          savedUser?.name || savedUser?.full_name || savedUser?.username || "",
+        email: savedUser?.email || "",
+        phone: savedUser?.phone || "",
+        // Lấy ví từ LocalStorage thay vì dùng biến customerInfo chưa tồn tại
+        walletAddress:
+          savedUser?.wallet_address ||
+          "0x0000000000000000000000000000000000000000",
+      };
+    } catch (e) {
+      console.error("Lỗi lấy dữ liệu từ LocalStorage:", e);
+      return { fullName: "", email: "", phone: "", walletAddress: "" };
     }
-
-    // Giá trị mặc định nếu không có user trong storage
-    return { fullName: "", email: "", phone: "" };
   });
 
-  const handleContinue = async () => {
-    console.log("Dữ liệu ghế gửi đi:", selectedSeats);
-    const { fullName, email, phone } = customerInfo;
+  // Kiểm tra nếu không có state (do reload trang hoặc truy cập trực tiếp)
+  if (!state) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center font-black">
+        <p className="mb-4 text-red-600">
+          Dữ liệu đơn hàng bị mất do bạn vừa tải lại trang.
+        </p>
+        <button
+          onClick={() => navigate("/")}
+          className="bg-black text-white px-6 py-2 rounded-lg"
+        >
+          Về trang chủ chọn lại ghế
+        </button>
+      </div>
+    );
+  }
 
-    if (!fullName || !email || !phone) {
-      alert("Vui lòng nhập đầy đủ thông tin!");
+  const handleContinue = async () => {
+    if (!window.ethereum) {
+      alert("Vui lòng cài đặt MetaMask!");
       return;
     }
 
+    setLoading(true);
     try {
-      // 1. Lấy thông tin User
-      const savedUser = JSON.parse(localStorage.getItem("user"));
-      if (!savedUser || !savedUser.user_id) {
-        alert("Vui lòng đăng nhập lại!");
-        navigate("/login");
-        return;
-      }
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
 
-      // 2. Kết nối ví MetaMask
-      if (!window.ethereum) return alert("Vui lòng cài đặt MetaMask!");
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-      const userWallet = accounts[0];
-
-      // 3. Bước 1: Gọi API tạo Đơn hàng (Order)
-      const orderRes = await axios.post(
-        `${import.meta.env.VITE_API_URL}/order`,
+      // --- BƯỚC MỚI: XÁC THỰC CHỮ KÝ VÍ VỚI SERVER ---
+      // 1. Lấy nonce từ server
+      const nonceRes = await axios.get(
+        `${import.meta.env.VITE_API_URL}/wallet/nonce`,
         {
-          user_id: savedUser.user_id,
-          concert_id: state?.concertId,
-          currency: "USDT",
-          items: selectedSeats.map((s) => ({
-            // SỬA TẠI ĐÂY: Dùng s.zone_id thay vì biến khác
-            zone_id: s.zone_id,
-            seat_id: s.seat_id,
-            quantity: 1,
-          })),
-          note: `Khách hàng: ${fullName}`,
+          withCredentials: true,
+        },
+      );
+
+      // 2. Ký message nonce
+      const signature = await signer.signMessage(nonceRes.data.message);
+
+      // 3. Gửi verify để server lưu địa chỉ ví vào session/cookie
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/wallet/verify`,
+        {
+          wallet_address: walletAddress,
+          signature: signature,
+          message: nonceRes.data.message,
         },
         { withCredentials: true },
       );
-      if (orderRes.data?.success) {
-        const newOrderId = orderRes.data.data.order_id;
 
-        // 4. Bước 2: Gọi API tạo thông tin Thanh toán (Payment Transaction)
-        // Bước này cực kỳ quan trọng để lấy được payment_id
+      // --- BƯỚC TẠO ORDER (Bây giờ đã có đủ Auth và Wallet Verify) ---
+      const items = selectedSeats.map((seat) => ({
+        zone_id: seat.zone_id,
+        seat_id: seat.seat_id,
+        quantity: 1,
+      }));
+
+      const orderRes = await axios.post(
+        `${import.meta.env.VITE_API_URL}/order`,
+        {
+          concert_id: concertId,
+          currency: "ETH",
+          items: items,
+          wallet_address: walletAddress,
+        },
+        { withCredentials: true },
+      );
+
+      if (orderRes.data?.success) {
+        const orderData = orderRes.data.data;
+
+        // Bước 5: Tạo Payment
         const paymentRes = await axios.post(
           `${import.meta.env.VITE_API_URL}/payment`,
           {
-            order_id: newOrderId,
-            amount: subtotal,
-            currency: "USDT",
-            from_wallet: userWallet,
+            order_id: orderData.order_id,
+            from_wallet: walletAddress,
             to_wallet: import.meta.env.VITE_WALLET_ADDRESS,
           },
           { withCredentials: true },
         );
 
-        // 5. Nếu tạo payment thành công, chuyển sang trang thanh toán thực tế
         if (paymentRes.data?.success) {
           navigate("/payment", {
             state: {
-              orderId: newOrderId,
-              paymentId: paymentRes.data.data.payment_id, // payment_id lấy từ kết quả API
-              amount: subtotal,
-              concert: concert, // Truyền tiếp thông tin concert sang trang sau
+              orderId: orderData.order_id,
+              paymentId: paymentRes.data.data.payment_id,
+              amount: orderData.total_amount,
+              walletAddress: walletAddress,
+              concert: concert,
             },
           });
         }
       }
     } catch (error) {
       console.error("Lỗi Checkout:", error);
-      alert(
-        "Lỗi: " + (error.response?.data?.message || "Kiểm tra lại dữ liệu"),
-      );
+      const msg =
+        error.response?.data?.message ||
+        "Không thể khởi tạo đơn hàng. Vui lòng kiểm tra lại kết nối ví.";
+      alert(msg);
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <div className="min-h-screen bg-[#F5F5F5] font-sans text-gray-900">
-      {/* Header - Giữ nguyên của bạn */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link
-            to="/"
-            className="text-3xl font-black tracking-tighter text-[#8D1B1B]"
-          >
-            TICKETX.
-          </Link>
-          <nav className="flex items-center gap-8">
-            <Link
-              to="/"
-              className="text-sm font-bold hover:text-[#8D1B1B] transition-colors flex items-center gap-2"
-            >
-              <AiFillHome size={18} /> TRANG CHỦ
-            </Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="flex flex-col lg:flex-row gap-12">
           {/* Left Column: Customer Information */}
@@ -224,14 +239,15 @@ const Checkout = () => {
               {/* Concert Info */}
               <div className="mb-6">
                 <h4 className="font-black text-[#8D1B1B] text-lg leading-tight mb-2">
-                  {concert.title}
+                  {concert?.title}
                 </h4>
                 <div className="space-y-1">
                   <p className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                    <HiOutlineLocationMarker size={14} /> {concert.location}
+                    <HiOutlineLocationMarker size={14} />{" "}
+                    {concert?.venue_name || "Chưa xác định địa điểm"}
                   </p>
                   <p className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                    <HiOutlineCalendar size={14} /> {concert.date}
+                    <HiOutlineCalendar size={14} /> {formatDate(concert?.date)}
                   </p>
                 </div>
               </div>
@@ -271,9 +287,16 @@ const Checkout = () => {
 
               <button
                 onClick={handleContinue}
-                className="w-full bg-[#8D1B1B] text-white font-black py-4 rounded-xl text-lg hover:bg-black transition-all uppercase shadow-md"
+                disabled={loading}
+                className="w-full bg-[#8D1B1B] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-50"
               >
-                Tiếp tục thanh toán
+                {loading ? (
+                  "Đang xử lý..."
+                ) : (
+                  <>
+                    <FaWallet /> Kết nối ví & Tiếp tục
+                  </>
+                )}
               </button>
             </div>
           </div>

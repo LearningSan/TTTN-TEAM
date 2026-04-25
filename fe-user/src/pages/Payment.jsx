@@ -7,11 +7,12 @@ import { FaWallet } from "react-icons/fa";
 
 const Payment = () => {
   const { state } = useLocation();
+  console.log("Dữ liệu nhận tại Payment:", state);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const orderId = state?.orderId;
-  const paymentIdActual = state?.paymentId; // Đây là UUID từ DB
+  const paymentIdActual = state?.paymentId || state?.payment_id;
   const amountVND = state?.amount || 0;
   const ethAmount = (amountVND / 60000000).toFixed(6);
 
@@ -21,56 +22,127 @@ const Payment = () => {
       return;
     }
 
-    if (!paymentIdActual) {
-      alert(
-        "Lỗi: Không tìm thấy ID thanh toán. Vui lòng thực hiện lại từ đầu!",
-      );
+    // Phân biệt ID: Mua mới dùng paymentIdActual, Resale dùng transferId từ state
+    const isResale = state?.isResale;
+    const idToConfirm = isResale ? state?.transferId : paymentIdActual;
+
+    if (!idToConfirm) {
+      alert("Không tìm thấy thông tin định danh giao dịch!");
       return;
     }
 
     setLoading(true);
     try {
-      // BƯỚC 1: THỰC HIỆN CHUYỂN TIỀN TRÊN BLOCKCHAIN
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
+      const address = await signer.getAddress();
 
-      const tx = await signer.sendTransaction({
-        to: import.meta.env.VITE_WALLET_ADDRESS,
-        value: ethers.parseEther(ethAmount),
-      });
+      // ================= BƯỚC 1: KIỂM TRA MẠNG SEPOLIA =================
+      const network = await provider.getNetwork();
+      if (Number(network.chainId) !== 11155111) {
+        alert("Vui lòng chuyển sang mạng Sepolia Testnet!");
+        setLoading(false);
+        return;
+      }
 
-      console.log("Đang chờ xác nhận giao dịch...");
-      await tx.wait(); // Đợi ví trừ tiền thành công
+      let txHash = "";
 
-      // BƯỚC 2: GỌI API XÁC NHẬN ĐỂ LƯU VÉ VÀO DB
-      try {
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/confirm-payment`,
-          { payment_id: paymentIdActual },
+      if (isResale) {
+        // ================= NHÁNH A: GIAO DỊCH RESALE (NFT TRANSFER) =================
+        const { nftData } = state; // Nhận dữ liệu NFT từ ResaleMarket truyền sang
+        // KIỂM TRA SỐ DƯ ETH TRONG VÍ NGƯỜI MUA (Đảm bảo đủ để trả phí Gas)
+        const balance = await provider.getBalance(address);
+
+        // Ước tính phí gas cho giao dịch transfer (ví dụ: 0.002 ETH trên Sepolia)
+        // Bạn có thể dùng provider.getFeeData() để chính xác hơn hoặc set cứng 1 khoảng an toàn
+        const estimatedGas = ethers.parseEther("0.005");
+
+        if (balance < estimatedGas) {
+          alert(
+            "Ví của bạn không đủ ETH để trả phí Gas cho giao dịch chuyển vé!",
+          );
+          setLoading(false);
+          return;
+        }
+        // Khởi tạo Contract NFT
+        const ticketContract = new ethers.Contract(
+          nftData.contract_address,
+          [
+            "function transferFrom(address from, address to, uint256 tokenId) public",
+          ],
+          signer,
+        );
+
+        // Thực hiện chuyển NFT từ người bán (seller) sang người mua (người dùng hiện tại)
+        const tx = await ticketContract.transferFrom(
+          nftData.seller_address,
+          address,
+          nftData.token_id,
+        );
+
+        console.log("Đang chờ xác nhận chuyển NFT:", tx.hash);
+        const receipt = await tx.wait(); // Đợi giao dịch SUCCESS (status = 1)
+
+        if (receipt.status !== 1)
+          throw new Error("Giao dịch chuyển NFT thất bại trên Blockchain!");
+        txHash = tx.hash;
+
+        // XÁC NHẬN VỚI BACKEND QUA API /resale/confirm
+        const confirmRes = await axios.post(
+          `${import.meta.env.VITE_API_URL}/resale/confirm`,
+          {
+            transfer_id: idToConfirm,
+            tx_hash: txHash,
+          },
           { withCredentials: true },
         );
 
-        if (response.data?.success) {
-          alert("Thanh toán và lưu vé thành công!");
-          navigate(`/order-success/${orderId}`);
-        } else {
-          // Trường hợp API trả về success: false
-          throw new Error("Backend không thể xác nhận thanh toán.");
+        if (confirmRes.data?.success) {
+          alert("Mua vé sang nhượng thành công!");
+          navigate("/my-tickets"); // Chuyển về danh sách vé cá nhân
         }
-      } catch (apiError) {
-        console.error(
-          "Lỗi lưu vào DB:",
-          apiError.response?.data?.message || apiError.message,
+      } else {
+        // ================= NHÁNH B: GIAO DỊCH MUA MỚI (ETH TRANSFER) =================
+        // (Giữ nguyên logic cũ của bạn)
+        const amountInWei = ethers.parseEther(ethAmount.toString()).toString();
+
+        const checkRes = await axios.post(
+          `${import.meta.env.VITE_API_URL}/check-balance`,
+          { from_wallet: address, amount: amountInWei },
+          { withCredentials: true },
         );
-        alert(
-          "Tiền đã trừ thành công nhưng hệ thống gặp lỗi khi tạo vé. Vui lòng chụp màn hình giao dịch và liên hệ Admin!",
-        );
-        // Vẫn cho sang trang thành công nếu bạn muốn Demo lướt qua lỗi DB
-        navigate(`/order-success/${orderId}`);
+
+        if (!checkRes.data?.has_enough_balance) {
+          alert("Ví của bạn không đủ số dư ETH!");
+          setLoading(false);
+          return;
+        }
+
+        const systemWallet = import.meta.env.VITE_WALLET_ADDRESS;
+        const tx = await signer.sendTransaction({
+          to: systemWallet,
+          value: ethers.parseEther(ethAmount.toString()),
+        });
+
+        const receipt = await tx.wait();
+
+        if (receipt.status === 1) {
+          const confirmRes = await axios.post(
+            `${import.meta.env.VITE_API_URL}/confirm-payment`,
+            { payment_id: idToConfirm, tx_hash: tx.hash },
+            { withCredentials: true },
+          );
+
+          if (confirmRes.data?.success) {
+            alert("Thanh toán thành công! Hệ thống đang khởi tạo vé.");
+            navigate(`/order-success/${orderId.order_id}`);
+          }
+        }
       }
     } catch (error) {
-      console.error("Lỗi giao dịch MetaMask:", error);
-      alert("Giao dịch bị hủy hoặc ví không đủ tiền!");
+      console.error("Lỗi quy trình:", error);
+      const errorMsg = error.response?.data?.message || error.message;
+      alert("Lỗi: " + errorMsg);
     } finally {
       setLoading(false);
     }
