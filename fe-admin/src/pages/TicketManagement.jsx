@@ -67,27 +67,37 @@ const TicketManagement = () => {
 
   // Logic tính toán gộp (Doanh thu, Vé)
   const getAdvancedStats = () => {
-    if (!concertDetail?.zones) return { total: 0, available: 0, sold: 0, revenue: 0, currency: 'USDT' };
+    if (!concertDetail?.zones) return { total: 0, available: 0, sold: 0, revenueMap: {} };
     
-    let total = 0, available = 0, sold = 0, revenue = 0, currency = 'USDT';
+    let total = 0, available = 0, sold = 0;
+    const revenueMap = {}; // Lưu trữ doanh thu theo từng loại tiền
 
     concertDetail.zones.forEach(zone => {
-      currency = zone.currency || currency;
+      const curr = zone.currency || 'USDT';
+      if (!revenueMap[curr]) revenueMap[curr] = 0;
+
       if (zone.hasSeatMap && zone.tiers) {
         zone.tiers.forEach(tier => {
           const tTotal = tier.totalSeats || 0;
           const tAvail = tier.availableSeats || 0;
           const tSold = tTotal - tAvail;
-          total += tTotal; available += tAvail; sold += tSold; revenue += (tSold * (tier.price || 0));
+          total += tTotal; 
+          available += tAvail; 
+          sold += tSold; 
+          revenueMap[curr] += (tSold * (tier.price || 0));
         });
       } else {
         const zTotal = zone.totalSeats || 0;
         const zAvail = zone.availableSeats || 0;
         const zSold = zTotal - zAvail;
-        total += zTotal; available += zAvail; sold += zSold; revenue += (zSold * (zone.price || 0));
+        total += zTotal; 
+        available += zAvail; 
+        sold += zSold; 
+        revenueMap[curr] += (zSold * (zone.price || 0));
       }
     });
-    return { total, available, sold, revenue, currency };
+    
+    return { total, available, sold, revenueMap };
   };
 
   const stats = getAdvancedStats();

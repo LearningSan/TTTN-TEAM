@@ -21,7 +21,6 @@ const Login = () => {
       import.meta.env.VITE_SERVER_ORIGIN ||
       import.meta.env.VITE_API_URL?.replace("/api", "");
 
-    // Đảm bảo không có dấu / ở cuối (ví dụ: biến thành http://localhost:3000)
     const serverOrigin = rawOrigin?.replace(/\/$/, "");
 
     const receiveMessage = (event) => {
@@ -105,15 +104,19 @@ const Login = () => {
       return;
     }
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/login`,
-        {
+      const response = await axios({
+        method: "post",
+        url: `${import.meta.env.VITE_API_URL}/login`,
+        data: {
           email: email,
           password: password,
-          // deviceInfo: navigator.userAgent, // Bạn có thể bỏ dòng này nếu Backend không cần
         },
-        { withCredentials: true },
-      );
+        withCredentials: true,
+        // CHỈ để lại Content-Type, không thêm bất kỳ header nào khác
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       // Trong handleLogin
       if (response.data && (response.data.user_id || response.data.email)) {

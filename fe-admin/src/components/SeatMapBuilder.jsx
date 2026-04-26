@@ -30,7 +30,7 @@ const SeatMapBuilder = ({ form }) => {
         marginBottom: 20,
         boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
       }}>
-        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', color: '#333', fontWeight: 'bold', fontSize: 20, opacity: 0.5 }}>STAGE AREA</div>
+        {/* <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', color: '#333', fontWeight: 'bold', fontSize: 20, opacity: 0.5 }}>STAGE AREA</div> */}
 
         {/* =============== RENDER SÂN KHẤU ================= */}
         {stages.map((stg, idx) => (
@@ -113,20 +113,109 @@ const SeatMapBuilder = ({ form }) => {
                 }
               }}
             >
-              <div style={{ 
-                background: z.colorCode || '#1890ff', color: '#fff', 
-                width: '100%', height: '100%', borderRadius: 6,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                fontSize: 10, fontWeight: 'bold', border: '2px solid #fff',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                cursor: isLocked ? 'not-allowed' : 'move',
-                zIndex: 20
-              }}>
-                <DragOutlined style={{ fontSize: 12 }} />
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', width: '90%', textAlign: 'center' }}>
+              {/* 🚀 BỌC MỘT DIV RELATIVE BÊN NGOÀI ĐỂ QUẢN LÝ VỊ TRÍ */}
+              <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                
+                {/* 🚀 1. ĐẨY TÊN ZONE LÊN TRÊN KHỐI MÀU (Nằm ngoài khung) */}
+                <div style={{ 
+                  position: 'absolute', top: -20, left: 0, width: '100%', textAlign: 'center', 
+                  color: '#fff', fontSize: 12, fontWeight: 'bold', 
+                  textShadow: '0px 1px 4px rgba(0,0,0,0.8)', // Đổ bóng để dễ đọc trên nền tối
+                  whiteSpace: 'nowrap', zIndex: 30, 
+                  pointerEvents: 'none' // Xuyên chuột qua chữ để không cản trở việc kéo thả
+                }}>
                   {z.zoneName || `Zone ${idx + 1}`}
                 </div>
-                {isLocked && <div style={{ fontSize: 8 }}>🔒 FIXED</div>}
+
+                {/* 🚀 2. KHỐI MÀU & LƯỚI GHẾ */}
+                <div style={{ 
+                  background: z.colorCode || '#1890ff', width: '100%', height: '100%', borderRadius: 6,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  border: '2px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                  cursor: isLocked ? 'not-allowed' : 'move', zIndex: 20, 
+                  padding: '6px', // Cấp padding để ghế dàn ra không bị cấn vào sát mép viền
+                  overflow: 'hidden' 
+                }}>
+                  
+                  {/* 🚀 3. LƯỚI GHẾ TỰ ĐỘNG DÀN ĐỀU (FLEX SPACE-EVENLY) */}
+                  {z.hasSeatMap && z.tiers && z.tiers.length > 0 && (
+                    <div style={{ 
+                      flex: 1, 
+                      width: '100%', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'space-evenly', 
+                      opacity: 0.9 
+                    }}>
+                      {z.tiers.map((tier, tIdx) => {
+                        // 🚀 BƯỚC 1: ĐẶT HÀM TÍNH TOÁN KÝ TỰ Ở ĐÂY (Bên trong vòng lặp tier)
+                        // Hàm này lấy prefix (VD: 'C'), đổi thành số, cộng thêm thứ tự hàng hiện tại, rồi đổi ngược ra chữ lại.
+                        const getLabel = (index) => {
+                          const prefix = tier.rowPrefix || 'A';
+                          let num = 0;
+                          for (let i = 0; i < prefix.length; i++) {
+                            num = num * 26 + (prefix.charCodeAt(i) - 64);
+                          }
+                          let currentNum = num + index;
+                          let label = '';
+                          while (currentNum > 0) {
+                            let mod = (currentNum - 1) % 26;
+                            label = String.fromCharCode(65 + mod) + label;
+                            currentNum = Math.floor((currentNum - mod) / 26);
+                          }
+                          return label;
+                        };
+
+                        // Thay vì dùng React.Fragment, ta dùng thẻ div để bọc màu nền cho nguyên 1 Tier
+                        return (
+                          <div key={`t-${tIdx}`} style={{
+                            flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly',
+                            backgroundColor: tier.colorCode ? `${tier.colorCode}66` : 'rgba(255,255,255,0.1)',
+                            padding: '2px', borderRadius: '4px',
+                            border: `1px dashed ${tier.colorCode || 'rgba(255,255,255,0.3)'}`,
+                            width: '100%', marginBottom: 2
+                          }}>
+                            {/* Vòng lặp vẽ Hàng (Rows) */}
+                            {Array.from({ length: tier.rowCount || 0 }).map((_, rIdx) => (
+                              <div key={`r-${rIdx}`} style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', // Đảm bảo chữ và ghế nằm cùng 1 đường ngang
+                                width: '100%',
+                                gap: '4px' // Khoảng cách giữa chữ và khu vực ghế
+                              }}>
+                                
+                                {/* 🚀 BƯỚC 2: KHỐI CHỨA KÝ TỰ HÀNG (Ở BÊN TRÁI) */}
+                                <div style={{ 
+                                  width: '15px', color: '#fff', fontSize: '9px', fontWeight: 'bold', 
+                                  textAlign: 'center', opacity: 0.8, userSelect: 'none' 
+                                }}>
+                                  {getLabel(rIdx)}
+                                </div>
+
+                                {/* KHU VỰC CHỨA GHẾ (DÀN ĐỀU Ở BÊN PHẢI) */}
+                                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-evenly' }}>
+                                  {Array.from({ length: tier.seatsPerRow || 0 }).map((_, sIdx) => (
+                                    <div key={`s-${sIdx}`} style={{
+                                      width: 5, height: 5, borderRadius: '50%',
+                                      backgroundColor: tier.colorCode || z.colorCode || '#fff', 
+                                      border: '1px solid rgba(255,255,255,0.4)',
+                                      boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                                    }} />
+                                  ))}
+                                </div>
+                                
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* NHÃN KHÓA NẾU ĐÃ BÁN VÉ */}
+                  {isLocked && <div style={{ fontSize: 8, marginTop: 4, color: '#fff', fontWeight: 'bold' }}>🔒 FIXED</div>}
+                </div>
+
               </div>
             </Rnd>
           );

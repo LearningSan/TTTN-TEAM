@@ -47,7 +47,7 @@ public class Ticket {
     @Column(name = "qr_code", columnDefinition = "nvarchar(max)")
     private String qrCode;
 
-    @Column(name = "qr_url", length = 500)
+    @Column(name = "qr_url", columnDefinition = "nvarchar(max)")
     private String qrURL;
 
     @Column(name = "status", nullable = false, length = 20)

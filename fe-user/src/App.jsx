@@ -19,7 +19,8 @@ import OrderSuccess from "./pages/OrderSuccess";
 import MyTicket from "./pages/MyTicket";
 import Payment from "./pages/Payment";
 import LoginButton from "./pages/nhap";
-
+import ProfilePage from "./pages/Profile";
+import ResaleMarket from "./pages/ResaleMarket";
 function AnimatedRoutes() {
   const location = useLocation();
   return (
@@ -29,12 +30,14 @@ function AnimatedRoutes() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/concert/:id" element={<ConcertDetail />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+          <Route path="/concert/:id/checkout" element={<Checkout />} />
+          <Route path="/order-success/:orderId?" element={<OrderSuccess />} />
           <Route path="/my-tickets" element={<MyTicket />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/resale-market" element={<ResaleMarket />} />
         </Route>
 
         {/* NHÓM 2: Các trang KHÔNG dùng Header (Login/Register/Quên mật khẩu) */}
