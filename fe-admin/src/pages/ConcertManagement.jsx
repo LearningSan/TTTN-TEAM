@@ -1,5 +1,5 @@
-import { useState, useEffect ,useRef} from 'react';
-import { Input,Select,Table, Button, Space, message, Popconfirm, Form, Card, Tag, Tooltip } from 'antd';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Input, Select, Table, Button, Space, message, Popconfirm, Form, Card, Tag, Tooltip } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -30,7 +30,7 @@ const ConcertManagement = () => {
   const [keyword, setKeyword] = useState('');
   const [filterVenueId, setFilterVenueId] = useState(null);
   const [filterStatus, setFilterStatus] = useState(null);
-  
+
   // Dùng để tránh gọi API lần đầu khi vừa render
   const isFirstRender = useRef(true);
   const parseApiDate = (dateStr) => {
@@ -44,7 +44,7 @@ const ConcertManagement = () => {
     return d ? d.format('DD/MM/YYYY HH:mm') : 'N/A';
   };
 
-  const fetchData = async (page = 1, pageSize = 10, kw = keyword, vId = filterVenueId, st = filterStatus) => {
+  const fetchData = useCallback(async (page = 1, pageSize = 10, kw = keyword, vId = filterVenueId, st = filterStatus) => {
     setLoading(true);
     try {
       let url = `/admin/concerts?page=${page - 1}&size=${pageSize}`;
@@ -65,21 +65,21 @@ const ConcertManagement = () => {
     } catch {
       message.error('Lỗi tải dữ liệu hệ thống!');
     } finally { setLoading(false); }
-  };
+  }, [keyword, filterVenueId, filterStatus]);
 
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      fetchData(); // Chỉ chạy lần đầu
+      fetchData();
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
       fetchData(1, pagination.pageSize, keyword, filterVenueId, filterStatus);
-    }, 500); // Đợi 500ms sau khi ngừng gõ mới gọi API
+    }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [keyword]);
+  }, [keyword, fetchData, filterStatus, filterVenueId, pagination.pageSize]);
 
   // 🚀 HÀM LÀM MỚI (RESET TOÀN BỘ)
   const handleReset = () => {
@@ -96,92 +96,92 @@ const ConcertManagement = () => {
     try {
       const res = await API.get(`/admin/concerts/${id}`);
       setDetailModal({ open: true, data: res.data?.data || res.data, loading: false });
-    } catch  {
+    } catch {
       message.error("Không thể lấy thông tin chi tiết!");
       setDetailModal({ open: false, data: null, loading: false });
     }
   };
 
   const handleFinish = async (values) => {
-  setLoading(true);
-  try {
-    const layoutConfigObj = { 
-      canvasConfig: { width: 1100, height: 550 },
-      stages: values.stages || [],
-      zoneLayouts: values.zones?.map(z => ({
-        zoneName: z.zoneName, 
-        layoutConfig: z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 }
-      }))
-    };
+    setLoading(true);
+    try {
+      const layoutConfigObj = {
+        canvasConfig: { width: 1100, height: 550 },
+        stages: values.stages || [],
+        zoneLayouts: values.zones?.map(z => ({
+          zoneName: z.zoneName,
+          layoutConfig: z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 }
+        }))
+      };
 
-    const payload = {
-      // Bốc đích danh các trường của ConcertRequest, KHÔNG dùng ...values để tránh gửi nhầm trường stages
-      title: values.title,
-      artist: values.artist,
-      description: values.description,
-      bannerURL: values.bannerURL,
-      venueId: values.venueId,
-      status: values.status,
-      layoutConfig: JSON.stringify(layoutConfigObj),
-      
-      // Xử lý ngày tháng như đệ đã làm chuẩn
-      concertDate: values.concertDate ? values.concertDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-      endDate: values.endDate ? values.endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-      saleStartAt: values.saleStartAt ? values.saleStartAt.format('YYYY-MM-DDTHH:mm:ss') : null,
-      saleEndAt: values.saleEndAt ? values.saleEndAt.format('YYYY-MM-DDTHH:mm:ss') : null,
-      
-      zones: values.zones?.map((z, i) => {
-        const isSeated = z.hasSeatMap;
-        let calculatedTotal = 0; 
-        
-        const mappedTiers = isSeated ? z.tiers?.map((t, j) => {
-          const rCount = t.rowCount || 1;
-          const sCount = t.seatsPerRow || 1;
-          calculatedTotal += (rCount * sCount);
-          
-          // 🚀 Chỉ gửi đúng những gì TierRequest cần + tierId (để Update)
+      const payload = {
+        // Bốc đích danh các trường của ConcertRequest, KHÔNG dùng ...values để tránh gửi nhầm trường stages
+        title: values.title,
+        artist: values.artist,
+        description: values.description,
+        bannerURL: values.bannerURL,
+        venueId: values.venueId,
+        status: values.status,
+        layoutConfig: JSON.stringify(layoutConfigObj),
+
+        // Xử lý ngày tháng như đệ đã làm chuẩn
+        concertDate: values.concertDate ? values.concertDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+        endDate: values.endDate ? values.endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+        saleStartAt: values.saleStartAt ? values.saleStartAt.format('YYYY-MM-DDTHH:mm:ss') : null,
+        saleEndAt: values.saleEndAt ? values.saleEndAt.format('YYYY-MM-DDTHH:mm:ss') : null,
+
+        zones: values.zones?.map((z, i) => {
+          const isSeated = z.hasSeatMap;
+          let calculatedTotal = 0;
+
+          const mappedTiers = isSeated ? z.tiers?.map((t, j) => {
+            const rCount = t.rowCount || 1;
+            const sCount = t.seatsPerRow || 1;
+            calculatedTotal += (rCount * sCount);
+
+            // 🚀 Chỉ gửi đúng những gì TierRequest cần + tierId (để Update)
+            return {
+              tierId: t.tierId, // Rất quan trọng khi SỬA
+              tierName: t.tierName || 'STANDARD',
+              price: t.price,
+              currency: t.currency || z.currency || 'USDT',
+              colorCode: t.colorCode || z.colorCode || ZONE_COLORS[0].value,
+              displayOrder: j + 1,
+              rowPrefix: t.rowPrefix?.toUpperCase(),
+              rowCount: rCount,
+              seatsPerRow: sCount
+            };
+          }) || [] : [];
+
+          // 🚀 Chỉ gửi đúng những gì ZoneRequest cần + zoneId (để Update)
           return {
-            tierId: t.tierId, // Rất quan trọng khi SỬA
-            tierName: t.tierName || 'STANDARD', 
-            price: t.price,
-            currency: t.currency || z.currency || 'USDT',
-            colorCode: t.colorCode || z.colorCode || ZONE_COLORS[0].value,
-            displayOrder: j + 1,
-            rowPrefix: t.rowPrefix?.toUpperCase(), 
-            rowCount: rCount, 
-            seatsPerRow: sCount
+            zoneId: z.zoneId, // Rất quan trọng khi SỬA
+            zoneName: z.zoneName?.trim() || `Khu vực ${i + 1}`,
+            price: z.price,
+            currency: z.currency,
+            colorCode: z.colorCode || ZONE_COLORS[i % ZONE_COLORS.length].value,
+            hasSeatMap: isSeated,
+            displayOrder: i + 1,
+            totalSeats: isSeated ? calculatedTotal : (z.totalSeats || 1),
+            tiers: mappedTiers
           };
-        }) || [] : [];
+        }) || []
+      };
 
-        // 🚀 Chỉ gửi đúng những gì ZoneRequest cần + zoneId (để Update)
-        return {
-          zoneId: z.zoneId, // Rất quan trọng khi SỬA
-          zoneName: z.zoneName?.trim() || `Khu vực ${i+1}`, 
-          price: z.price,
-          currency: z.currency,
-          colorCode: z.colorCode || ZONE_COLORS[i % ZONE_COLORS.length].value,
-          hasSeatMap: isSeated,
-          displayOrder: i + 1,
-          totalSeats: isSeated ? calculatedTotal : (z.totalSeats || 1), 
-          tiers: mappedTiers
-        };
-      }) || []
-    };
-
-    if (modalState.id) {
-      await API.put(`/admin/concerts/${modalState.id}`, payload);
-      message.success('Cập nhật Concert thành công!');
-    } else {
-      await API.post('/admin/concerts', payload);
-      message.success('Tạo Concert thành công!');
-    }
-    setModalState({ open: false, id: null });
-    fetchData(pagination.current);
-  } catch (error) {
-    const backendMsg = error.response?.data?.message || 'Có lỗi xảy ra!';
-    message.error(`Lưu thất bại: ${backendMsg}`);
-  } finally { setLoading(false); }
-};
+      if (modalState.id) {
+        await API.put(`/admin/concerts/${modalState.id}`, payload);
+        message.success('Cập nhật Concert thành công!');
+      } else {
+        await API.post('/admin/concerts', payload);
+        message.success('Tạo Concert thành công!');
+      }
+      setModalState({ open: false, id: null });
+      fetchData(pagination.current);
+    } catch (error) {
+      const backendMsg = error.response?.data?.message || 'Có lỗi xảy ra!';
+      message.error(`Lưu thất bại: ${backendMsg}`);
+    } finally { setLoading(false); }
+  };
   const handleChangeStatus = async (id, newStatus) => {
     setLoading(true);
     try {
@@ -208,12 +208,12 @@ const ConcertManagement = () => {
           savedStages = parsed.stages || [];
           savedZoneLayouts = parsed.zoneLayouts || [];
         }
-      } catch  { console.warn("Lỗi parse layoutConfig"); }
+      } catch { console.warn("Lỗi parse layoutConfig"); }
 
       const processedZones = fullData.zones?.map((z) => {
         const matchedZone = savedZoneLayouts.find(layoutObj => layoutObj.zoneName === z.zoneName);
         const layout = matchedZone ? matchedZone.layoutConfig : { x: 50, y: 150, w: 120, h: 60 };
-        return { ...z, layoutConfig: layout,area: !z.hasSeatMap ? Math.ceil((z.totalSeats || 0) / 2) : undefined };
+        return { ...z, layoutConfig: layout, area: !z.hasSeatMap ? Math.ceil((z.totalSeats || 0) / 2) : undefined };
       });
 
       form.resetFields();
@@ -223,7 +223,7 @@ const ConcertManagement = () => {
         saleStartAt: parseApiDate(fullData.saleStartAt), saleEndAt: parseApiDate(fullData.saleEndAt),
       });
       setModalState({ open: true, id: fullData.concertId || fullData.id });
-    } catch  { message.error("Không thể lấy dữ liệu chi tiết!"); } finally { setLoading(false); }
+    } catch { message.error("Không thể lấy dữ liệu chi tiết!"); } finally { setLoading(false); }
   };
 
   const columns = [
@@ -232,49 +232,50 @@ const ConcertManagement = () => {
     { title: 'Nghệ sĩ', dataIndex: 'artist' },
     { title: 'Địa điểm', dataIndex: 'venueId', render: (vId, record) => record.venueName || venues.find(v => (v.venueId || v.venue_id) === vId)?.name || 'Chưa cập nhật' },
     { title: 'Ngày diễn', dataIndex: 'concertDate', render: (d) => formatSafeDate(d) },
-    { title: 'Trạng thái', dataIndex: 'status', width: 120, render: (status) => <Tag color={{'ON_SALE': 'green', 'DRAFT': 'blue', 'CANCELLED': 'red', 'COMPLETED': 'gray'}[status] || 'default'}>{status || 'ACTIVE'}</Tag> },
-    { title: 'Hành động', render: (_, r) => {
+    { title: 'Trạng thái', dataIndex: 'status', width: 120, render: (status) => <Tag color={{ 'ON_SALE': 'green', 'DRAFT': 'blue', 'CANCELLED': 'red', 'COMPLETED': 'gray' }[status] || 'default'}>{status || 'ACTIVE'}</Tag> },
+    {
+      title: 'Hành động', render: (_, r) => {
         const isDraft = r.status === 'DRAFT';
         const isOnSale = r.status === 'ON_SALE';
-        
+
         return (
           <Space wrap>
             <Tooltip title="Xem chi tiết">
               <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(r.concertId || r.id)} />
             </Tooltip>
-            
+
             {/* ✏️ Sửa: Chỉ hiện khi DRAFT hoặc ON_SALE */}
             {(isDraft || isOnSale) && (
-              <Button size="small" type="primary" ghost  onClick={() => handleOpenEdit(r)}>Sửa</Button>
+              <Button size="small" type="primary" ghost onClick={() => handleOpenEdit(r)}>Sửa</Button>
             )}
 
             {/* 🟢 MỞ BÁN: Chỉ hiện khi sự kiện đang là DRAFT */}
             {isDraft && (
-               <Popconfirm 
-                  title="Xác nhận mở bán?" 
-                  description="Concert sẽ chuyển sang trạng thái ON_SALE và hiển thị cho khách hàng." 
-                  onConfirm={() => handleChangeStatus(r.concertId || r.id, 'ON_SALE')}
-               >
-                 <Button size="small" style={{ borderColor: '#52c41a', color: '#52c41a' }}>Mở bán</Button>
-               </Popconfirm>
+              <Popconfirm
+                title="Xác nhận mở bán?"
+                description="Concert sẽ chuyển sang trạng thái ON_SALE và hiển thị cho khách hàng."
+                onConfirm={() => handleChangeStatus(r.concertId || r.id, 'ON_SALE')}
+              >
+                <Button size="small" style={{ borderColor: '#52c41a', color: '#52c41a' }}>Mở bán</Button>
+              </Popconfirm>
             )}
 
             {/* 🔴 HỦY SỰ KIỆN: Hiện khi sự kiện đang Mở bán */}
             {isOnSale && (
-               <Popconfirm 
-                  title="HỦY SỰ KIỆN NÀY?" 
-                  description={
-                    <div style={{ maxWidth: 280 }}>
-                      Sự kiện sẽ chuyển thành <b>CANCELLED</b>.<br/>
-                      Sau khi hủy, bạn cần sang mục <b>Quản lý Đơn hàng</b> để thực hiện Refund cho các vé đã bán.
-                    </div>
-                  }
-                  onConfirm={() => handleChangeStatus(r.concertId || r.id, 'CANCELLED')}
-                  okText="Xác nhận Hủy"
-                  okButtonProps={{ danger: true }}
-               >
-                 <Button size="small" danger>Hủy</Button>
-               </Popconfirm>
+              <Popconfirm
+                title="HỦY SỰ KIỆN NÀY?"
+                description={
+                  <div style={{ maxWidth: 280 }}>
+                    Sự kiện sẽ chuyển thành <b>CANCELLED</b>.<br />
+                    Sau khi hủy, bạn cần sang mục <b>Quản lý Đơn hàng</b> để thực hiện Refund cho các vé đã bán.
+                  </div>
+                }
+                onConfirm={() => handleChangeStatus(r.concertId || r.id, 'CANCELLED')}
+                okText="Xác nhận Hủy"
+                okButtonProps={{ danger: true }}
+              >
+                <Button size="small" danger>Hủy</Button>
+              </Popconfirm>
             )}
 
             {/* 🗑️ XÓA VĨNH VIỄN: Chỉ cho phép xóa hẳn khỏi DB khi còn là DRAFT (chưa bán vé) */}
@@ -285,24 +286,24 @@ const ConcertManagement = () => {
             )}
           </Space>
         );
-      } 
+      }
     }
   ];
 
   return (
     <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
-      <Card 
-        title={<h2 style={{ margin: 0 }}>Quản lý Concert</h2>} 
+      <Card
+        title={<h2 style={{ margin: 0 }}>Quản lý Concert</h2>}
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={handleReset}>Làm mới</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { 
-              form.setFieldsValue({ 
-                status: 'DRAFT', 
-                stages: [{ name: 'Sân khấu', shape: 'rectangle', layoutConfig: {x: 300, y: 20, w: 200, h: 80} }],
-                zones: [{ zoneName: 'Khu vực 1', price: 10, currency: 'USDT', colorCode: ZONE_COLORS[0].value, hasSeatMap: true, layoutConfig: {x: 50, y: 150, w: 120, h: 60}, tiers: [{ price: 10, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] }] 
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              form.setFieldsValue({
+                status: 'DRAFT',
+                stages: [{ name: 'Sân khấu', shape: 'rectangle', layoutConfig: { x: 300, y: 20, w: 200, h: 80 } }],
+                zones: [{ zoneName: 'Khu vực 1', price: 10, currency: 'USDT', colorCode: ZONE_COLORS[0].value, hasSeatMap: true, layoutConfig: { x: 50, y: 150, w: 120, h: 60 }, tiers: [{ price: 10, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] }]
               });
-              setModalState({ open: true, id: null }); 
+              setModalState({ open: true, id: null });
             }}>Tạo Concert</Button>
           </Space>
         }
@@ -316,7 +317,7 @@ const ConcertManagement = () => {
             onChange={(e) => setKeyword(e.target.value)} // Cập nhật state liên tục để useEffect bên trên tự gọi API
             style={{ width: 350 }}
           />
-          
+
           <Select
             placeholder="Lọc theo Địa điểm"
             allowClear
@@ -351,24 +352,24 @@ const ConcertManagement = () => {
         <Table columns={columns} dataSource={concerts} rowKey={(r) => r.concertId || r.id || Math.random()} loading={loading} pagination={pagination} onChange={(p) => fetchData(p.current, p.pageSize)} bordered scroll={{ x: 800 }} />
       </Card>
 
-      <ConcertFormModal 
-        open={modalState.open} 
-        modalId={modalState.id} 
-        onCancel={() => setModalState({ open: false, id: null })} 
-        form={form} 
-        onFinish={handleFinish} 
-        loading={loading} 
-        venues={venues} 
-        zoneColors={ZONE_COLORS} 
+      <ConcertFormModal
+        open={modalState.open}
+        modalId={modalState.id}
+        onCancel={() => setModalState({ open: false, id: null })}
+        form={form}
+        onFinish={handleFinish}
+        loading={loading}
+        venues={venues}
+        zoneColors={ZONE_COLORS}
       />
 
-      <ConcertDetailModal 
-        open={detailModal.open} 
-        data={detailModal.data} 
-        loading={detailModal.loading} 
-        onCancel={() => setDetailModal({ open: false, data: null, loading: false })} 
-        venues={venues} 
-        formatSafeDate={formatSafeDate} 
+      <ConcertDetailModal
+        open={detailModal.open}
+        data={detailModal.data}
+        loading={detailModal.loading}
+        onCancel={() => setDetailModal({ open: false, data: null, loading: false })}
+        venues={venues}
+        formatSafeDate={formatSafeDate}
       />
     </div>
   );

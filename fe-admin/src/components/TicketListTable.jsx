@@ -7,8 +7,8 @@ const { Text } = Typography;
 
 const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId, onViewInvoice }) => {
   const columns = [
-    { 
-      title: 'Mã vé (Ticket ID)', 
+    {
+      title: 'Mã vé (Ticket ID)',
       dataIndex: 'ticketId',
       render: (id) => (
         <Tooltip title="Copy ID">
@@ -18,8 +18,8 @@ const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId
         </Tooltip>
       )
     },
-    { 
-      title: 'Khách hàng', 
+    {
+      title: 'Khách hàng',
       render: (_, r) => (
         <Space direction="vertical" size={0}>
           <Text strong>{r.buyerName || 'Khách ẩn danh'}</Text>
@@ -27,11 +27,11 @@ const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId
         </Space>
       )
     },
-    
+
     { title: 'Khu vực & Vị trí', render: (_, r) => <Space><Tag color="geekblue">{r.zoneName}</Tag>{r.seatLabel && <Tag>{r.seatLabel}</Tag>}</Space> },
     { title: 'Ngày mua', dataIndex: 'purchaseDate', render: (d) => d ? dayjs(d).format('DD/MM/YYYY HH:mm') : '-' },
-    { 
-      title: 'Trạng thái', 
+    {
+      title: 'Trạng thái',
       dataIndex: 'status',
       render: (s) => {
         const statusMap = {
@@ -51,11 +51,11 @@ const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId
       render: (_, r) => (
         <Tooltip title="Xem chi tiết Hóa đơn & User">
           {/* 🚀 Bấm nút này sẽ mở Modal chi tiết */}
-          <Button 
-            type="primary" 
-            ghost size="small" 
-            icon={<EyeOutlined />} 
-            onClick={() => onViewInvoice(r.ticketId)} 
+          <Button
+            type="primary"
+            ghost size="small"
+            icon={<EyeOutlined />}
+            onClick={() => onViewInvoice(r.ticketId)}
           />
         </Tooltip>
       )
@@ -64,10 +64,10 @@ const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId
 
   return (
     <Card title={<><IdcardOutlined /> Lịch sử giao dịch & Danh sách vé</>} bordered={false} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-      <Table 
-        columns={columns} 
-        dataSource={tickets} 
-        rowKey="ticketId" 
+      <Table
+        columns={columns}
+        dataSource={tickets}
+        rowKey="ticketId"
         loading={loading}
         pagination={pagination}
         onChange={(p) => onChangePage(concertId, p.current - 1, p.pageSize)}

@@ -44,41 +44,41 @@ const AdminLayout = () => {
         <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', borderRadius: 6, textAlign: 'center', color: 'white', lineHeight: '32px', fontWeight: 'bold' }}>
           {collapsed ? 'TA' : 'TICKET ADMIN'}
         </div>
-        <Menu 
-          theme="dark" 
-          mode="inline" 
-          selectedKeys={[location.pathname]} 
-          items={menuItems} 
-          onClick={({ key }) => navigate(key)} 
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          onClick={({ key }) => navigate(key)}
         />
       </Sider>
 
       {/* Nội dung bên phải */}
       <Layout>
         <Header style={{ padding: '0 24px', background: colorBgContainer, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ margin: 0 }}>Hệ thống Quản trị</h2>
-            <Space size="middle">
-      {/* Hiển thị lời chào và tên Admin */}
-      <Space>
-        <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
-          <span style={{ fontSize: '12px', color: '#8c8c8c' }}>Xin chào,</span>
-          <Text strong>{getOrganizerName() || 'Admin'}</Text>
-        </div>
-      </Space>
+          <h2 style={{ margin: 0 }}>Hệ thống Quản trị</h2>
+          <Space size="middle">
+            {/* Hiển thị lời chào và tên Admin */}
+            <Space>
+              <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                <span style={{ fontSize: '12px', color: '#8c8c8c' }}>Xin chào,</span>
+                <Text strong>{getOrganizerName() || 'Admin'}</Text>
+              </div>
+            </Space>
 
-      <Button 
-        type="primary" 
-        danger 
-        icon={<LogoutOutlined />} 
-        onClick={handleLogout} 
-        loading={logoutLoading}
-      >
-        Đăng xuất
-      </Button>
-    </Space>
+            <Button
+              type="primary"
+              danger
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              loading={logoutLoading}
+            >
+              Đăng xuất
+            </Button>
+          </Space>
         </Header>
-        
+
         <Content style={{ margin: '16px' }}>
           <div style={{ padding: 24, minHeight: 360, background: colorBgContainer, borderRadius: borderRadiusLG }}>
             {/* CÁC TRANG CON SẼ ĐƯỢC ĐỔ VÀO ĐÂY */}

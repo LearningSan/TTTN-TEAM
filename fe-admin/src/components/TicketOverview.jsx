@@ -1,5 +1,5 @@
 import React from 'react';
-import { Row, Col, Card, Statistic,Typography, Space } from 'antd';
+import { Row, Col, Card, Statistic, Typography, Space } from 'antd';
 const { Text } = Typography;
 const TicketOverview = ({ stats, loading }) => {
   return (
@@ -20,11 +20,11 @@ const TicketOverview = ({ stats, loading }) => {
         </Card>
       </Col>
       <Col span={6}>
-        <Card 
-          bordered={false} 
-          style={{ 
-            borderLeft: '4px solid #722ed1', 
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)', 
+        <Card
+          bordered={false}
+          style={{
+            borderLeft: '4px solid #722ed1',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
             background: '#f9f0ff',
             minHeight: '120px' // Đảm bảo chiều cao khi hiện nhiều dòng tiền
           }}
@@ -32,7 +32,7 @@ const TicketOverview = ({ stats, loading }) => {
           <div style={{ color: 'rgba(0, 0, 0, 0.45)', fontSize: '14px', marginBottom: '8px' }}>
             💰 Doanh thu dự kiến
           </div>
-          
+
           <Space direction="vertical" size={0} style={{ width: '100%' }}>
             {loading ? (
               <Statistic value=" " loading={true} />
@@ -42,7 +42,7 @@ const TicketOverview = ({ stats, loading }) => {
                 Object.entries(stats.revenueMap).map(([currency, amount]) => (
                   <div key={currency} style={{ marginBottom: 4 }}>
                     <Text strong style={{ fontSize: 20, color: '#722ed1' }}>
-                      {amount.toLocaleString()} 
+                      {amount.toLocaleString()}
                       <span style={{ fontSize: 13, marginLeft: 4, fontWeight: 'normal' }}>{currency}</span>
                     </Text>
                   </div>

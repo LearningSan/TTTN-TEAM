@@ -12,7 +12,7 @@ const UserFilterBar = ({ keyword, setKeyword, filterStatus, setFilterStatus, onF
     }
     const delay = setTimeout(() => { onFilterTrigger(); }, 500);
     return () => clearTimeout(delay);
-  }, [keyword]);
+  }, [keyword, onFilterTrigger]);
 
   return (
     <div style={{ marginBottom: 16, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
@@ -32,7 +32,7 @@ const UserFilterBar = ({ keyword, setKeyword, filterStatus, setFilterStatus, onF
         options={[
           { value: 'ACTIVE', label: 'Hoạt động (ACTIVE)' },
           { value: 'LOCKED', label: 'Đã khóa (LOCKED)' },
-        //   { value: 'UNVERIFIED', label: 'Chưa xác thực (UNVERIFIED)' },
+          { value: 'UNVERIFIED', label: 'Chưa xác thực (UNVERIFIED)' },
         ]}
       />
     </div>

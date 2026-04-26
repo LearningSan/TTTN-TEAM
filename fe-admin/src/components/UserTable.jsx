@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat'; // 🚀 Import thêm plugin này
 
 // Kích hoạt plugin để dayjs hiểu định dạng chuỗi của Backend
-dayjs.extend(customParseFormat); 
+dayjs.extend(customParseFormat);
 
 const { Text } = Typography;
 
@@ -13,23 +13,23 @@ const UserTable = ({ users, loading, pagination, onChangePage, onToggleStatus })
   const columns = [
     { title: 'Tên người dùng', dataIndex: 'name', render: (n) => <Text strong>{n}</Text> },
     { title: 'Email', dataIndex: 'email' },
-    { 
-      title: 'Vai trò', 
-      dataIndex: 'role', 
-      render: (r) => <Tag color={r === 'ADMIN' ? 'red' : r === 'ORGANIZER' ? 'purple' : 'blue'}>{r}</Tag> 
+    {
+      title: 'Vai trò',
+      dataIndex: 'role',
+      render: (r) => <Tag color={r === 'ADMIN' ? 'red' : r === 'ORGANIZER' ? 'purple' : 'blue'}>{r}</Tag>
     },
-    { 
-      title: 'Ngày tham gia', 
-      dataIndex: 'createdAt', 
+    {
+      title: 'Ngày tham gia',
+      dataIndex: 'createdAt',
       render: (d) => {
         if (!d) return '-';
         // 🚀 Báo cho dayjs biết dữ liệu đang là ngày/tháng/năm
-        const parsedDate = dayjs(d, "DD/MM/YYYY HH:mm:ss"); 
+        const parsedDate = dayjs(d, "DD/MM/YYYY HH:mm:ss");
         return parsedDate.isValid() ? parsedDate.format('DD/MM/YYYY HH:mm') : d;
-      } 
+      }
     },
-    { 
-      title: 'Trạng thái', 
+    {
+      title: 'Trạng thái',
       dataIndex: 'status',
       render: (s) => {
         // 🚀 Đổi LOCKED thành BANNED
@@ -42,8 +42,8 @@ const UserTable = ({ users, loading, pagination, onChangePage, onToggleStatus })
       align: 'center',
       render: (_, r) => {
         if (r.role === 'ADMIN') return <Text type="secondary" italic>Không thể khóa</Text>;
-        
-        const isLocked = r.status === 'LOCKED'; 
+
+        const isLocked = r.status === 'LOCKED';
         return (
           <Popconfirm
             title={isLocked ? "Mở khóa tài khoản này?" : "Khóa tài khoản này?"}
@@ -53,9 +53,9 @@ const UserTable = ({ users, loading, pagination, onChangePage, onToggleStatus })
             cancelText="Hủy"
             okButtonProps={{ danger: !isLocked }}
           >
-            <Button 
-              size="small" 
-              type={isLocked ? 'primary' : 'default'} 
+            <Button
+              size="small"
+              type={isLocked ? 'primary' : 'default'}
               danger={!isLocked}
               icon={isLocked ? <UnlockOutlined /> : <LockOutlined />}
             >
@@ -68,10 +68,10 @@ const UserTable = ({ users, loading, pagination, onChangePage, onToggleStatus })
   ];
 
   return (
-    <Table 
-      columns={columns} 
-      dataSource={users} 
-      rowKey="userId" 
+    <Table
+      columns={columns}
+      dataSource={users}
+      rowKey="userId"
       loading={loading}
       pagination={pagination}
       onChange={(p) => onChangePage(p.current, p.pageSize)}

@@ -14,11 +14,11 @@ const TicketManagement = () => {
   const [selectedConcertId, setSelectedConcertId] = useState(null);
   const [concertDetail, setConcertDetail] = useState(null);
   const [tickets, setTickets] = useState([]);
-  
+
   const [loadingList, setLoadingList] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingTickets, setLoadingTickets] = useState(false);
-  
+
   const [ticketPagination, setTicketPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [invoiceModal, setInvoiceModal] = useState({ open: false, ticketId: null });
   // Lấy danh sách Concert vào SelectBox
@@ -28,7 +28,7 @@ const TicketManagement = () => {
       try {
         const res = await API.get('/admin/concerts?size=100');
         setConcerts(res.data?.content || []);
-      } catch  {
+      } catch {
         message.error("Không thể tải danh sách concert");
       } finally { setLoadingList(false); }
     };
@@ -42,7 +42,7 @@ const TicketManagement = () => {
       const res = await API.get(`/admin/concerts/${concertId}/tickets`, { params: { page, size } });
       setTickets(res.data?.content || []);
       setTicketPagination(prev => ({ ...prev, current: page + 1, total: res.data?.totalElements || 0 }));
-    } catch  { message.error("Không thể kết nối máy chủ để lấy danh sách vé!"); } 
+    } catch { message.error("Không thể kết nối máy chủ để lấy danh sách vé!"); }
     finally { setLoadingTickets(false); }
   }, []);
 
@@ -51,15 +51,15 @@ const TicketManagement = () => {
     setLoadingStats(true);
     try {
       const res = await API.get(`/admin/concerts/${id}`);
-      setConcertDetail(res.data); 
-    } catch  { message.error("Lỗi khi lấy thông tin thống kê phát hành!"); } 
+      setConcertDetail(res.data);
+    } catch { message.error("Lỗi khi lấy thông tin thống kê phát hành!"); }
     finally { setLoadingStats(false); }
   };
 
   // Xử lý khi chọn 1 Concert từ SelectBox
   const handleSelectConcert = (id) => {
     setSelectedConcertId(id);
-    setConcertDetail(null); 
+    setConcertDetail(null);
     setTickets([]);
     fetchConcertDetail(id);
     fetchTickets(id, 0, ticketPagination.pageSize);
@@ -68,7 +68,7 @@ const TicketManagement = () => {
   // Logic tính toán gộp (Doanh thu, Vé)
   const getAdvancedStats = () => {
     if (!concertDetail?.zones) return { total: 0, available: 0, sold: 0, revenueMap: {} };
-    
+
     let total = 0, available = 0, sold = 0;
     const revenueMap = {}; // Lưu trữ doanh thu theo từng loại tiền
 
@@ -81,22 +81,22 @@ const TicketManagement = () => {
           const tTotal = tier.totalSeats || 0;
           const tAvail = tier.availableSeats || 0;
           const tSold = tTotal - tAvail;
-          total += tTotal; 
-          available += tAvail; 
-          sold += tSold; 
+          total += tTotal;
+          available += tAvail;
+          sold += tSold;
           revenueMap[curr] += (tSold * (tier.price || 0));
         });
       } else {
         const zTotal = zone.totalSeats || 0;
         const zAvail = zone.availableSeats || 0;
         const zSold = zTotal - zAvail;
-        total += zTotal; 
-        available += zAvail; 
-        sold += zSold; 
+        total += zTotal;
+        available += zAvail;
+        sold += zSold;
         revenueMap[curr] += (zSold * (zone.price || 0));
       }
     });
-    
+
     return { total, available, sold, revenueMap };
   };
 
@@ -116,7 +116,7 @@ const TicketManagement = () => {
               style={{ width: '100%' }}
               size="large"
               onChange={handleSelectConcert}
-              loading={loadingList} 
+              loading={loadingList}
               disabled={loadingList}
               options={concerts.map(c => ({ value: c.concertId, label: c.title }))}
             />
@@ -130,23 +130,23 @@ const TicketManagement = () => {
       ) : (
         <>
           <TicketOverview stats={stats} loading={loadingStats} />
-          
+
           <TicketZoneStats zones={concertDetail?.zones || []} loading={loadingStats} />
-          
-          <TicketListTable 
-            tickets={tickets} 
-            loading={loadingTickets} 
-            pagination={ticketPagination} 
-            onChangePage={fetchTickets} 
+
+          <TicketListTable
+            tickets={tickets}
+            loading={loadingTickets}
+            pagination={ticketPagination}
+            onChangePage={fetchTickets}
             concertId={selectedConcertId}
             onViewInvoice={(tId) => setInvoiceModal({ open: true, ticketId: tId })}
           />
         </>
       )}
-      <TicketInvoiceModal 
-        open={invoiceModal.open} 
-        ticketId={invoiceModal.ticketId} 
-        onCancel={() => setInvoiceModal({ open: false, ticketId: null })} 
+      <TicketInvoiceModal
+        open={invoiceModal.open}
+        ticketId={invoiceModal.ticketId}
+        onCancel={() => setInvoiceModal({ open: false, ticketId: null })}
       />
     </div>
   );

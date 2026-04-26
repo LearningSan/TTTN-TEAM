@@ -13,7 +13,7 @@ function App() {
     <Routes>
       {/* 1. Mặc định vào trang chủ (/) -> Ép chuyển hướng thẳng ra Login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-      
+
       {/* 2. Tuyến đường duy nhất không cần bảo vệ */}
       <Route path="/login" element={<Login />} />
 

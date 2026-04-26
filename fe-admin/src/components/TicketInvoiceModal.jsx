@@ -33,7 +33,7 @@ const TicketInvoiceModal = ({ ticketId, open, onCancel }) => {
 
   return (
     <Modal
-      title={<Title level={4} style={{margin: 0}}>Chi tiết Hóa đơn / Vé</Title>}
+      title={<Title level={4} style={{ margin: 0 }}>Chi tiết Hóa đơn / Vé</Title>}
       open={open}
       onCancel={onCancel}
       footer={null}
@@ -48,12 +48,12 @@ const TicketInvoiceModal = ({ ticketId, open, onCancel }) => {
               <Descriptions.Item label="Tên khách hàng"><Text strong>{data.buyerInfo?.name}</Text></Descriptions.Item>
               <Descriptions.Item label="Email">{data.buyerInfo?.email}</Descriptions.Item>
               <Descriptions.Item label="Số điện thoại">{data.buyerInfo?.phone || 'Chưa cập nhật'}</Descriptions.Item>
-              <Descriptions.Item label="Ví nhận NFT"><Text copyable style={{fontFamily:'monospace'}}>{data.buyerInfo?.receivingWallet}</Text></Descriptions.Item>
+              <Descriptions.Item label="Ví nhận NFT"><Text copyable style={{ fontFamily: 'monospace' }}>{data.buyerInfo?.receivingWallet}</Text></Descriptions.Item>
             </Descriptions>
 
             {/* THÔNG TIN GIAO DỊCH */}
             <Descriptions title="💳 Thông tin Giao dịch (Transaction)" bordered size="small" column={2}>
-              <Descriptions.Item label="Mã Đơn hàng (Order ID)">{data.transactionInfo?.orderId?.substring(0,8)}...</Descriptions.Item>
+              <Descriptions.Item label="Mã Đơn hàng (Order ID)">{data.transactionInfo?.orderId?.substring(0, 8)}...</Descriptions.Item>
               <Descriptions.Item label="Trạng thái Payment">
                 <Tag color={data.transactionInfo?.paymentStatus === 'SUCCESS' ? 'green' : 'orange'}>
                   {data.transactionInfo?.paymentStatus}
@@ -67,7 +67,7 @@ const TicketInvoiceModal = ({ ticketId, open, onCancel }) => {
             {/* THÔNG TIN VÉ */}
             <Descriptions title="🎫 Thông tin Vé (Ticket & Zone)" bordered size="small" column={2}>
               <Descriptions.Item label="Khu vực">{data.zoneInfo?.zoneName}</Descriptions.Item>
-              <Descriptions.Item label="Mức giá"><Text strong style={{color: '#cf1322'}}>{data.zoneInfo?.price?.toLocaleString()} {data.zoneInfo?.currency}</Text></Descriptions.Item>
+              <Descriptions.Item label="Mức giá"><Text strong style={{ color: '#cf1322' }}>{data.zoneInfo?.price?.toLocaleString()} {data.zoneInfo?.currency}</Text></Descriptions.Item>
               <Descriptions.Item label="Vị trí ghế">{data.zoneInfo?.seatLabel || <Tag color="purple">Vé đứng tự do</Tag>}</Descriptions.Item>
               <Descriptions.Item label="Trạng thái Vé">
                 <Tag color="blue">{data.ticketInfo?.status}</Tag>

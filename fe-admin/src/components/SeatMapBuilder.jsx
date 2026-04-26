@@ -18,12 +18,12 @@ const SeatMapBuilder = ({ form }) => {
   return (
     <div style={{ padding: '20px', background: '#f0f2f5', borderRadius: 8, marginBottom: 20 }}>
       <Divider titlePlacement="left">🗺️ Thiết lập Sơ đồ & Vị trí</Divider>
-      
-      <div style={{ 
-        width: '100%', 
-        height: '550px', 
-        background: '#141414', 
-        position: 'relative', 
+
+      <div style={{
+        width: '100%',
+        height: '550px',
+        background: '#141414',
+        position: 'relative',
         overflow: 'hidden',
         borderRadius: 12,
         border: '4px solid #000',
@@ -35,7 +35,7 @@ const SeatMapBuilder = ({ form }) => {
         {/* =============== RENDER SÂN KHẤU ================= */}
         {stages.map((stg, idx) => (
           <Rnd
-            key={`stg-rnd-${idx}-${stg?.name}`} 
+            key={`stg-rnd-${idx}-${stg?.name}`}
             bounds="parent"
             dragGrid={[10, 10]}
             default={{
@@ -46,27 +46,27 @@ const SeatMapBuilder = ({ form }) => {
             }}
             onDragStop={(e, d) => {
               const currentStages = [...(form.getFieldValue('stages') || [])];
-              if(currentStages[idx]) {
+              if (currentStages[idx]) {
                 currentStages[idx].layoutConfig = { ...(currentStages[idx].layoutConfig || {}), x: d.x, y: d.y };
                 form.setFieldsValue({ stages: currentStages });
               }
             }}
             onResizeStop={(e, dir, ref, delta, pos) => {
               const currentStages = [...(form.getFieldValue('stages') || [])];
-              if(currentStages[idx]) {
-                 currentStages[idx].layoutConfig = { 
-                   ...(currentStages[idx].layoutConfig || {}), 
-                   w: parseInt(ref.style.width), 
-                   h: parseInt(ref.style.height), 
-                   x: pos.x, 
-                   y: pos.y 
-                 };
-                 form.setFieldsValue({ stages: currentStages });
+              if (currentStages[idx]) {
+                currentStages[idx].layoutConfig = {
+                  ...(currentStages[idx].layoutConfig || {}),
+                  w: parseInt(ref.style.width),
+                  h: parseInt(ref.style.height),
+                  x: pos.x,
+                  y: pos.y
+                };
+                form.setFieldsValue({ stages: currentStages });
               }
             }}
           >
-            <div style={{ 
-              width: '100%', height: '100%', 
+            <div style={{
+              width: '100%', height: '100%',
               background: '#434343', color: '#fff',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               borderRadius: stg.shape === 'circle' ? '50%' : '4px',
@@ -83,7 +83,7 @@ const SeatMapBuilder = ({ form }) => {
         {zones.map((z, idx) => {
           const isLocked = z?.availableSeats < z?.totalSeats && z?.totalSeats > 0;
           const layout = z.layoutConfig || { x: 50, y: 150, w: 120, h: 60 };
-          
+
           return (
             <Rnd
               key={`zone-rnd-${idx}-${z?.zoneName}`}
@@ -94,20 +94,20 @@ const SeatMapBuilder = ({ form }) => {
               enableResizing={!isLocked}
               onDragStop={(e, d) => {
                 const currentZones = [...(form.getFieldValue('zones') || [])];
-                if(currentZones[idx]) {
+                if (currentZones[idx]) {
                   currentZones[idx].layoutConfig = { ...(currentZones[idx].layoutConfig || {}), x: d.x, y: d.y };
                   form.setFieldsValue({ zones: currentZones });
                 }
               }}
               onResizeStop={(e, dir, ref, delta, pos) => {
                 const currentZones = [...(form.getFieldValue('zones') || [])];
-                if(currentZones[idx]) {
-                  currentZones[idx].layoutConfig = { 
-                    ...(currentZones[idx].layoutConfig || {}), 
-                    w: parseInt(ref.style.width), 
-                    h: parseInt(ref.style.height), 
-                    x: pos.x, 
-                    y: pos.y 
+                if (currentZones[idx]) {
+                  currentZones[idx].layoutConfig = {
+                    ...(currentZones[idx].layoutConfig || {}),
+                    w: parseInt(ref.style.width),
+                    h: parseInt(ref.style.height),
+                    x: pos.x,
+                    y: pos.y
                   };
                   form.setFieldsValue({ zones: currentZones });
                 }
@@ -115,37 +115,37 @@ const SeatMapBuilder = ({ form }) => {
             >
               {/* 🚀 BỌC MỘT DIV RELATIVE BÊN NGOÀI ĐỂ QUẢN LÝ VỊ TRÍ */}
               <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                
+
                 {/* 🚀 1. ĐẨY TÊN ZONE LÊN TRÊN KHỐI MÀU (Nằm ngoài khung) */}
-                <div style={{ 
-                  position: 'absolute', top: -20, left: 0, width: '100%', textAlign: 'center', 
-                  color: '#fff', fontSize: 12, fontWeight: 'bold', 
+                <div style={{
+                  position: 'absolute', top: -20, left: 0, width: '100%', textAlign: 'center',
+                  color: '#fff', fontSize: 12, fontWeight: 'bold',
                   textShadow: '0px 1px 4px rgba(0,0,0,0.8)', // Đổ bóng để dễ đọc trên nền tối
-                  whiteSpace: 'nowrap', zIndex: 30, 
+                  whiteSpace: 'nowrap', zIndex: 30,
                   pointerEvents: 'none' // Xuyên chuột qua chữ để không cản trở việc kéo thả
                 }}>
                   {z.zoneName || `Zone ${idx + 1}`}
                 </div>
 
                 {/* 🚀 2. KHỐI MÀU & LƯỚI GHẾ */}
-                <div style={{ 
+                <div style={{
                   background: z.colorCode || '#1890ff', width: '100%', height: '100%', borderRadius: 6,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   border: '2px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                  cursor: isLocked ? 'not-allowed' : 'move', zIndex: 20, 
+                  cursor: isLocked ? 'not-allowed' : 'move', zIndex: 20,
                   padding: '6px', // Cấp padding để ghế dàn ra không bị cấn vào sát mép viền
-                  overflow: 'hidden' 
+                  overflow: 'hidden'
                 }}>
-                  
+
                   {/* 🚀 3. LƯỚI GHẾ TỰ ĐỘNG DÀN ĐỀU (FLEX SPACE-EVENLY) */}
                   {z.hasSeatMap && z.tiers && z.tiers.length > 0 && (
-                    <div style={{ 
-                      flex: 1, 
-                      width: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      justifyContent: 'space-evenly', 
-                      opacity: 0.9 
+                    <div style={{
+                      flex: 1,
+                      width: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-evenly',
+                      opacity: 0.9
                     }}>
                       {z.tiers.map((tier, tIdx) => {
                         // 🚀 BƯỚC 1: ĐẶT HÀM TÍNH TOÁN KÝ TỰ Ở ĐÂY (Bên trong vòng lặp tier)
@@ -177,17 +177,17 @@ const SeatMapBuilder = ({ form }) => {
                           }}>
                             {/* Vòng lặp vẽ Hàng (Rows) */}
                             {Array.from({ length: tier.rowCount || 0 }).map((_, rIdx) => (
-                              <div key={`r-${rIdx}`} style={{ 
-                                display: 'flex', 
+                              <div key={`r-${rIdx}`} style={{
+                                display: 'flex',
                                 alignItems: 'center', // Đảm bảo chữ và ghế nằm cùng 1 đường ngang
                                 width: '100%',
                                 gap: '4px' // Khoảng cách giữa chữ và khu vực ghế
                               }}>
-                                
+
                                 {/* 🚀 BƯỚC 2: KHỐI CHỨA KÝ TỰ HÀNG (Ở BÊN TRÁI) */}
-                                <div style={{ 
-                                  width: '15px', color: '#fff', fontSize: '9px', fontWeight: 'bold', 
-                                  textAlign: 'center', opacity: 0.8, userSelect: 'none' 
+                                <div style={{
+                                  width: '15px', color: '#fff', fontSize: '9px', fontWeight: 'bold',
+                                  textAlign: 'center', opacity: 0.8, userSelect: 'none'
                                 }}>
                                   {getLabel(rIdx)}
                                 </div>
@@ -197,13 +197,13 @@ const SeatMapBuilder = ({ form }) => {
                                   {Array.from({ length: tier.seatsPerRow || 0 }).map((_, sIdx) => (
                                     <div key={`s-${sIdx}`} style={{
                                       width: 5, height: 5, borderRadius: '50%',
-                                      backgroundColor: tier.colorCode || z.colorCode || '#fff', 
+                                      backgroundColor: tier.colorCode || z.colorCode || '#fff',
                                       border: '1px solid rgba(255,255,255,0.4)',
                                       boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
                                     }} />
                                   ))}
                                 </div>
-                                
+
                               </div>
                             ))}
                           </div>
@@ -234,14 +234,14 @@ const SeatMapBuilder = ({ form }) => {
                       <Select options={STAGE_SHAPES} style={{ width: 110 }} />
                     </Form.Item>
                     <Form.Item {...restField} name={[name, 'layoutConfig', 'x']} hidden><Input /></Form.Item>
-    <Form.Item {...restField} name={[name, 'layoutConfig', 'y']} hidden><Input /></Form.Item>
-    <Form.Item {...restField} name={[name, 'layoutConfig', 'w']} hidden><Input /></Form.Item>
-    <Form.Item {...restField} name={[name, 'layoutConfig', 'h']} hidden><Input /></Form.Item>
+                    <Form.Item {...restField} name={[name, 'layoutConfig', 'y']} hidden><Input /></Form.Item>
+                    <Form.Item {...restField} name={[name, 'layoutConfig', 'w']} hidden><Input /></Form.Item>
+                    <Form.Item {...restField} name={[name, 'layoutConfig', 'h']} hidden><Input /></Form.Item>
                     <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
                   </Space>
                 ))}
               </div>
-              <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ name: 'Sân khấu', shape: 'rectangle', layoutConfig: {x: 300, y: 50, w: 200, h: 80} })}>
+              <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ name: 'Sân khấu', shape: 'rectangle', layoutConfig: { x: 300, y: 50, w: 200, h: 80 } })}>
                 Thêm khối Sân khấu mới
               </Button>
             </>

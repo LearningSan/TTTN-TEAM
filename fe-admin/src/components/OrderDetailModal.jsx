@@ -55,15 +55,15 @@ const OrderDetailModal = ({ orderId, open, onCancel }) => {
             </Descriptions>
 
             <Divider orientation="left">Vật phẩm trong đơn hàng (Tickets)</Divider>
-            <Table 
-              dataSource={data.items || []} 
-              columns={itemColumns} 
-              rowKey="orderItemId" 
-              pagination={false} 
-              size="small" 
+            <Table
+              dataSource={data.items || []}
+              columns={itemColumns}
+              rowKey="orderItemId"
+              pagination={false}
+              size="small"
               bordered
             />
-            
+
             <div style={{ marginTop: 16, textAlign: 'right' }}>
               <Text size="large">Tổng cộng: <Title level={3} style={{ display: 'inline', color: '#cf1322' }}>{data.totalAmount?.toLocaleString()} {data.currency}</Title></Text>
             </div>

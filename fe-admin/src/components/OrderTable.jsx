@@ -38,8 +38,8 @@ const OrderTable = ({ orders, loading, pagination, onChangePage, onViewDetail })
       render: (d) => {
         if (!d) return '-';
         // 🚀 Bước 3: Ép kiểu dữ liệu kèm theo Format tương ứng từ API
-        const parsedDate = dayjs(d, "DD/MM/YYYY HH:mm:ss"); 
-        
+        const parsedDate = dayjs(d, "DD/MM/YYYY HH:mm:ss");
+
         // Trả về định dạng hiển thị đẹp cho Admin (bỏ bớt giây cho gọn)
         return parsedDate.isValid() ? parsedDate.format('DD/MM/YYYY HH:mm') : d;
       }
@@ -56,12 +56,12 @@ const OrderTable = ({ orders, loading, pagination, onChangePage, onViewDetail })
       title: 'Chi tiết',
       align: 'center',
       render: (_, r) => (
-        <Button 
-          type="primary" 
-          ghost 
-          size="small" 
-          icon={<EyeOutlined />} 
-          onClick={() => onViewDetail(r.orderId)} 
+        <Button
+          type="primary"
+          ghost
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => onViewDetail(r.orderId)}
         />
       )
     }
