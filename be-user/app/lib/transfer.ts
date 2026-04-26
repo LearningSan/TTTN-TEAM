@@ -156,3 +156,95 @@ export async function updateTicketOwner(
     throw new Error("Cập nhật owner vé thất bại");
   }
 }
+
+export async function checkPendingTransferByTicket(
+  ticket_id: string,
+  transaction?: any
+) {
+  try {
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
+
+    const result = await request
+      .input("ticket_id", ticket_id)
+      .query(`
+        SELECT TOP 1 *
+        FROM transfer_transactions
+        WHERE ticket_id = @ticket_id
+          AND transfer_status = 'PENDING'
+        ORDER BY transfer_date DESC
+      `);
+
+    return result.recordset[0] || null;
+
+  } catch (error) {
+    console.error("Error checkPendingTransferByTicket:", error);
+    throw new Error("DB check pending transfer failed");
+  }
+}
+export async function getPendingTransfersByWallet(
+  wallet: string,
+  transaction?: any
+) {
+  try {
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
+
+    const result = await request
+      .input("wallet", wallet)
+      .query(`
+        SELECT 
+          t.transfer_id,
+          t.ticket_id,
+          t.from_wallet,
+          t.to_wallet,
+          t.transfer_status,
+          t.transfer_date,
+          tk.token_id,
+          tk.contract_address
+        FROM transfer_transactions t
+        JOIN tickets tk ON t.ticket_id = tk.ticket_id
+        WHERE t.from_wallet = @wallet
+          AND t.transfer_status = 'PENDING'
+        ORDER BY t.transfer_date DESC
+      `);
+
+    return result.recordset;
+
+  } catch (error) {
+    console.error("Error getPendingTransfersByWallet:", error);
+    throw new Error("DB get transfers failed");
+  }
+}
+
+export async function getAllPendingTransfersDB(transaction?: any) {
+  try {
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
+
+    const result = await request.query(`
+      SELECT 
+        t.transfer_id,
+        t.ticket_id,
+        t.from_wallet,
+        t.to_wallet,
+        t.transfer_status,
+        t.transfer_date,
+        tk.token_id,
+        tk.contract_address
+      FROM transfer_transactions t
+      JOIN tickets tk ON t.ticket_id = tk.ticket_id
+      WHERE t.transfer_status = 'PENDING'
+      ORDER BY t.transfer_date DESC
+    `);
+
+    return result.recordset;
+
+  } catch (error) {
+    console.error("Error getAllPendingTransfersDB:", error);
+    throw new Error("DB get all transfers failed");
+  }
+}

@@ -44,8 +44,15 @@ async function handleTokens(
 }
 
 export default async function middleware(req: NextRequest) {
-  const allowedOrigin = "http://localhost:5173";
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+const origin = req.headers.get("origin") || "";
 
+const allowedOrigin = allowedOrigins.includes(origin)
+  ? origin
+  : allowedOrigins[0];
   // ===== CORS preflight =====
   if (req.method === "OPTIONS") {
     return new NextResponse(null, {

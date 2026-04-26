@@ -548,7 +548,7 @@ export async function updateTicketOwner(
       .input("to_user_id", to_user_id)
       .input("to_wallet", to_wallet)
       .query(`
-        UPDATE tickets
+        UPDATE tickets  
         SET 
           user_id = @to_user_id,
           wallet_address = @to_wallet,
@@ -651,7 +651,7 @@ export async function updateTicketStatus(
     .input("status", status);
 
   await request.query(`
-    UPDATE ticket
+    UPDATE tickets
     SET status = @status
     WHERE ticket_id = @ticket_id
   `);
