@@ -12,20 +12,25 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "supersecret";
 
 
 export async function authenticateUser(email: string, password: string) {
-  try {
-    const user = await getUser(email);
-  if (!user || !user.password_hash) return null;
+  const user = await getUser(email);
+console.log("EMAIL:", email);
+console.log("PASSWORD INPUT:", password);
+console.log("USER:", user);
+console.log("HASH:", user?.password_hash);
+  if (!user) return null;
+
+  if (!user.password_hash) {
+    console.log("Missing password_hash in DB");
+    return null;
+  }
+
   const match = await bcrypt.compare(password, user.password_hash);
+
   if (!match) return null;
-  if(user.status ==="LOCKED"){
-    throw new Error("User account is locked");
-  }
-  return await sanitizeUser(user)
-  } catch (error) {
-    console.error("Authentication failed:", error);
-    throw new Error("Authentication failed");
-  }
-  
+
+  if (user.status === "LOCKED") return null;
+
+  return sanitizeUser(user);
 }
 
 export async function createToken(

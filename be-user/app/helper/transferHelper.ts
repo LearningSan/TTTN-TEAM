@@ -1,6 +1,6 @@
 import { connectDB } from "../lib/data";
 import {
-  checkPendingTransfer,
+  checkPendingTransfer,getPendingTransfersByWallet,getAllPendingTransfersDB,
   insertTransfer,
   getTransferById,
   markTransferSuccess,
@@ -10,9 +10,6 @@ import { updateTicketOwner, getTicketForUpdate, updateTicketStatus } from "../li
 import { ethers } from "ethers";
 import { abi } from "../lib/abi";
 
-// =============================
-// 🔥 CREATE TRANSFER
-// =============================
 export async function createTransferTransaction(
   ticket_id: string,
   buyer_id: string
@@ -215,4 +212,31 @@ export async function confirmTransferService(
     tx_hash,
     block_number: receipt.blockNumber,
   };
+}
+
+export async function getMyPendingTransfers(wallet: string) {
+  try {
+    if (!wallet) {
+      throw new Error("Wallet is required");
+    }
+
+    const transfers = await getPendingTransfersByWallet(wallet);
+
+    return transfers;
+
+  } catch (error: any) {
+    console.error("Helper getMyPendingTransfers error:", error);
+    throw new Error(error.message || "Get transfers failed");
+  }
+}
+
+export async function getAllPendingTransfers() {
+  try {
+    const transfers = await getAllPendingTransfersDB();
+    return transfers;
+
+  } catch (error: any) {
+    console.error("Helper getAllPendingTransfers error:", error);
+    throw new Error(error.message || "Get all transfers failed");
+  }
 }
