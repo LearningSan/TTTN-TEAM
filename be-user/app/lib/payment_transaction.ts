@@ -133,3 +133,31 @@ export async function markPaymentSuccess(
     throw new Error("Cập nhật payment thất bại");
   }
 }
+
+export async function markPaymentFailed(
+  payment_id: string,
+  failure_reason: string,
+  transaction?: any
+) {
+  try {
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
+
+    await request
+      .input("payment_id", payment_id)
+      .input("failure_reason", failure_reason)
+      .query(`
+        UPDATE payment_transactions
+        SET 
+          payment_status = 'FAILED',
+          failure_reason = @failure_reason,
+          updated_at = GETDATE()
+        WHERE payment_id = @payment_id
+      `);
+
+  } catch (error) {
+    console.error("Error in markPaymentFailed:", error);
+    throw new Error("Cập nhật payment FAILED thất bại");
+  }
+}

@@ -30,9 +30,6 @@ export type social_account = {
   provider: string;
   provider_id: string;         
   provider_email?: string;
-  access_token?: string;
-  refresh_token?: string;
-  token_expires_at?: string;
   linked_at: string;
  
 };
@@ -102,7 +99,6 @@ export type concerts = {
 export type seats = {
   seat_id: string,               
   zone_id: string,               
-  concert_id: string,            
   row_label: string,             
   seat_number: number,           
   seat_label: string,            
@@ -117,7 +113,6 @@ export type seats = {
 export type seat_tiers = {
   tier_id: string;         
   zone_id: string;         
-  concert_id: string;       
   tier_name: string;        
   price: number;           
   currency: string;        

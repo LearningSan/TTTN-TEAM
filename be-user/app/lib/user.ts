@@ -69,7 +69,7 @@ export async function activateUser(userId: string): Promise<void> {
       .input("user_id", userId)
       .query(`
         UPDATE users
-        SET status = 'ACTIVE',
+        SET status = 'ACTIVE',  
             email_verified = 1
         WHERE user_id = @user_id
           AND (status <> 'ACTIVE' OR email_verified <> 1)

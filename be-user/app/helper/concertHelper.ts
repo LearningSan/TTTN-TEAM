@@ -14,22 +14,28 @@ type GetAllParams = {
 type GetDetailParams = {
   concert_id: string;
 };
+export async function search(
+  keyword: string,
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: any
+) {
+  const result = await searchConcertByKeyword(keyword, page, pageSize, filters);
 
-export async function search(params: {
-  keyword: string;
-  page?: number;
-  pageSize?: number;
-}) {
-  try {
-    return await searchConcertByKeyword(
-      params.keyword,
-      params.page,
-      params.pageSize
-    );
-  } catch (error: any) {
-    console.error("❌ search helper error:", error);
-    throw error;
-  }
+  const total =
+    typeof result.hits.total === "number"
+      ? result.hits.total
+      : result.hits.total?.value || 0;
+
+  return {
+    items: result.hits.hits.map((h: any) => h._source),
+    pagination: {
+      page,
+      pageSize,
+      totalItems: total,
+      totalPages: Math.ceil(total / pageSize)
+    }
+  };
 }
 export async function getAll(params: GetAllParams) {
   try {

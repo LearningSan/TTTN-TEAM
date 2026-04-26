@@ -138,7 +138,7 @@ export default function PaymentTestPage() {
       if (Number(network.chainId) !== 11155111) {
         alert("Please switch to Sepolia");
         return;
-      }
+      }   
 
       // ================= CHECK BALANCE API =================
       const checkRes = await fetch("/api/check-balance", {
