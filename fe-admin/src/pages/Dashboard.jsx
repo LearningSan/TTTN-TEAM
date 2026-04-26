@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Card, Statistic, Table, Typography, Space, Spin, Button, Avatar, Tag, DatePicker, Flex } from 'antd';
-import { 
-  CustomerServiceOutlined, 
-  TagsOutlined, 
-  UserOutlined, 
-  ShoppingCartOutlined, 
+import {
+  CustomerServiceOutlined,
+  TagsOutlined,
+  UserOutlined,
+  ShoppingCartOutlined,
   AlertOutlined,
   RightOutlined,
   DollarOutlined,
-  CalendarOutlined, 
+  CalendarOutlined,
   BarChartOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -22,7 +22,7 @@ const { Title, Text } = Typography;
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [filterDate, setFilterDate] = useState(dayjs()); 
+  const [filterDate, setFilterDate] = useState(dayjs());
   const [allOrders, setAllOrders] = useState([]);
   const [summary, setSummary] = useState({
     concerts: 0, users: 0, totalPaidOrders: 0, refunds: 0
@@ -64,7 +64,7 @@ const Dashboard = () => {
   // 🚀 LOGIC TÍNH TOÁN DOANH THU ĐA TIỀN TỆ 
   const calculatedStats = useMemo(() => {
     const targetDate = filterDate.format('DD/MM/YYYY');
-    
+
     const totalRevenueMap = {}; // Lưu tổng doanh thu tất cả các ngày
     const dailyRevenueMap = {}; // Lưu doanh thu riêng ngày được chọn
     let dailyCount = 0;
@@ -110,21 +110,21 @@ const Dashboard = () => {
         <Title level={3} style={{ margin: 0 }}>CỔNG ĐIỀU HÀNH ADMIN</Title>
         <Space direction="vertical" align="end">
           <Text type="secondary">Chọn ngày để xem báo cáo chi tiết:</Text>
-          <DatePicker 
-            value={filterDate} 
-            onChange={(date) => setFilterDate(date || dayjs())} 
+          <DatePicker
+            value={filterDate}
+            onChange={(date) => setFilterDate(date || dayjs())}
             format="DD/MM/YYYY"
             allowClear={false}
           />
         </Space>
       </Flex>
-      
+
       <Spin spinning={loading}>
         <Row gutter={[16, 16]}>
           {/* 💰 CARD DOANH THU CHIA THEO TIỀN TỆ */}
           <Col xs={24} sm={24} lg={8}>
-            <Card 
-              hoverable 
+            <Card
+              hoverable
               style={{ height: '100%', borderRadius: 12, borderLeft: `5px solid #fa8c16` }}
               onClick={() => navigate("/dashboard/orders")}
             >
@@ -154,12 +154,12 @@ const Dashboard = () => {
           </Col>
 
           <Col xs={24} sm={12} lg={8}>
-            <Card 
-              hoverable 
+            <Card
+              hoverable
               style={{ height: '100%', borderRadius: 12, borderLeft: `5px solid #52c41a` }}
               onClick={() => navigate("/dashboard/tickets")}
             >
-              <Statistic 
+              <Statistic
                 title={<Text strong style={{ color: '#8c8c8c' }}>VÉ ĐÃ BÁN</Text>}
                 value={summary.totalPaidOrders}
                 prefix={<TagsOutlined />}
@@ -198,31 +198,31 @@ const Dashboard = () => {
 
         <div style={{ marginTop: 40 }}>
           <Card title={<Space><BarChartOutlined /> <Text strong>Top Khách Hàng Chi Tiêu Nhiều Nhất</Text></Space>} size="small">
-            <Table 
-              dataSource={calculatedStats.topSpenders} 
-              pagination={false} 
+            <Table
+              dataSource={calculatedStats.topSpenders}
+              pagination={false}
               size="middle"
               rowKey="email"
               scroll={{ y: 400 }}
               columns={[
-                { 
-                  title: 'Khách hàng', 
+                {
+                  title: 'Khách hàng',
                   render: (_, r) => (
                     <Space>
                       <Avatar style={{ backgroundColor: '#1890ff' }} icon={<UserOutlined />} />
                       <div>
-                        <Text strong>{r.name}</Text><br/>
+                        <Text strong>{r.name}</Text><br />
                         <Text type="secondary" style={{ fontSize: 11 }}>{r.email}</Text>
                       </div>
                     </Space>
                   )
                 },
                 { title: 'Số đơn', dataIndex: 'orderCount', align: 'center', width: 120 },
-                { 
-                  title: 'Tổng chi tiêu', 
-                  align: 'right', 
+                {
+                  title: 'Tổng chi tiêu',
+                  align: 'right',
                   width: 250,
-                  render: (_, r) => <Text type="danger" strong>{r.totalSpent.toLocaleString()} USDT</Text> 
+                  render: (_, r) => <Text type="danger" strong>{r.totalSpent.toLocaleString()} USDT</Text>
                 }
               ]}
             />

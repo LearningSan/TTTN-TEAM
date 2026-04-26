@@ -7,7 +7,7 @@ const ProtectedRoute = () => {
   if (!token) {
     return <Navigate to="/login" replace />;
   }
-let isAuthorized = false;
+  let isAuthorized = false;
   try {
     const decoded = jwtDecode(token);
     // Kiểm tra role { "role": "ADMIN", ... }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Typography, message, Button } from 'antd';
 import { ReloadOutlined, UserOutlined } from '@ant-design/icons';
 import API from '../api/config';
@@ -11,11 +11,11 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-  
+
   const [keyword, setKeyword] = useState('');
   const [filterStatus, setFilterStatus] = useState(null);
 
-  const fetchUsers = async (page = 1, size = 10, kw = keyword, st = filterStatus) => {
+  const fetchUsers = useCallback(async (page = 1, size = 10, kw = keyword, st = filterStatus) => {
     setLoading(true);
     try {
       let url = `/admin/users?page=${page - 1}&size=${size}`;
@@ -31,9 +31,11 @@ const UserManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [keyword, filterStatus]);
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleToggleStatus = async (userId, newStatus) => {
     try {
@@ -54,22 +56,22 @@ const UserManagement = () => {
 
   return (
     <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
-      <Card 
-        title={<><UserOutlined /> Quản lý Người dùng</>} 
+      <Card
+        title={<><UserOutlined /> Quản lý Người dùng</>}
         extra={<Button icon={<ReloadOutlined />} onClick={handleReset}>Làm mới</Button>}
-        bordered={false} 
+        bordered={false}
         style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
       >
-        <UserFilterBar 
+        <UserFilterBar
           keyword={keyword} setKeyword={setKeyword}
           filterStatus={filterStatus} setFilterStatus={setFilterStatus}
           onFilterTrigger={(st = filterStatus) => fetchUsers(1, pagination.pageSize, keyword, st)}
         />
-        
-        <UserTable 
-          users={users} 
-          loading={loading} 
-          pagination={pagination} 
+
+        <UserTable
+          users={users}
+          loading={loading}
+          pagination={pagination}
           onChangePage={(p, s) => fetchUsers(p, s)}
           onToggleStatus={handleToggleStatus}
         />
