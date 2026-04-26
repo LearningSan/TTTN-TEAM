@@ -262,14 +262,14 @@ export async function setCookies(response:NextResponse,accessToken:string,refres
   
     response.cookies.set("access_token", accessToken, {
     httpOnly: true,
-    secure: false, // nên true nếu HTTPS
-    sameSite: "strict",
+    sameSite: "lax",
+secure: false,
     maxAge: 60 * 60 // 1 giờ
   });
   response.cookies.set("refresh_token", refreshToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "strict",
+    sameSite: "lax",
+secure: false,
     maxAge: 7 * 24 * 60 * 60 
   });
 }

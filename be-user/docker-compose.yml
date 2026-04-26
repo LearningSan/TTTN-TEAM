@@ -16,7 +16,7 @@ services:
       - app-network
 
   be:
-    image: onlysan/be-user
+    image: onlysan/be-user:latest
     container_name: be-user
     ports:
       - "3000:3000"
@@ -26,6 +26,7 @@ services:
       - elasticsearch
     networks:
       - app-network
+    pull_policy: always   # 👈 QUAN TRỌNG
 
 volumes:
   es_data:

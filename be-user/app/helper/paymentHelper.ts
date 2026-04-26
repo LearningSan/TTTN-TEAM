@@ -1,5 +1,5 @@
 import { connectDB } from "../lib/data";
-import { getPaymentById, insertPayment, updateOrderPayment,markPaymentSuccess } from "../lib/payment_transaction";
+import { getPaymentById, insertPayment, updateOrderPayment,markPaymentSuccess,markPaymentFailed } from "../lib/payment_transaction";
 import { getOrderById,markOrderPaid } from "../lib/order";
 import { createTicketsFromOrder } from "./ticketHelper";
 import { markSeatsBookedByOrder } from "../lib/seat";
@@ -56,10 +56,17 @@ export async function confirmPaymentService(payment_id: string, tx_hash: string)
     throw new Error("Payment already processed");
   }
 
-  const receipt = await provider.getTransactionReceipt(tx_hash);
+ const receipt = await provider.getTransactionReceipt(tx_hash);
 
-  if (!receipt) throw new Error("Transaction not found");
-  if (receipt.status !== 1) throw new Error("Transaction failed");
+if (!receipt) {
+  await markPaymentFailed(payment_id, "Transaction not found");
+  throw new Error("Transaction not found");
+}
+
+if (receipt.status !== 1) {
+  await markPaymentFailed(payment_id, "Transaction failed on blockchain");
+  throw new Error("Transaction failed");
+}
 
   const pool = await connectDB();
   const transaction = pool.transaction();

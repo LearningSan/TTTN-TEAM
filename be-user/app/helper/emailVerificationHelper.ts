@@ -35,7 +35,7 @@ export async function verifyEmailToken(token: string) {
 }
 
 
-export async function sendVerifyEmail(email: string, token: string) {
+export async function   sendVerifyEmail(email: string, token: string) {
   const transporter = await nodemailer.createTransport({
     service: "gmail",
     auth: {

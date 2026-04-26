@@ -29,13 +29,18 @@
  *                 example: admin@gmail.com
  *               password:
  *                 type: string
- *                 minLength: 6
- *                 example: "123456"
+ *                 minLength: 8
+ *                 example: "Abc12345"
  *               name:
  *                 type: string
  *                 minLength: 2
  *                 maxLength: 50
  *                 example: "Try It"
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Số điện thoại Việt Nam (bắt đầu bằng 0, 10-11 số)
+ *                 example: "0912345678"
  *     responses:
  *       200:
  *         description: Đăng ký thành công, cần verify email
@@ -47,6 +52,7 @@
  *                 user_id: 1
  *                 email: admin@gmail.com
  *                 name: Try It
+ *                 phone: "0912345678"
  *       400:
  *         description: Dữ liệu không hợp lệ hoặc user đã tồn tại
  *         content:

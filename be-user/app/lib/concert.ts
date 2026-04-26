@@ -4,60 +4,61 @@ import { esClient } from "./elasticsearch";
 export async function searchConcertByKeyword(
   keyword: string,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  filters?: any
 ) {
-  try {
-    keyword = keyword?.trim();
+  const from = (page - 1) * pageSize;
 
-    const from = (page - 1) * pageSize;
-
-    const result = await esClient.search({
-      index: "concerts",
-      from,
-      size: pageSize,
-      query: keyword
-        ? {
-          multi_match: {
-            query: keyword,
-            fields: [
-              "title^3",
-              "artist^2",
-              "venue.city",
-              "venue.name",
-              "zones.zone_name",
-              "seat_tiers.tier_name"
-            ],
-            fuzziness: "AUTO",
-            operator: "or"
+  return await esClient.search({
+    index: "concerts",
+    from,
+    size: pageSize,
+    query: {
+      bool: {
+        must: [
+          {
+            multi_match: {
+              query: keyword,
+              fields: [
+                "title^3",
+                "artist^2",
+                "description",
+                "venue_name",
+                "city",
+                "district",
+                "address",
+                "organizer_name",
+                "zone_names"
+              ],
+              fuzziness: "AUTO"
+            }
           }
-        }
-        : { match_all: {} },
-
-      sort: [
-        "_score",
-        { concert_date: "asc" }
-      ]
-    });
-
-    const total =
-      typeof result.hits.total === "number"
-        ? result.hits.total
-        : result.hits.total?.value || 0;
-
-    return {
-      items: result.hits.hits.map((hit: any) => hit._source),
-      pagination: {
-        page,
-        pageSize,
-        totalItems: total,
-        totalPages: Math.ceil(total / pageSize)
+        ],
+        filter: [
+          filters?.status && { term: { status: filters.status } },
+          filters?.city && { match: { city: filters.city } },
+          filters?.min_price && {
+            range: { min_price: { gte: filters.min_price } }
+          },
+          filters?.max_price && {
+            range: { max_price: { lte: filters.max_price } }
+          },
+          filters?.date && {
+            range: {
+              concert_date: {
+                gte: filters.date,
+                lte: filters.date
+              }
+            }
+          }
+        ].filter(Boolean)
       }
-    };
-
-  } catch (error: any) {
-    console.error("❌ searchConcertByKeyword error:", error);
-    throw error;
-  }
+    },
+    sort: [
+      "_score",
+      { concert_date: "asc" }
+    ]
+  });
 }
 export async function getConcertList(
   filters?: {
