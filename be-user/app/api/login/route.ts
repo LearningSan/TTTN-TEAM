@@ -76,13 +76,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-  if (!passwordRegex.test(password)) {
-    return NextResponse.json(
-      { message: "Password must include uppercase, lowercase, and number" },
-      { status: 400 }
-    );
-  }
+  // const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  // if (!passwordRegex.test(password)) {
+  //   return NextResponse.json(
+  //     { message: "Password must include uppercase, lowercase, and number" },
+  //     { status: 400 }
+  //   );
+  // }
 
   const user = await authenticateUser(email, password);
 

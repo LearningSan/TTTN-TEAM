@@ -90,13 +90,27 @@ export default function PaymentTestPage() {
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        order_id: "282D78FD-02A7-4A4B-A7CD-DD45CAEDEA13",
+        order_id: "B47C13F3-AB1A-4818-9A21-578AF2BD735B",
         from_wallet: wallet,
         to_wallet: process.env.NEXT_PUBLIC_SYSTEM_WALLET,
       }),
     });
 
     const data = await res.json();
+
+
+if (!res.ok) {
+  console.error("Payment API error:", data);
+  alert(data.message || "Create payment failed");
+  return;
+}
+
+if (!data?.data?.payment_id) {
+  console.error("Invalid response:", data);
+  alert("Invalid payment response");
+  return;
+}
+
     setPaymentId(data.data.payment_id);
 
     console.log("PAYMENT ID:", data.data.payment_id);
