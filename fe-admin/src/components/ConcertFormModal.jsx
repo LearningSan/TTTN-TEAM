@@ -319,9 +319,11 @@ const ConcertFormModal = ({
                                   disabled={isZoneLocked}
                                   min={0}
                                   style={{ width: "100%" }}
-                                  formatter={(v) =>
-                                    `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                                  }
+                                  // formatter={(v) =>
+                                  //   `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                                  // }
+                                  step={0.000001} // Thêm cái này để hỗ trợ gõ số nhỏ mượt hơn
+                                  stringMode     // Giúp xử lý số cực nhỏ mà không bị chuyển sang dạng 1e-6
                                 />
                               </Form.Item>
                               <Form.Item
@@ -333,8 +335,8 @@ const ConcertFormModal = ({
                                 <Select
                                   disabled={isZoneLocked}
                                   options={[
-                                    { value: "USDT", label: "USDT" },
                                     { value: "ETH", label: "ETH" },
+                                    { value: "USDT", label: "USDT" },
                                     { value: "BNB", label: "BNB" },
                                   ]}
                                 />
@@ -594,12 +596,14 @@ const ConcertFormModal = ({
                                               disabled={isZoneLocked}
                                               min={0}
                                               style={{ width: "100%" }}
-                                              formatter={(v) =>
-                                                `${v}`.replace(
-                                                  /\B(?=(\d{3})+(?!\d))/g,
-                                                  ",",
-                                                )
-                                              }
+                                              // formatter={(v) =>
+                                              //   `${v}`.replace(
+                                              //     /\B(?=(\d{3})+(?!\d))/g,
+                                              //     ",",
+                                              //   )
+                                              // }
+                                              step={0.000001} // Thêm cái này để hỗ trợ gõ số nhỏ mượt hơn
+                                              stringMode     // Giúp xử lý số cực nhỏ mà không bị chuyển sang dạng 1e-6
                                               onChange={(val) => {
                                                 // Đồng bộ Giá lên Zone nếu là Tier đầu tiên
                                                 if (index === 0) {
@@ -619,16 +623,17 @@ const ConcertFormModal = ({
                                             name={[tName, "currency"]}
                                             label="Tiền tệ"
                                             rules={[{ required: true }]}
-                                            initialValue="USDT"
+                                            initialValue="ETH"
                                           >
                                             <Select
                                               disabled={isZoneLocked}
                                               options={[
+                                                { value: "ETH", label: "ETH" },
                                                 {
                                                   value: "USDT",
                                                   label: "USDT",
                                                 },
-                                                { value: "ETH", label: "ETH" },
+
                                                 { value: "BNB", label: "BNB" },
                                               ]}
                                               onChange={(val) => {
@@ -754,15 +759,15 @@ const ConcertFormModal = ({
                 onClick={() =>
                   addZone({
                     zoneName: `Khu vực ${zoneFields.length + 1}`,
-                    price: 10,
-                    currency: "USDT",
+                    price: 0.000001,
+                    currency: "ETH",
                     colorCode:
                       zoneColors[zoneFields.length % zoneColors.length].value,
                     hasSeatMap: true,
                     layoutConfig: { x: 50, y: 150, w: 120, h: 60 },
                     tiers: [
                       {
-                        price: 10,
+                        price: 0.000001,
                         rowPrefix: "A",
                         rowCount: 1,
                         seatsPerRow: 2,
