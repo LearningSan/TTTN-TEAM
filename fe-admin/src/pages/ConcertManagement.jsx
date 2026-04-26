@@ -144,7 +144,7 @@ const ConcertManagement = () => {
               tierId: t.tierId, // Rất quan trọng khi SỬA
               tierName: t.tierName || 'STANDARD',
               price: t.price,
-              currency: t.currency || z.currency || 'USDT',
+              currency: t.currency || z.currency || 'ETH',
               colorCode: t.colorCode || z.colorCode || ZONE_COLORS[0].value,
               displayOrder: j + 1,
               rowPrefix: t.rowPrefix?.toUpperCase(),
@@ -301,7 +301,7 @@ const ConcertManagement = () => {
               form.setFieldsValue({
                 status: 'DRAFT',
                 stages: [{ name: 'Sân khấu', shape: 'rectangle', layoutConfig: { x: 300, y: 20, w: 200, h: 80 } }],
-                zones: [{ zoneName: 'Khu vực 1', price: 10, currency: 'USDT', colorCode: ZONE_COLORS[0].value, hasSeatMap: true, layoutConfig: { x: 50, y: 150, w: 120, h: 60 }, tiers: [{ price: 10, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] }]
+                zones: [{ zoneName: 'Khu vực 1', price: 0.000001, currency: 'ETH', colorCode: ZONE_COLORS[0].value, hasSeatMap: true, layoutConfig: { x: 50, y: 150, w: 120, h: 60 }, tiers: [{ price: 0.000001, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] }]
               });
               setModalState({ open: true, id: null });
             }}>Tạo Concert</Button>
