@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     const wallet_address=decoded.wallet_address;
     const body = await req.json();
     const { concert_id, items, currency, note } = body;
-
+console.log("concert_id raw:", concert_id);
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { message: "Items is required" },
