@@ -107,7 +107,7 @@ const Dashboard = () => {
   return (
     <div style={{ padding: 0 }}>
       <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
-        <Title level={3} style={{ margin: 0 }}>CỔNG ĐIỀU HÀNH ADMIN</Title>
+        <Title level={3} style={{ margin: 0 }}>TỔNG QUAN</Title>
         <Space direction="vertical" align="end">
           <Text type="secondary">Chọn ngày để xem báo cáo chi tiết:</Text>
           <DatePicker

@@ -820,7 +820,7 @@ const ConcertFormModal = ({
           loading={loading}
           style={{ height: 50, fontSize: 16 }}
         >
-          XÁC NHẬN
+          LƯU
         </Button>
       </Form>
     </Modal>
