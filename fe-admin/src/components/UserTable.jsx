@@ -47,9 +47,9 @@ const UserTable = ({ users, loading, pagination, onChangePage, onToggleStatus })
         return (
           <Popconfirm
             title={isLocked ? "Mở khóa tài khoản này?" : "Khóa tài khoản này?"}
-            description={isLocked ? "Người dùng sẽ có thể đăng nhập lại." : "Người dùng sẽ bị văng ra và không thể giao dịch."}
+            description={isLocked ? "Xác nhận mở khóa tài khoản này" : "Xác nhận khóa tài khoản này"}
             onConfirm={() => onToggleStatus(r.userId, isLocked ? 'ACTIVE' : 'LOCKED')} // 🚀 Gửi LOCKED lên Backend
-            okText="Đồng ý"
+            okText="Xác nhận"
             cancelText="Hủy"
             okButtonProps={{ danger: !isLocked }}
           >

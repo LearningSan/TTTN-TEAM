@@ -71,7 +71,7 @@ const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId
         loading={loading}
         pagination={pagination}
         onChange={(p) => onChangePage(concertId, p.current - 1, p.pageSize)}
-        locale={{ emptyText: "Sự kiện này hiện chưa có người mua vé" }}
+        locale={{ emptyText: "Chưa có người mua vé" }}
       />
     </Card>
   );

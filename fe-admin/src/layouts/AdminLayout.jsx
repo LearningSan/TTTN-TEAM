@@ -34,7 +34,7 @@ const AdminLayout = () => {
     { key: '/dashboard/concerts', label: 'Quản Lý Concert' },
     { key: '/dashboard/tickets', label: 'Quản Lý Vé' },
     { key: '/dashboard/users', label: 'Quản Lý Người Dùng' },
-    { key: '/dashboard/orders', label: 'Quản Lý Đơn Hàng' },
+    { key: '/dashboard/orders', label: 'Quản Lý Doanh Thu' },
   ];
 
   return (
