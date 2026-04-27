@@ -61,7 +61,7 @@ useEffect(() => {
   };
   
   return (
-    <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 0, background: '#f5f5f5', minHeight: '100vh' }}>
       <Card
         title={<><UserOutlined /> Quản lý Người dùng</>}
         extra={<Button icon={<ReloadOutlined />} onClick={handleReset}>Làm mới</Button>}

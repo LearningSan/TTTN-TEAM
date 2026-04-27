@@ -30,7 +30,7 @@ const TicketOverview = ({ stats, loading }) => {
           }}
         >
           <div style={{ color: 'rgba(0, 0, 0, 0.45)', fontSize: '14px', marginBottom: '8px' }}>
-            💰 Doanh thu dự kiến
+            💰 Doanh thu
           </div>
 
           <Space direction="vertical" size={0} style={{ width: '100%' }}>
@@ -42,7 +42,7 @@ const TicketOverview = ({ stats, loading }) => {
                 Object.entries(stats.revenueMap).map(([currency, amount]) => (
                   <div key={currency} style={{ marginBottom: 4 }}>
                     <Text strong style={{ fontSize: 20, color: '#722ed1' }}>
-                      {amount.toLocaleString()}
+                      {amount.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                       <span style={{ fontSize: 13, marginLeft: 4, fontWeight: 'normal' }}>{currency}</span>
                     </Text>
                   </div>
