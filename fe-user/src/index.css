@@ -1,7 +1,7 @@
 @import "tailwindcss";
 /* Phải có dấu nháy đơn/kép quanh tên font */
 @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap");
-
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap");
 .ticket-container {
   position: relative;
   background: #000;

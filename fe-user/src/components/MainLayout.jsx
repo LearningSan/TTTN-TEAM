@@ -92,8 +92,11 @@ const MainLayout = () => {
         className={`${headerBgColor} ${borderColor} py-4 px-12 flex items-center justify-between shadow-sm sticky top-0 z-50 transition-colors duration-300`}
       >
         <Link to="/">
-          <h1 className="text-3xl font-black tracking-tighter text-[#8D1B1B]">
-            TICKETX
+          <h1 className="text-3xl font-bold tracking-tighter uppercase">
+            {/* Phần TICKET màu hồng */}
+            <span className="text-[#FF40B4]">T I C K E T</span>
+            {/* Phần X màu xanh cyan */}
+            <span className="text-[#00F2FF]"> X</span>
           </h1>
         </Link>
 
@@ -101,15 +104,15 @@ const MainLayout = () => {
           className={`flex items-center gap-6 text-[13px] font-bold uppercase ${textColor}`}
         >
           {" "}
-          <Link
-            to="/my-tickets"
-            className="flex items-center gap-1 hover:text-[#8D1B1B]"
-          >
-            <GiTicket size={18} /> My ticket
-          </Link>
           {/* Hiển thị tên người dùng */}
           {user ? (
             <div className="flex items-center gap-3">
+              <Link
+                to="/my-tickets"
+                className="flex items-center gap-1 hover:text-[#8D1B1B]"
+              >
+                <GiTicket size={18} /> My ticket
+              </Link>
               {/* Thay 'flex-col' thành 'flex-row' hoặc xóa hẳn 'flex-col' đi */}
               <Link
                 to="/resale-market"

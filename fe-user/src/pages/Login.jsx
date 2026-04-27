@@ -3,12 +3,11 @@ import { HiOutlineMail } from "react-icons/hi";
 import { RiLockPasswordLine, RiEyeOffLine, RiEyeLine } from "react-icons/ri";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom"; // Thêm Link và useNavigate để điều hướng
-import axios from "axios"; // Import axios để gọi API
-import { motion } from "framer-motion"; // Thêm import motion từ framer-motion
-import { HiOutlineChevronDown } from "react-icons/hi"; // Icon mũi tên cho phần ngôn ngữ
-import { AiFillHome } from "react-icons/ai"; // Icon Home
-
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { motion } from "framer-motion";
+import { HiOutlineChevronDown } from "react-icons/hi";
+import { AiFillHome } from "react-icons/ai";
 const Login = () => {
   // 1. Khai báo State để lưu thông tin
   const [email, setEmail] = useState("");

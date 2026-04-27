@@ -22,8 +22,6 @@ import ProfilePage from "./pages/Profile";
 import ResaleMarket from "./pages/ResaleMarket";
 
 import LoginButton from "./pages/nhap";
-import NhapMarketplace from "./pages/nhapMarketplace";
-import NhapTransactionPage from "./pages/nhapTransactionPage";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -51,11 +49,6 @@ function AnimatedRoutes() {
           element={<SeatSelection />}
         />
         <Route path="/nhap" element={<LoginButton />} />
-        <Route path="/nhap-marketplace" element={<NhapMarketplace />} />
-        <Route
-          path="/transaction/:transferId"
-          element={<NhapTransactionPage />}
-        />
       </Routes>
     </AnimatePresence>
   );
