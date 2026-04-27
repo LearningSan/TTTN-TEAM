@@ -1,148 +1,201 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Card, Col, Row, Select, Typography, Empty, message } from 'antd';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Card, Table, Tag, Button, Space, Typography, message, Input, Avatar } from 'antd';
+import { EyeOutlined, LeftOutlined, DashboardOutlined, ShoppingCartOutlined, SearchOutlined } from '@ant-design/icons';
 import API from '../api/config';
 import TicketInvoiceModal from '../components/TicketInvoiceModal';
-// Import các Component con đệ vừa tạo
 import TicketOverview from '../components/TicketOverview';
 import TicketZoneStats from '../components/TicketZoneStats';
 import TicketListTable from '../components/TicketListTable';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const TicketManagement = () => {
+  const [viewMode, setViewMode] = useState('list'); // 'list' hoặc 'detail'
   const [concerts, setConcerts] = useState([]);
-  const [selectedConcertId, setSelectedConcertId] = useState(null);
-  const [concertDetail, setConcertDetail] = useState(null);
+  const [keyword, setKeyword] = useState('');
+  const [selectedConcert, setSelectedConcert] = useState(null); // Lưu nguyên object concert
   const [tickets, setTickets] = useState([]);
-
-  const [loadingList, setLoadingList] = useState(false);
-  const [loadingStats, setLoadingStats] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [loadingTickets, setLoadingTickets] = useState(false);
-
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [ticketPagination, setTicketPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [invoiceModal, setInvoiceModal] = useState({ open: false, ticketId: null });
-  // Lấy danh sách Concert vào SelectBox
-  useEffect(() => {
-    const fetchConcertList = async () => {
-      setLoadingList(true);
-      try {
-        const res = await API.get('/admin/concerts?size=100');
-        setConcerts(res.data?.content || []);
-      } catch {
-        message.error("Không thể tải danh sách concert");
-      } finally { setLoadingList(false); }
-    };
-    fetchConcertList();
+  const isFirstRender = useRef(true);
+  // 🚀 Hàm tính toán stats cho 1 concert (Dùng chung cho cả Bảng và Overview)
+  const calculateStats = useCallback((concert) => {
+    if (!concert?.zones) return { total: 0, available: 0, sold: 0, revenueMap: {} };
+    let total = 0, available = 0, sold = 0;
+    const revenueMap = {};
+    let totalValue = 0;
+    concert.zones.forEach(zone => {
+      const curr = zone.currency || 'USDT';
+      if (!revenueMap[curr]) revenueMap[curr] = 0;
+      const zoneSold = (zone.totalSeats || 0) - (zone.availableSeats || 0);
+
+      if (zone.hasSeatMap && zone.tiers) {
+        zone.tiers.forEach(tier => {
+          const tSold = (tier.totalSeats || 0) - (tier.availableSeats || 0);
+          total += tier.totalSeats || 0;
+          available += tier.availableSeats || 0;
+          sold += tSold;
+          const rev = tSold * (tier.price || 0);
+          revenueMap[curr] += rev;
+          totalValue += rev; // Cộng dồn để lấy trọng số sắp xếp
+        });
+      } else {
+        total += zone.totalSeats || 0;
+        available += zone.availableSeats || 0;
+        sold += zoneSold;
+        const rev = zoneSold * (zone.price || 0);
+        revenueMap[curr] += rev;
+        totalValue += rev;
+      }
+    });
+    return { total, available, sold, revenueMap, totalValue };
   }, []);
 
-  // Hàm lấy danh sách vé đã mua
+  // 🚀 Tải danh sách Concert (Phân trang chuẩn)
+  const fetchConcertList = useCallback(async (page = 1, size = 10, kw = keyword) => {
+    setLoading(true);
+    try {
+      let url = `/admin/concerts?page=${page - 1}&size=${size}`;
+      if (kw) url += `&keyword=${encodeURIComponent(kw)}`;
+      const res = await API.get(url);
+      setConcerts(res.data?.content || []);
+      setPagination(prev => ({ ...prev, current: page, total: res.data?.totalElements || 0 }));
+    } catch {
+      message.error("Không thể tải danh sách concert");
+    } finally { setLoading(false); }
+  }, [keyword]);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      fetchConcertList();
+      return;
+    }
+    const delay = setTimeout(() => {
+      fetchConcertList(1, pagination.pageSize, keyword);
+    }, 500);
+    return () => clearTimeout(delay);
+  }, [keyword, fetchConcertList, pagination.pageSize]);
+
+  // 🚀 Tải danh sách vé cho concert được chọn
   const fetchTickets = useCallback(async (concertId, page = 0, size = 10) => {
     setLoadingTickets(true);
     try {
       const res = await API.get(`/admin/concerts/${concertId}/tickets`, { params: { page, size } });
       setTickets(res.data?.content || []);
       setTicketPagination(prev => ({ ...prev, current: page + 1, total: res.data?.totalElements || 0 }));
-    } catch { message.error("Không thể kết nối máy chủ để lấy danh sách vé!"); }
+    } catch { message.error("Không thể lấy danh sách vé!"); }
     finally { setLoadingTickets(false); }
   }, []);
 
-  // Hàm lấy thống kê từ Concert Detail
-  const fetchConcertDetail = async (id) => {
-    setLoadingStats(true);
-    try {
-      const res = await API.get(`/admin/concerts/${id}`);
-      setConcertDetail(res.data);
-    } catch { message.error("Lỗi khi lấy thông tin thống kê phát hành!"); }
-    finally { setLoadingStats(false); }
+  const handleOpenDetail = (record) => {
+    setSelectedConcert(record);
+    setViewMode('detail');
+    fetchTickets(record.concertId, 0, 10);
   };
 
-  // Xử lý khi chọn 1 Concert từ SelectBox
-  const handleSelectConcert = (id) => {
-    setSelectedConcertId(id);
-    setConcertDetail(null);
-    setTickets([]);
-    fetchConcertDetail(id);
-    fetchTickets(id, 0, ticketPagination.pageSize);
+  const handleBack = () => {
+    setViewMode('list');
+    setSelectedConcert(null);
   };
 
-  // Logic tính toán gộp (Doanh thu, Vé)
-  const getAdvancedStats = () => {
-    if (!concertDetail?.zones) return { total: 0, available: 0, sold: 0, revenueMap: {} };
-
-    let total = 0, available = 0, sold = 0;
-    const revenueMap = {}; // Lưu trữ doanh thu theo từng loại tiền
-
-    concertDetail.zones.forEach(zone => {
-      const curr = zone.currency || 'USDT';
-      if (!revenueMap[curr]) revenueMap[curr] = 0;
-
-      if (zone.hasSeatMap && zone.tiers) {
-        zone.tiers.forEach(tier => {
-          const tTotal = tier.totalSeats || 0;
-          const tAvail = tier.availableSeats || 0;
-          const tSold = tTotal - tAvail;
-          total += tTotal;
-          available += tAvail;
-          sold += tSold;
-          revenueMap[curr] += (tSold * (tier.price || 0));
-        });
-      } else {
-        const zTotal = zone.totalSeats || 0;
-        const zAvail = zone.availableSeats || 0;
-        const zSold = zTotal - zAvail;
-        total += zTotal;
-        available += zAvail;
-        sold += zSold;
-        revenueMap[curr] += (zSold * (zone.price || 0));
+  // 🚀 ĐỊNH NGHĨA CỘT CHO BẢNG DANH SÁCH CONCERT
+  const concertColumns = [
+    {
+      title: 'Concert',
+      render: (_, r) => (
+        <Space>
+          <Avatar src={r.bannerURL} shape="square" size={48} />
+          <div style={{ maxWidth: 200 }}><Text strong>{r.title}</Text><br /><Text type="secondary" style={{ fontSize: 12 }}>{r.artist}</Text></div>
+        </Space>
+      )
+    },
+    {
+      title: 'Thống kê vé',
+      render: (_, r) => {
+        const s = calculateStats(r);
+        return (
+          <Space direction="vertical" size={0}>
+            <Text>Tổng: <Text strong>{s.total}</Text></Text>
+            <Text>Đã bán: <Tag color="green">{s.sold}</Tag></Text>
+            <Text>Còn lại: <Tag color="orange">{s.available}</Tag></Text>
+          </Space>
+        );
       }
-    });
+    },
+    {
+      title: 'Doanh thu',
+      // sorter: (a, b) => calculateStats(a).totalValue - calculateStats(b).totalValue,
+      render: (_, r) => {
+        const s = calculateStats(r);
 
-    return { total, available, sold, revenueMap };
-  };
-
-  const stats = getAdvancedStats();
+        return Object.entries(s.revenueMap).map(([curr, val]) => (
+          <div key={curr}><Text strong style={{ color: '#722ed1' }}>{val.toLocaleString()} {curr}</Text></div>
+        ));
+      }
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      render: (status) => <Tag color={status === 'ON_SALE' ? 'green' : 'default'}>{status}</Tag>
+    },
+    {
+      title: 'Thao tác',
+      align: 'center',
+      render: (_, r) => (
+        <Button type="primary" ghost icon={<DashboardOutlined />} onClick={() => handleOpenDetail(r)}>
+          Xem tình trạng vé
+        </Button>
+      )
+    }
+  ];
 
   return (
-    <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
-      {/* HEADER: CHỌN CONCERT */}
-      <Card bordered={false} style={{ marginBottom: 24 }}>
-        <Row align="middle" gutter={24}>
-          <Col span={6}><Title level={4} style={{ margin: 0 }}>Quản lý Vé & Phát hành</Title></Col>
-          <Col span={18}>
-            <Select
-              showSearch
-              filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-              placeholder="🔍 Tìm và chọn concert để quản lý vé..."
-              style={{ width: '100%' }}
+    <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
+      {viewMode === 'list' ? (
+        <Card title={<Space><ShoppingCartOutlined /> <Title level={4} style={{ margin: 0 }}>Quản lý Vé & Doanh thu</Title></Space>} bordered={false}>
+          <div style={{ marginBottom: 16 }}>
+            <Input
+              placeholder="Tìm tên concert hoặc nghệ sĩ..."
+              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+              allowClear
               size="large"
-              onChange={handleSelectConcert}
-              loading={loadingList}
-              disabled={loadingList}
-              options={concerts.map(c => ({ value: c.concertId, label: c.title }))}
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              style={{ width: 450, borderRadius: 8 }}
             />
-          </Col>
-        </Row>
-      </Card>
-
-      {/* NẾU CHƯA CHỌN THÌ HIỆN EMPTY, CHỌN RỒI THÌ RENDER CÁC COMPONENT CON */}
-      {!selectedConcertId ? (
-        <Empty description="Vui lòng chọn một Concert ở trên để xem chi tiết vé" style={{ marginTop: 100 }} />
+          </div>
+          <Table
+            columns={concertColumns}
+            dataSource={concerts}
+            rowKey="concertId"
+            loading={loading}
+            pagination={pagination}
+            onChange={(p) => fetchConcertList(p.current, p.pageSize)}
+          />
+        </Card>
       ) : (
         <>
-          <TicketOverview stats={stats} loading={loadingStats} />
+          <Button icon={<LeftOutlined />} onClick={handleBack} style={{ marginBottom: 16 }}>Quay lại danh sách</Button>
+          <Title level={3} style={{ marginBottom: 24 }}>Chi tiết vé: {selectedConcert?.title}</Title>
 
-          <TicketZoneStats zones={concertDetail?.zones || []} loading={loadingStats} />
-
+          {/* Reuse các component cũ với dữ liệu từ selectedConcert */}
+          <TicketOverview stats={calculateStats(selectedConcert)} loading={false} />
+          <TicketZoneStats zones={selectedConcert?.zones || []} loading={false} />
           <TicketListTable
             tickets={tickets}
             loading={loadingTickets}
             pagination={ticketPagination}
             onChangePage={fetchTickets}
-            concertId={selectedConcertId}
+            concertId={selectedConcert?.concertId}
             onViewInvoice={(tId) => setInvoiceModal({ open: true, ticketId: tId })}
           />
         </>
       )}
+
       <TicketInvoiceModal
         open={invoiceModal.open}
         ticketId={invoiceModal.ticketId}

@@ -36,7 +36,13 @@ const UserManagement = () => {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+  const handleFilter = useCallback((st) => {
+  fetchUsers(1, pagination.pageSize, keyword, st || filterStatus);
+}, [fetchUsers, pagination.pageSize, keyword, filterStatus]);
 
+useEffect(() => {
+  fetchUsers();
+}, [fetchUsers]);
   const handleToggleStatus = async (userId, newStatus) => {
     try {
       // Gọi API cập nhật trạng thái 
@@ -53,7 +59,7 @@ const UserManagement = () => {
     setFilterStatus(null);
     fetchUsers(1, 10, '', null);
   };
-
+  
   return (
     <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
       <Card
@@ -65,7 +71,7 @@ const UserManagement = () => {
         <UserFilterBar
           keyword={keyword} setKeyword={setKeyword}
           filterStatus={filterStatus} setFilterStatus={setFilterStatus}
-          onFilterTrigger={(st = filterStatus) => fetchUsers(1, pagination.pageSize, keyword, st)}
+          onFilterTrigger={handleFilter}
         />
 
         <UserTable
