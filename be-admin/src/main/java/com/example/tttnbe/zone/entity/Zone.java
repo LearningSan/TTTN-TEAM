@@ -77,6 +77,6 @@ public class Zone {
     @JoinColumn(name = "concert_id", nullable = false)
     private Concert concert;
 
-    @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SeatTier> seatTiers;
 }

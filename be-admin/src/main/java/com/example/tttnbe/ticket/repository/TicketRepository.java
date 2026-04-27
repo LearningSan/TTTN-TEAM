@@ -6,10 +6,12 @@ import com.example.tttnbe.ticket.entity.Ticket;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,4 +45,19 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
     // Đếm xem Concert này đã bán được bao nhiêu vé
     long countByConcert_ConcertId(UUID concertId);
+
+    @Query("SELECT t FROM Ticket t " +
+            "JOIN PaymentTransaction pt ON t.payment.paymentId = pt.paymentId " +
+            "WHERE t.concert.concertId = :concertId " +
+            "AND t.status = 'CANCELLED' " +
+            "AND pt.paymentStatus = 'SUCCESS'")
+    List<Ticket> findTicketsPendingRefund(@Param("concertId") UUID concertId);
+
+    // Cập nhật trạng thái của toàn bộ vé thuộc về 1 Concert
+    @Modifying
+    @Query("UPDATE Ticket t SET t.status = :status WHERE t.concert.concertId = :concertId")
+    void updateStatusByConcertId(@Param("status") String status, @Param("concertId") UUID concertId);
+
+    // Thêm dòng này vào TicketRepository
+    long countByStatus(String status);
 }

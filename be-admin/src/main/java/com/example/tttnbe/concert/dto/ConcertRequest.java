@@ -25,29 +25,21 @@ public class ConcertRequest {
     @Future(message = "Thời gian sự kiện phải diễn ra trong tương lai")
     private LocalDateTime concertDate;
 
-    @NotNull(message = "Ngày giờ kết thúc sự kiện không được để trống")
     @Future(message = "Thời gian kết thúc sự kiện phải ở trong tương lai")
     private LocalDateTime endDate;
 
-    @NotBlank(message = "Mô tả sự kiện không được để trống")
     private String description;
-
-    @NotBlank(message = "Link ảnh banner không được để trống")
     private String bannerURL;
 
-    @NotNull(message = "Ngày mở bán vé không được để trống")
     @Future(message = "Thời gian mở bán vé phải ở trong tương lai")
     private LocalDateTime saleStartAt;
 
-    @NotNull(message = "Ngày đóng bán vé không được để trống")
     @Future(message = "Thời gian đóng bán vé phải ở trong tương lai")
     private LocalDateTime saleEndAt;
 
     @NotNull(message = "Vui lòng chọn địa điểm tổ chức (Venue ID)")
     private UUID venueId;
 
-    // Biến status thường do Backend tự set mặc định (ví dụ: ON_SALE hoặc UPCOMING) khi tạo mới,
-    // nên không cần bắt buộc FE phải gửi lên.
     private String status;
 
     private String layoutConfig;

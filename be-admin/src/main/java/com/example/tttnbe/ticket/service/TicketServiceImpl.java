@@ -12,6 +12,7 @@ import com.example.tttnbe.order.repository.OrderItemRepository;
 import com.example.tttnbe.order.repository.OrderRepository;
 import com.example.tttnbe.payment.entity.PaymentTransaction;
 import com.example.tttnbe.payment.repository.PaymentRepository;
+import com.example.tttnbe.payment.service.Web3ServiceImpl;
 import com.example.tttnbe.seat.entity.Seat;
 import com.example.tttnbe.seat.repository.SeatRepository;
 import com.example.tttnbe.ticket.dto.TicketDetailResponse;
@@ -32,6 +33,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -53,6 +55,8 @@ public class TicketServiceImpl implements TicketService{
     private TicketRepository ticketRepository;
     @Autowired
     private ZoneRepository zoneRepository;
+    @Autowired
+    private Web3ServiceImpl  web3Service;
 
     //dung chung - bien entity thanh dto
     private TicketResponse mapToResponse(Ticket ticket) {
@@ -180,5 +184,35 @@ public class TicketServiceImpl implements TicketService{
     public TicketDetailResponse getTicketDetail(UUID ticketId) {
         return ticketRepository.getFullTicketDetailById(ticketId)
                 .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy vé với ID: " + ticketId));
+    }
+
+    public List<Ticket> getTicketsPendingRefund(UUID concertId) {
+        return ticketRepository.findTicketsPendingRefund(concertId);
+    }
+
+    @Transactional
+    public void processRefund(UUID ticketId) {
+        // 1. Tìm vé trong DB
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new CustomException(404, "Không tìm thấy vé"));
+
+        // 2. Kiểm tra điều kiện ngặt nghèo: Vé phải đang bị HỦY và Chưa được hoàn tiền
+        if (!"CANCELLED".equals(ticket.getStatus())) {
+            throw new CustomException(400, "Vé này không bị hủy, không thể hoàn tiền!");
+        }
+
+        PaymentTransaction payment = ticket.getPayment();
+        if (!"SUCCESS".equals(payment.getPaymentStatus())) {
+            throw new CustomException(400, "Giao dịch không hợp lệ hoặc đã được hoàn tiền trước đó!");
+        }
+
+        // 3. Gọi Blockchain bắn tiền trả khách (Lấy địa chỉ ví khách và số tiền từ DB)
+        String refundTxHash = web3Service.sendRefund(ticket.getWalletAddress(), payment.getAmount());
+
+        // 4. Cập nhật trạng thái Payment thành REFUNDED để đóng sổ nợ
+        payment.setPaymentStatus("REFUNDED");
+        // (Tùy chọn: payment.setRefundTxHash(refundTxHash); nếu DB có cột này)
+
+        paymentRepository.save(payment);
     }
 }

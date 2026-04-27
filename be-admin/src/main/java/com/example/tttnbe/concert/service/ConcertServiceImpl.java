@@ -33,6 +33,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -145,27 +146,52 @@ public class ConcertServiceImpl implements ConcertService {
     public ConcertResponse createConcert(ConcertRequest concertRequest) {
 
         // ==========================================
-        // ⏰ KIỂM TRA RÀNG BUỘC THỜI GIAN (TIME LOGIC)
+        // ⏰ 1. KIỂM TRA RÀNG BUỘC THỜI GIAN (TIME LOGIC)
         // ==========================================
 
-        // 1. Logic Bán vé: Thời gian mở bán phải hợp lý (saleStartAt < saleEndAt)
-        if (concertRequest.getSaleStartAt().isAfter(concertRequest.getSaleEndAt()) ||
-                concertRequest.getSaleStartAt().isEqual(concertRequest.getSaleEndAt())) {
+        LocalDateTime now = LocalDateTime.now();
+
+        // [THÊM MỚI]: Sự kiện và thời gian bán vé phải ở tương lai
+        if (concertRequest.getSaleStartAt().isBefore(now)) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian mở bán vé không được nằm trong quá khứ!");
+        }
+        if (concertRequest.getConcertDate().isBefore(now)) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian diễn ra sự kiện không được nằm trong quá khứ!");
+        }
+
+        // Logic Bán vé: Thời gian mở bán phải hợp lý (saleStartAt < saleEndAt)
+        if (!concertRequest.getSaleStartAt().isBefore(concertRequest.getSaleEndAt())) {
             throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian mở bán vé phải diễn ra TRƯỚC thời gian đóng bán!");
         }
 
-        // 2. Logic Sự kiện: Ngày kết thúc phải sau Ngày bắt đầu (concertDate < endDate)
-        if (concertRequest.getConcertDate().isAfter(concertRequest.getEndDate()) ||
-                concertRequest.getConcertDate().isEqual(concertRequest.getEndDate())) {
-            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian bắt đầu sự kiện phải diễn ra TRƯỚC thời gian kết thúc (Tránh hát lùi thời gian)!");
+        // Logic Sự kiện: Ngày kết thúc phải sau Ngày bắt đầu (concertDate < endDate)
+        if (!concertRequest.getConcertDate().isBefore(concertRequest.getEndDate())) {
+            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Thời gian bắt đầu sự kiện phải diễn ra TRƯỚC thời gian kết thúc!");
         }
 
-        // 3. Logic Chéo: Đóng cửa bán vé trước khi hát (saleEndAt <= concertDate)
-        // (Nếu saleEndAt lớn hơn concertDate -> Báo lỗi)
+        // Logic Chéo: Đóng cửa bán vé trước khi hát (saleEndAt <= concertDate)
         if (concertRequest.getSaleEndAt().isAfter(concertRequest.getConcertDate())) {
             throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Phải kết thúc đóng cửa bán vé TRƯỚC HOẶC ĐÚNG LÚC sự kiện bắt đầu!");
         }
 
+        // ==========================================
+        // 🏢 2. KIỂM TRA ĐỊA ĐIỂM & ĐỤNG LỊCH (VENUE LOGIC)
+        // ==========================================
+
+        Venue venue = venueRepository.findById(concertRequest.getVenueId())
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy địa điểm tổ chức với ID: " + concertRequest.getVenueId()));
+
+        // [THÊM MỚI]: Kiểm tra trùng lịch sân khấu
+        boolean isBusy = concertRepository.existsOverlappingConcert(
+                venue.getVenueId(),
+                concertRequest.getConcertDate(),
+                concertRequest.getEndDate()
+        );
+        if (isBusy) {
+            throw new CustomException(HttpStatus.CONFLICT.value(), "Lỗi: Địa điểm này đã có sự kiện khác được lên lịch trong khoảng thời gian này!");
+        }
+
+        // Thiết lập thông tin Concert
         Concert concert = new Concert();
         concert.setTitle(concertRequest.getTitle());
         concert.setArtist(concertRequest.getArtist());
@@ -177,31 +203,29 @@ public class ConcertServiceImpl implements ConcertService {
         concert.setSaleEndAt(concertRequest.getSaleEndAt());
         concert.setStatus(concertRequest.getStatus());
         concert.setLayoutConfig(concertRequest.getLayoutConfig());
-
-        // Tìm organizer trong security
-        String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
-        User organizer = userRepository.findById(UUID.fromString(currentUserId))
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy thông tin Admin (ID: " + currentUserId + ")"));
-        concert.setOrganizer(organizer);
-
-        // Tìm venue
-        Venue venue = venueRepository.findById(concertRequest.getVenueId())
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy địa điểm tổ chức với ID: " + concertRequest.getVenueId()));
         concert.setVenue(venue);
 
-        // Lưu concert để lấy ID
+        String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
+        User organizer = userRepository.findById(UUID.fromString(currentUserId))
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND.value(), "Không tìm thấy thông tin Admin"));
+        concert.setOrganizer(organizer);
+
         Concert savedConcert = concertRepository.save(concert);
 
-        // XỬ LÝ LƯU ZONE VÀ TIER VÀ SEAT
+        // ==========================================
+        // 💺 3. XỬ LÝ LƯU ZONE, TIER VÀ KIỂM SOÁT SỨC CHỨA
+        // ==========================================
         if (concertRequest.getZones() != null && !concertRequest.getZones().isEmpty()) {
             List<Zone> zonesToSave = new ArrayList<>();
             List<Seat> allSeatsToSave = new ArrayList<>();
+
+            int grandTotalSeats = 0; // [THÊM MỚI]: Biến cộng dồn tổng số vé của toàn bộ sự kiện
 
             for (ZoneRequest zReq : concertRequest.getZones()) {
                 Zone zone = new Zone();
                 zone.setConcert(savedConcert);
                 zone.setZoneName(zReq.getZoneName());
-                zone.setPrice(zReq.getPrice()); // Dành cho vé đứng
+                zone.setPrice(zReq.getPrice());
                 zone.setCurrency(zReq.getCurrency());
                 zone.setColorCode(zReq.getColorCode());
                 zone.setHasSeatMap(zReq.getHasSeatMap() != null ? zReq.getHasSeatMap() : false);
@@ -209,17 +233,18 @@ public class ConcertServiceImpl implements ConcertService {
                 zone.setStatus("ACTIVE");
                 zone.setSoldSeats(0);
 
-                // NẾU CÓ SƠ ĐỒ GHẾ VÀ CÓ TRUYỀN TIERS
                 if (zone.isHasSeatMap() && zReq.getTiers() != null && !zReq.getTiers().isEmpty()) {
                     int totalSeatsForZone = 0;
-
-                    // Lưu Zone trước để lấy ID gắn vào Tier
                     Zone savedZone = zoneRepository.save(zone);
                     zonesToSave.add(savedZone);
 
-                    // 🌟 VÒNG LẶP MỚI: QUÉT QUA TỪNG HẠNG VÉ (TIER)
                     for (com.example.tttnbe.seat.dto.TierRequest tReq : zReq.getTiers()) {
-                        // 1. Tạo và lưu Hạng vé (Tier)
+                        // [THÊM MỚI]: Chặn spam tạo quá nhiều ghế gây sập server (Giới hạn ví dụ: 5000 ghế/tier)
+                        int seatsInTier = tReq.getRowCount() * tReq.getSeatsPerRow();
+                        if (seatsInTier > 5000) {
+                            throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Lỗi: Không được tạo quá 5000 ghế trong một Hạng vé (Tier) để đảm bảo hiệu suất!");
+                        }
+
                         com.example.tttnbe.seat.entity.SeatTier tier = new com.example.tttnbe.seat.entity.SeatTier();
                         tier.setZone(savedZone);
                         tier.setTierName(tReq.getTierName());
@@ -230,10 +255,8 @@ public class ConcertServiceImpl implements ConcertService {
                         tier.setDisplayOrder(tReq.getDisplayOrder() != null ? tReq.getDisplayOrder() : 1);
 
                         SeatTier savedTier = seatTierRepository.save(tier);
-
-                        // 2. Logic sinh ghế chuẩn Excel cho Tier này
-                        int seatsInTier = tReq.getRowCount() * tReq.getSeatsPerRow();
                         totalSeatsForZone += seatsInTier;
+                        grandTotalSeats += seatsInTier; // Cộng vào tổng sự kiện
 
                         String prefix = (tReq.getRowPrefix() != null && !tReq.getRowPrefix().isBlank())
                                 ? tReq.getRowPrefix().toUpperCase() : "A";
@@ -241,11 +264,10 @@ public class ConcertServiceImpl implements ConcertService {
 
                         for (int i = 0; i < tReq.getRowCount(); i++) {
                             String currentRow = numberToRowLabel(startIndex + i);
-
                             for (int j = 1; j <= tReq.getSeatsPerRow(); j++) {
                                 Seat seat = new Seat();
                                 seat.setZone(savedZone);
-                                seat.setSeatTier(savedTier); // 👈 Quan trọng: Gắn ghế vào Tier
+                                seat.setSeatTier(savedTier);
                                 seat.setRowLabel(currentRow);
                                 seat.setSeatNumber(j);
                                 seat.setSeatLabel(currentRow + j);
@@ -255,25 +277,29 @@ public class ConcertServiceImpl implements ConcertService {
                             }
                         }
                     }
-
-                    // Cập nhật lại tổng số ghế của Zone
                     savedZone.setTotalSeats(totalSeatsForZone);
                     savedZone.setAvailableSeats(totalSeatsForZone);
                     zoneRepository.save(savedZone);
 
                 } else {
-                    // NẾU LÀ VÉ ĐỨNG (Không có sơ đồ ghế)
-                    zone.setTotalSeats(zReq.getTotalSeats() != null ? zReq.getTotalSeats() : 0);
-                    zone.setAvailableSeats(zReq.getTotalSeats() != null ? zReq.getTotalSeats() : 0);
+                    int standingSeats = zReq.getTotalSeats() != null ? zReq.getTotalSeats() : 0;
+                    zone.setTotalSeats(standingSeats);
+                    zone.setAvailableSeats(standingSeats);
+                    grandTotalSeats += standingSeats; // Cộng vé đứng vào tổng sự kiện
 
                     Zone savedZone = zoneRepository.save(zone);
                     zonesToSave.add(savedZone);
                 }
             }
 
+            // [THÊM MỚI]: Kiểm tra tổng số vé tạo ra có vượt sức chứa sân khấu không?
+            if (grandTotalSeats > venue.getCapacity()) {
+                throw new CustomException(HttpStatus.BAD_REQUEST.value(),
+                        "Lỗi: Tổng số vé (" + grandTotalSeats + ") vượt quá sức chứa tối đa của địa điểm (" + venue.getCapacity() + " người)!");
+            }
+
             savedConcert.setZones(zonesToSave);
 
-            // Lưu toàn bộ ghế xuống DB trong 1 câu lệnh (Tối ưu performance)
             if (!allSeatsToSave.isEmpty()) {
                 seatRepository.saveAll(allSeatsToSave);
             }
@@ -373,20 +399,36 @@ public class ConcertServiceImpl implements ConcertService {
                 // Đã bán vé -> Chặn đứng hành động sửa sơ đồ ghế!
                 throw new CustomException(HttpStatus.BAD_REQUEST.value(), "Concert này đã có vé được bán ra! Bạn chỉ được sửa thông tin cơ bản, KHÔNG THỂ thay đổi sơ đồ khu vực và hạng vé.");
             } else {
-                // Chưa bán vé -> Cho phép "Đập đi xây lại" (Chuẩn Hibernate)
+                // Chưa bán vé -> Cho phép "Đập đi xây lại" (Trùm cuối trị Hibernate)
 
-                // BƯỚC 1: Xóa sạch Zone cũ khỏi bộ nhớ đệm của Concert
-                if (concert.getZones() != null) {
+                // BƯỚC 1: Ép Hibernate XÓA ĐÍCH DANH thay vì lén lút Update NULL
+                if (concert.getZones() != null && !concert.getZones().isEmpty()) {
+                    for (Zone oldZone : concert.getZones()) {
+
+                        // 1. Xóa sạch Ghế bằng ID (Vì Ghế không có list con nên an toàn)
+                        seatRepository.deleteByZone_ZoneId(oldZone.getZoneId());
+
+                        // 2. Dùng hàm deleteAll(entities) để BẮT BUỘC Hibernate phát lệnh DELETE Hạng vé
+                        if (oldZone.getSeatTiers() != null && !oldZone.getSeatTiers().isEmpty()) {
+                            seatTierRepository.deleteAll(oldZone.getSeatTiers());
+                        }
+                    }
+
+                    // 3. BẮT BUỘC Hibernate phát lệnh DELETE toàn bộ Khu vực cũ
+                    zoneRepository.deleteAll(concert.getZones());
+
+                    // 4. Clear túi RAM để chuẩn bị nhét Zone mới vào (Không bị lỗi Orphan nữa)
                     concert.getZones().clear();
                 }
 
-                // BƯỚC 2: Lưu Concert lại để Hibernate tự động kích hoạt "orphanRemoval" và xóa sạch dữ liệu cũ dưới DB
-                // (KHÔNG cần dùng hàm deleteByConcert_ConcertId nữa)
+                // BƯỚC 2: Ép Database dội sạch rác ngay lập tức để trống chỗ
+                concertRepository.flush();
+
+                // BƯỚC 3: Lưu thông tin cơ bản
                 Concert savedConcert = concertRepository.save(concert);
 
-                // BƯỚC 3: Bắt đầu bơm danh sách Zone và Seat mới vào...
-
-                // BƯỚC 3.2: Xây lại sơ đồ mới (Copy y chang logic từ hàm Create)
+                // BƯỚC 4: XÂY LẠI SƠ ĐỒ MỚI (Bắt đầu vòng lặp List<Zone> zonesToSave = new ArrayList<>(); ...)
+                // ---> (Phần code lặp tạo Zone và Seat ở dưới của bạn GIỮ NGUYÊN KHÔNG ĐỔI)
                 List<Zone> zonesToSave = new ArrayList<>();
                 List<Seat> allSeatsToSave = new ArrayList<>();
 
@@ -452,13 +494,12 @@ public class ConcertServiceImpl implements ConcertService {
                     }
                 }
 
+                // CHỈNH SỬA LẠI ĐOẠN GẮN ZONES VÀO CONCERT
                 if (savedConcert.getZones() != null) {
-                    // Xóa sạch bộ nhớ tạm của Hibernate về danh sách cũ
-                    savedConcert.getZones().clear();
-                    // Bơm danh sách mới vào (Hibernate sẽ tự hiểu là update)
-                    savedConcert.getZones().addAll(zonesToSave);
+                    savedConcert.getZones().clear(); // Xóa rỗng cái túi của Hibernate
+                    savedConcert.getZones().addAll(zonesToSave); // Đổ dữ liệu mới vào lại cái túi đó
                 } else {
-                    savedConcert.setZones(zonesToSave);
+                    savedConcert.setZones(zonesToSave); // (Chỉ dùng set khi ban đầu nó thực sự Null)
                 }
 
                 if (!allSeatsToSave.isEmpty()) {

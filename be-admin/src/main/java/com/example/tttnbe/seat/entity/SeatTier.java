@@ -10,6 +10,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -56,4 +57,7 @@ public class SeatTier {
     @Column(name = "updated_at", nullable = false, updatable = false)
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "seatTier", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Seat> seats;
 }
