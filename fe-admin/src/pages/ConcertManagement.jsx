@@ -291,7 +291,7 @@ const ConcertManagement = () => {
   ];
 
   return (
-    <div style={{ padding: 1, background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 0,  minHeight: '100vh' }}>
       <Card
         title={<h2 style={{ margin: 0 }}>Quản lý Concert</h2>}
         extra={
@@ -301,7 +301,7 @@ const ConcertManagement = () => {
               form.setFieldsValue({
                 status: 'DRAFT',
                 stages: [{ name: 'Sân khấu', shape: 'rectangle', layoutConfig: { x: 300, y: 20, w: 200, h: 80 } }],
-                zones: [{ zoneName: 'Khu vực 1', price: 0.000001, currency: 'ETH', colorCode: ZONE_COLORS[0].value, hasSeatMap: true, layoutConfig: { x: 50, y: 150, w: 120, h: 60 }, tiers: [{ price: 0.000001, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] }]
+                zones: [{ zoneName: 'Khu vực 1', price: 0.0001, currency: 'ETH', colorCode: ZONE_COLORS[0].value, hasSeatMap: true, layoutConfig: { x: 50, y: 150, w: 120, h: 60 }, tiers: [{ price: 0.0001, rowPrefix: 'A', rowCount: 1, seatsPerRow: 2 }] }]
               });
               setModalState({ open: true, id: null });
             }}>Tạo Concert</Button>

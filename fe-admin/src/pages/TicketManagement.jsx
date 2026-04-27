@@ -133,7 +133,7 @@ const TicketManagement = () => {
         const s = calculateStats(r);
 
         return Object.entries(s.revenueMap).map(([curr, val]) => (
-          <div key={curr}><Text strong style={{ color: '#722ed1' }}>{val.toLocaleString()} {curr}</Text></div>
+          <div key={curr}><Text strong style={{ color: '#722ed1' }}>{val.toLocaleString(undefined, { maximumFractionDigits: 4 })} {curr}</Text></div>
         ));
       }
     },
@@ -154,7 +154,7 @@ const TicketManagement = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: 0, background: '#f5f5f5', minHeight: '100vh' }}>
       {viewMode === 'list' ? (
         <Card title={<Space><ShoppingCartOutlined /> <Title level={4} style={{ margin: 0 }}>Quản lý Vé & Doanh thu</Title></Space>} bordered={false}>
           <div style={{ marginBottom: 16 }}>

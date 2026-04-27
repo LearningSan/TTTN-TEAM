@@ -29,9 +29,9 @@ const OrderDetailModal = ({ orderId, open, onCancel }) => {
     { title: 'Khu vực', dataIndex: 'zoneName' },
     { title: 'Hạng vé', dataIndex: 'tierName', render: (t) => t || '-' },
     { title: 'Vị trí', dataIndex: 'seatLabel', render: (s) => s ? <Tag color="blue">{s}</Tag> : <Tag>Vé đứng</Tag> },
-    { title: 'Đơn giá', dataIndex: 'unitPrice', render: (p) => `${p?.toLocaleString()} ${data?.currency}` },
+    { title: 'Đơn giá', dataIndex: 'unitPrice', render: (p) => `${p?.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${data?.currency}` },
     { title: 'Số lượng', dataIndex: 'quantity' },
-    { title: 'Thành tiền', dataIndex: 'subtotal', render: (s) => <Text strong>{s?.toLocaleString()} {data?.currency}</Text> },
+    { title: 'Thành tiền', dataIndex: 'subtotal', render: (s) => <Text strong>{s?.toLocaleString(undefined, { maximumFractionDigits: 6 })} {data?.currency}</Text> },
   ];
 
   return (
@@ -65,7 +65,7 @@ const OrderDetailModal = ({ orderId, open, onCancel }) => {
             />
 
             <div style={{ marginTop: 16, textAlign: 'right' }}>
-              <Text size="large">Tổng cộng: <Title level={3} style={{ display: 'inline', color: '#cf1322' }}>{data.totalAmount?.toLocaleString()} {data.currency}</Title></Text>
+              <Text size="large">Tổng cộng: <Title level={3} style={{ display: 'inline', color: '#cf1322' }}>{data.totalAmount?.toLocaleString(undefined, { maximumFractionDigits: 6 })} {data.currency}</Title></Text>
             </div>
           </>
         )}

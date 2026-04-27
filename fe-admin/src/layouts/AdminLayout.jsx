@@ -32,15 +32,15 @@ const AdminLayout = () => {
   const menuItems = [
     { key: '/dashboard', label: 'Bảng Điều Khiển' },
     { key: '/dashboard/concerts', label: 'Quản Lý Concert' },
-    { key: '/dashboard/tickets', label: 'Quản Lý Vé' },
+    { key: '/dashboard/tickets', label: 'Quản Lý Vé & Doanh Thu' },
     { key: '/dashboard/users', label: 'Quản Lý Người Dùng' },
-    { key: '/dashboard/orders', label: 'Quản Lý Doanh Thu' },
+    { key: '/dashboard/orders', label: 'Quản Lý Đơn Hàng' },
   ];
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
       {/* Cột Menu bên trái */}
-      <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
+      <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)} width={210}>
         <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', borderRadius: 6, textAlign: 'center', color: 'white', lineHeight: '32px', fontWeight: 'bold' }}>
           {collapsed ? 'TA' : 'TICKET ADMIN'}
         </div>

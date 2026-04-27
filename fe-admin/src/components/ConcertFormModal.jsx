@@ -322,7 +322,7 @@ const ConcertFormModal = ({
                                   // formatter={(v) =>
                                   //   `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                                   // }
-                                  step={0.000001} // Thêm cái này để hỗ trợ gõ số nhỏ mượt hơn
+                                  step={0.0001} // Thêm cái này để hỗ trợ gõ số nhỏ mượt hơn
                                   stringMode     // Giúp xử lý số cực nhỏ mà không bị chuyển sang dạng 1e-6
                                 />
                               </Form.Item>
@@ -602,7 +602,7 @@ const ConcertFormModal = ({
                                               //     ",",
                                               //   )
                                               // }
-                                              step={0.000001} // Thêm cái này để hỗ trợ gõ số nhỏ mượt hơn
+                                              step={0.0001} // Thêm cái này để hỗ trợ gõ số nhỏ mượt hơn
                                               stringMode     // Giúp xử lý số cực nhỏ mà không bị chuyển sang dạng 1e-6
                                               onChange={(val) => {
                                                 // Đồng bộ Giá lên Zone nếu là Tier đầu tiên
@@ -759,7 +759,7 @@ const ConcertFormModal = ({
                 onClick={() =>
                   addZone({
                     zoneName: `Khu vực ${zoneFields.length + 1}`,
-                    price: 0.000001,
+                    price: 0.0001,
                     currency: "ETH",
                     colorCode:
                       zoneColors[zoneFields.length % zoneColors.length].value,
@@ -767,7 +767,7 @@ const ConcertFormModal = ({
                     layoutConfig: { x: 50, y: 150, w: 120, h: 60 },
                     tiers: [
                       {
-                        price: 0.000001,
+                        price: 0.0001,
                         rowPrefix: "A",
                         rowCount: 1,
                         seatsPerRow: 2,

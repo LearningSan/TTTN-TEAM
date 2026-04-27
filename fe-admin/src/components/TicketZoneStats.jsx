@@ -19,7 +19,7 @@ const TicketZoneStats = ({ zones, loading }) => {
       title: 'Giá vé',
       dataIndex: 'price',
       key: 'price',
-      render: (p, r) => <Text >{p?.toLocaleString()} {r.currency}</Text>
+      render: (p, r) => <Text >{p?.toLocaleString(undefined, { maximumFractionDigits: 4 })} {r.currency}</Text>
     },
     { title: 'Tổng phát hành', dataIndex: 'totalSeats', align: 'center' },
     {
@@ -69,7 +69,7 @@ const TicketZoneStats = ({ zones, loading }) => {
       render: (_, r) => {
         if (!r.hasSeatMap) {
           // Trường hợp 1: Vé đứng -> Lấy giá trực tiếp của Zone
-          return <Text>{r.price?.toLocaleString()} {r.currency}</Text>;
+          return <Text>{r.price?.toLocaleString(undefined, { maximumFractionDigits: 6 })} {r.currency}</Text>;
         } else {
           // Trường hợp 2: Vé ngồi -> Không hiện giá ở Zone, chỉ hiện ở Tier
           return <Text>— (Xem ở hạng vé) —</Text>;

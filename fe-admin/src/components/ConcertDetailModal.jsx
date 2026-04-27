@@ -226,7 +226,7 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
                   size="small"
                   columns={[
                     { title: 'Hạng vé', dataIndex: 'tierName', render: (text) => <b>{text}</b> },
-                    { title: 'Giá hạng', dataIndex: 'price', render: (p) => <Text>{p?.toLocaleString()} {record.currency}</Text> },
+                    { title: 'Giá hạng', dataIndex: 'price', render: (p) => <Text>{p?.toLocaleString(undefined, { maximumFractionDigits: 4 })} {record.currency}</Text> },
                     {
                       title: 'Cấu hình ghế',
                       render: (_, t) => record.hasSeatMap
@@ -263,7 +263,7 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
                 key: 'price',
                 render: (_, r) => {
                   if (!r.hasSeatMap) {
-                    return <Text strong>{r.price?.toLocaleString()} {r.currency}</Text>;
+                    return <Text strong>{r.price?.toLocaleString(undefined, { maximumFractionDigits: 4 })} {r.currency}</Text>;
                   } else {
                     return <Text>— (Xem ở Hạng vé) —</Text>;
                   }

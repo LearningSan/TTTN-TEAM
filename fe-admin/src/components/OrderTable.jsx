@@ -30,7 +30,7 @@ const OrderTable = ({ orders, loading, pagination, onChangePage, onViewDetail })
     {
       title: 'Tổng tiền',
       dataIndex: 'totalAmount',
-      render: (val, r) => <Text strong color="red">{val?.toLocaleString()} {r.currency}</Text>
+      render: (val, r) => <Text strong color="red">{val?.toLocaleString(undefined, { maximumFractionDigits: 4 })} {r.currency}</Text>
     },
     {
       title: 'Thời gian',

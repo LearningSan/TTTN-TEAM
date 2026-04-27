@@ -76,7 +76,7 @@ const Dashboard = () => {
 
       const dateKey = d.format('DD/MM/YYYY');
       const amount = ord.totalAmount || 0; // 
-      const currency = ord.currency || 'USDT'; // 
+      const currency = ord.currency || 'ETH'; // 
 
       // 1. Cộng dồn vào Tổng doanh thu theo từng loại tiền
       if (!totalRevenueMap[currency]) totalRevenueMap[currency] = 0;
@@ -91,14 +91,16 @@ const Dashboard = () => {
 
       const email = ord.userEmail;
       if (!customerMap[email]) {
-        customerMap[email] = { name: ord.userName, email, totalSpent: 0, orderCount: 0 };
+        customerMap[email] = { name: ord.userName, email, spending: {}, orderCount: 0, sortValue: 0 };
       }
-      customerMap[email].totalSpent += amount;
+      if (!customerMap[email].spending[currency]) customerMap[email].spending[currency] = 0;
+      customerMap[email].spending[currency] += amount;
       customerMap[email].orderCount += 1;
+      customerMap[email].sortValue += amount;
     });
 
     const topSpenders = Object.values(customerMap)
-      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .sort((a, b) => b.sortValue - a.sortValue)
       .slice(0, 10);
 
     return { totalRevenueMap, dailyRevenueMap, dailyCount, topSpenders };
@@ -126,14 +128,14 @@ const Dashboard = () => {
             <Card
               hoverable
               style={{ height: '100%', borderRadius: 12, borderLeft: `5px solid #fa8c16` }}
-              onClick={() => navigate("/dashboard/orders")}
+              onClick={() => navigate("/dashboard/tickets")}
             >
               <div style={{ color: '#8c8c8c', fontWeight: 'bold', marginBottom: 8 }}>DOANH THU TỔNG</div>
               <Space direction="vertical" size={4} style={{ width: '100%', marginBottom: 12 }}>
                 {Object.keys(calculatedStats.totalRevenueMap).length > 0 ? (
                   Object.entries(calculatedStats.totalRevenueMap).map(([curr, val]) => (
                     <div key={curr}>
-                      <Text strong style={{ fontSize: 20, color: '#fa8c16' }}>{val.toLocaleString()} </Text>
+                      <Text strong style={{ fontSize: 20, color: '#fa8c16' }}>{val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>{curr}</Text>
                     </div>
                   ))
@@ -145,7 +147,7 @@ const Dashboard = () => {
                 {Object.keys(calculatedStats.dailyRevenueMap).length > 0 ? (
                   Object.entries(calculatedStats.dailyRevenueMap).map(([curr, val]) => (
                     <div key={curr}>
-                      <Text strong style={{ color: '#fa8c16' }}>+ {val.toLocaleString()} {curr}</Text>
+                      <Text strong style={{ color: '#fa8c16' }}>+ {val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {curr}</Text>
                     </div>
                   ))
                 ) : <Text type="secondary" style={{ fontSize: 12 }}>Không có doanh thu</Text>}
@@ -222,7 +224,20 @@ const Dashboard = () => {
                   title: 'Tổng chi tiêu',
                   align: 'right',
                   width: 250,
-                  render: (_, r) => <Text type="danger" strong>{r.totalSpent.toLocaleString()} USDT</Text>
+                  render: (_, r) => (
+                    <Space direction="vertical" align="end" size={0}>
+                      {/* 🚀 Duyệt qua object spending để hiện từng loại tiền khách đã tiêu */}
+                      {Object.entries(r.spending).map(([curr, val]) => (
+                        <div key={curr}>
+                          <Text type="danger" strong>
+                            {/* Fix lỗi hiện số 0 bằng maximumFractionDigits: 6 */}
+                            {val.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>{curr}</Text>
+                        </div>
+                      ))}
+                    </Space>
+                  )
                 }
               ]}
             />
