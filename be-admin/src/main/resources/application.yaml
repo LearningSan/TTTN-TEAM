@@ -29,3 +29,6 @@ web3:
   admin:
     # Lát nữa bạn tạo ví xong thì copy cái địa chỉ 0x... dán vào đây
     wallet: "0xfF7154E5D44951a824E4Be4909f588d553f98383"
+    private-key: "e4a56eaf6ebce9183ac7ac7e7de6a51e03bba565f9260be458d60359f868fb09"
+  contract:
+    address: "0x37163CfCF134747aC0C84842A40Da18E46B59fDb"

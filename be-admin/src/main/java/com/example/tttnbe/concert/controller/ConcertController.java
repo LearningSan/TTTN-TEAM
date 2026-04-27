@@ -7,12 +7,15 @@ import com.example.tttnbe.concert.dto.UpdateConcertRequest;
 import com.example.tttnbe.concert.dto.UpdateStatusRequest;
 import com.example.tttnbe.concert.service.ConcertService;
 import com.example.tttnbe.ticket.dto.TicketListItemResponse;
+import com.example.tttnbe.ticket.entity.Ticket;
+import com.example.tttnbe.ticket.service.TicketService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -20,6 +23,8 @@ import java.util.UUID;
 public class ConcertController {
     @Autowired
     private ConcertService concertService;
+    @Autowired
+    private TicketService ticketService;
 
     @PostMapping
     public ResponseEntity<ConcertResponse> createConcert(@Valid @RequestBody ConcertRequest concertRequest) {
@@ -74,5 +79,13 @@ public class ConcertController {
 
         PageResponse<TicketListItemResponse> response = concertService.getTicketsByConcertId(concertId, page, size);
         return ResponseEntity.ok(response);
+    }
+
+    // API để Admin xem danh sách khách hàng cần đền tiền
+    @GetMapping("/concerts/{concertId}/refunds")
+    public ResponseEntity<?> getPendingRefunds(@PathVariable UUID concertId) {
+        List<Ticket> refunds = ticketService.getTicketsPendingRefund(concertId);
+        // Nhớ Map cái List<Ticket> này sang DTO trước khi trả về nhé để tránh lỗi vòng lặp JSON
+        return ResponseEntity.ok(refunds);
     }
 }

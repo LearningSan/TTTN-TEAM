@@ -7,6 +7,7 @@ import com.example.tttnbe.ticket.dto.TicketResponse;
 import com.example.tttnbe.ticket.dto.TicketUpdateRequest;
 import com.example.tttnbe.ticket.entity.Ticket;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface TicketService {
@@ -21,4 +22,6 @@ public interface TicketService {
     public void deleteTicket(UUID ticketId);
 
     public TicketDetailResponse getTicketDetail(UUID ticketId);
+
+    public List<Ticket> getTicketsPendingRefund(UUID concertId);
 }

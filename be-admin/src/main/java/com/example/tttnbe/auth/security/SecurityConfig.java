@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration cfg = new CorsConfiguration();
                     cfg.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:5174", "https://admin-concert-blockchain-stu-22.vercel.app"));
-                    cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                     cfg.setAllowedHeaders(Arrays.asList("*"));
                     cfg.setAllowCredentials(true);
                     return cfg;
