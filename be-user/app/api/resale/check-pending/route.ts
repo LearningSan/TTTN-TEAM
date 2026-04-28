@@ -93,38 +93,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/app/helper/authenHelper";
 import { checkPendingTransferByTicket } from "@/app/lib/transfer";
+import { getTicketById } from "@/app/lib/ticket";
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const decoded = await verifyToken(token);
 
     if (!decoded) {
-      return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, message: "Invalid token" },
+        { status: 401 }
+      );
     }
 
     const { ticket_id } = await req.json();
 
     if (!ticket_id) {
       return NextResponse.json(
-        { message: "ticket_id is required" },
+        { ok: false, message: "ticket_id required" },
         { status: 400 }
       );
     }
 
     const transfer = await checkPendingTransferByTicket(ticket_id);
 
-    return NextResponse.json(transfer); // 👈 trả raw DB
+    if (!transfer?.transfer) {
+      return NextResponse.json({
+        ok: false,
+        message: "No pending transfer"
+      });
+    }
+
+    const ticket = await getTicketById(ticket_id);
+
+    if (!ticket?.contract_address || !ticket?.token_id) {
+      return NextResponse.json({
+        ok: false,
+        message: "NFT not minted yet"
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      transfer: {
+        ...transfer.transfer,
+        contract_address: ticket.contract_address,
+        token_id: ticket.token_id
+      }
+    });
 
   } catch (error: any) {
-    console.error("API check pending error:", error);
-
     return NextResponse.json(
-      { message: error.message || "Internal server error" },
+      { ok: false, message: error.message },
       { status: 500 }
     );
   }

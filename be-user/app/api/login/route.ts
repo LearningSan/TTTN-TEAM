@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-
+  
   // const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
   // if (!passwordRegex.test(password)) {
   //   return NextResponse.json(
