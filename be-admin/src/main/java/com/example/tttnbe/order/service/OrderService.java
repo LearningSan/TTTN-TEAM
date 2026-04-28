@@ -15,4 +15,6 @@ public interface OrderService {
     public DashboardStatsResponse getDashboardStats(LocalDate selectedDate);
 
     public OrderDetailResponse getOrderDetail(UUID orderId);
+
+    public OrderResponse processRefundOrder(UUID orderId);
 }

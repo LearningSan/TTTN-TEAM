@@ -4,6 +4,7 @@ import com.example.tttnbe.common.response.PageResponse;
 import com.example.tttnbe.order.dto.DashboardStatsResponse;
 import com.example.tttnbe.order.dto.OrderDetailResponse;
 import com.example.tttnbe.order.dto.OrderResponse;
+import com.example.tttnbe.order.entity.Order;
 import com.example.tttnbe.order.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -50,5 +52,26 @@ public class OrderController {
     public ResponseEntity<OrderDetailResponse> getOrderDetail(@PathVariable UUID id) {
         OrderDetailResponse detail = orderService.getOrderDetail(id);
         return ResponseEntity.ok(detail);
+    }
+
+    /**
+     * API: Hoàn tiền một đơn hàng
+     * Method: POST /api/admin/orders/{orderId}/refund
+     */
+    @PostMapping("/{orderId}/refund")
+    // @PreAuthorize("hasRole('ADMIN')") // Nếu ông dùng Spring Security thì mở cái này ra
+    public ResponseEntity<?> refundOrder(@PathVariable UUID orderId) {
+
+        // Gọi Service xử lý
+        OrderResponse refundedOrder = orderService.processRefundOrder(orderId);
+
+        // Đóng gói JSON trả về cho FE theo đúng cấu trúc
+        return ResponseEntity.ok(
+                Map.of(
+                        "status", 200,
+                        "message", "Hoàn tiền thành công trên Blockchain!",
+                        "data", refundedOrder
+                )
+        );
     }
 }

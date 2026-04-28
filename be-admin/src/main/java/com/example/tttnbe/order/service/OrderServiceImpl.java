@@ -10,7 +10,9 @@ import com.example.tttnbe.order.dto.OrderItemDetailResponse;
 import com.example.tttnbe.order.dto.OrderResponse;
 import com.example.tttnbe.order.entity.Order;
 import com.example.tttnbe.order.repository.OrderRepository;
+import com.example.tttnbe.payment.service.Web3ServiceImpl;
 import com.example.tttnbe.ticket.repository.TicketRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,8 +37,10 @@ public class OrderServiceImpl implements OrderService {
     private ConcertRepository concertRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private Web3ServiceImpl web3Service; // Gọi "cô thu ngân" Blockchain vào đây
 
-    // API 1: Lấy danh sách đơn hàng cho Admin
+    // API 1: Lấy danh sách đơn hàng cho Admin (Tích hợp luôn bộ lọc hoàn tiền)
     public PageResponse<OrderResponse> getAllOrders(int page, int size, String status) {
 
         // Fix lỗi trang số 0 của Spring Boot
@@ -47,24 +51,22 @@ public class OrderServiceImpl implements OrderService {
 
         Page<Order> orderPage;
 
-        // Nếu FE truyền status (ví dụ: PAID), thì lọc theo status. Nếu không thì lấy tất cả.
         if (status != null && !status.isEmpty()) {
-            orderPage = orderRepository.findByOrderStatus(status.toUpperCase(), pageable);
+            if (status.equalsIgnoreCase("NEED_REFUND")) {
+                // 🌟 TRƯỜNG HỢP ĐẶC BIỆT: FE muốn lấy danh sách cần hoàn tiền
+                orderPage = orderRepository.findOrdersNeedingRefund(pageable);
+            } else {
+                // 🌟 TRƯỜNG HỢP BÌNH THƯỜNG: FE lọc theo PAID, PENDING, CANCELLED...
+                orderPage = orderRepository.findByOrderStatus(status.toUpperCase(), pageable);
+            }
         } else {
+            // FE không truyền status -> Lấy tất cả
             orderPage = orderRepository.findAll(pageable);
         }
 
-        // Map Entity sang DTO
-        Page<OrderResponse> dtoPage = orderPage.map(order -> OrderResponse.builder()
-                .orderId(order.getOrderId())
-                .userName(order.getUser().getName()) // 👈 Lấy tên từ bảng User
-                .userEmail(order.getUser().getEmail()) // 👈 Lấy email từ bảng User
-                .concertTitle(order.getConcert().getTitle()) // 👈 Lấy tên show từ bảng Concert
-                .totalAmount(order.getTotalAmount())
-                .currency(order.getCurrency())
-                .orderStatus(order.getOrderStatus())
-                .createdAt(order.getCreatedAt())
-                .build());
+        // 🌟 TỐI ƯU CODE: Thay vì viết lại cục Builder dài ngoằng,
+        // ta gọi luôn hàm mapToResponse đã viết chuẩn chỉnh ở dưới!
+        Page<OrderResponse> dtoPage = orderPage.map(this::mapToResponse);
 
         return PageResponse.from(dtoPage);
     }
@@ -128,6 +130,68 @@ public class OrderServiceImpl implements OrderService {
                 .concertTitle(order.getConcert().getTitle())
                 .venueName(order.getConcert().getVenue().getVenueName())
                 .items(items)
+                .build();
+    }
+
+    @Transactional
+    public OrderResponse processRefundOrder(UUID orderId) {
+        // 1. Tìm đơn hàng
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException(404, "Không tìm thấy đơn hàng này!"));
+
+        // 2. Chốt chặn an toàn: Chỉ hoàn tiền cho đơn ĐÃ THANH TOÁN
+        if (!"PAID".equals(order.getOrderStatus())) {
+            throw new CustomException(400, "Lỗi: Chỉ có thể hoàn tiền cho đơn hàng đã thanh toán (PAID)!");
+        }
+
+        // 3. Lấy thông tin ví khách và số tiền cần hoàn
+        // (Lưu ý: Chỗ order.getUserWallet() ông tự chỉnh lại cho khớp với tên biến trong Entity của ông nhé)
+        String customerWallet = order.getUser().getWalletAddress();
+        BigDecimal refundAmount = order.getTotalAmount();
+
+        // 4. Kêu gọi Web3 chọc xuống Smart Contract để trả ETH
+        // Nếu Contract hết tiền hoặc nghẽn mạng, hàm này sẽ tự quăng lỗi 500, code bên dưới sẽ dừng ngay lập tức.
+        String txHash = web3Service.sendRefund(customerWallet, refundAmount);
+
+        // 5. Nếu Web3 chạy êm xuôi -> Cập nhật trạng thái đơn hàng trong DB
+        order.setOrderStatus("REFUNDED");
+        // order.setRefundTxHash(txHash); // Khuyên dùng: Nếu DB ông có cột này thì nên lưu lại mã TxHash làm bằng chứng
+
+        Order savedOrder = orderRepository.save(order);
+
+        // 6. Trả kết quả về cho Controller
+        return mapToResponse(savedOrder);
+    }
+
+    // --------------------------------------------------------
+    // HÀM MAPPER: Chuyển đổi từ Order Entity sang Order Response
+    // --------------------------------------------------------
+    private OrderResponse mapToResponse(Order order) {
+        return OrderResponse.builder()
+                .orderId(order.getOrderId())
+
+                // 1. THÔNG TIN NGƯỜI MUA
+                .userName(order.getUser() != null ? order.getUser().getName() : "N/A")
+                .userEmail(order.getUser() != null ? order.getUser().getEmail() : "N/A")
+
+                // Lấy ví từ User (nếu có), nếu không có thì lấy trực tiếp từ Order
+                .userWallet(order.getUser() != null && order.getUser().getWalletAddress() != null
+                        ? order.getUser().getWalletAddress()
+                        : order.getWalletAddress())
+
+                // 2. THÔNG TIN SỰ KIỆN & VÉ (Đã sửa thành getOrderItems)
+                .concertTitle(order.getConcert() != null ? order.getConcert().getTitle() : "Chưa xác định")
+                .ticketCount(order.getOrderItems() != null ? order.getOrderItems().size() : 0)
+
+                // 3. THÔNG TIN TIỀN TỆ
+                .totalAmount(order.getTotalAmount())
+                .currency(order.getCurrency())
+                .orderStatus(order.getOrderStatus())
+
+                // 4. THÔNG TIN THỜI GIAN
+                .createdAt(order.getCreatedAt())
+                .paidAt(order.getPaidAt()) // Trong Entity có trường này nên mình mở ra luôn
+
                 .build();
     }
 }
