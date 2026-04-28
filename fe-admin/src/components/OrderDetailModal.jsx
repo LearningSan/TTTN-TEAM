@@ -41,7 +41,7 @@ const OrderDetailModal = ({ orderId, open, onCancel }) => {
   };
   return (
     <Modal
-      title={<Title level={4} style={{ margin: 0 }}>Chi tiết giao dịch: {orderId?.substring(0, 8)}</Title>}
+      title={<Title level={4} style={{ margin: 0 }}>Chi tiết giao dịch: {orderId?.substring(0, 50)}</Title>}
       open={open}
       onCancel={onCancel}
       footer={null}
