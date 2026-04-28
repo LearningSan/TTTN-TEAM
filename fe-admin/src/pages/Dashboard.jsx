@@ -20,7 +20,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [filterDate, setFilterDate] = useState(dayjs());
-  
+
   // 🚀 State gọn nhẹ chỉ chứa các con số tổng quát từ API
   const [summary, setSummary] = useState({
     totalRevenue: 0,
@@ -31,7 +31,7 @@ const Dashboard = () => {
     totalConcerts: 0,
     totalUsers: 0,
     totalOrders: 0,
-    currency: 'ETH' 
+    currency: 'ETH'
   });
 
   // 🚀 API duy nhất: Lấy toàn bộ thông số dashboard
@@ -40,8 +40,8 @@ const Dashboard = () => {
     try {
       const formattedDate = dateObj.format('YYYY-MM-DD');
       // Chỉ gọi đúng endpoint stats, không gọi orders?size=... nữa
-      const res = await API.get('/admin/orders/revenue/total', { 
-        params: { date: formattedDate } 
+      const res = await API.get('/admin/orders/revenue/total', {
+        params: { date: formattedDate }
       });
 
       if (res.data) {
@@ -64,7 +64,11 @@ const Dashboard = () => {
   return (
     <div style={{ padding: 0 }}>
       <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
-        <Title level={3} style={{ margin: 0 }}>TỔNG QUAN HỆ THỐNG</Title>
+        <Title level={3} style={{
+          margin: 0, fontSize: '1.5em',
+          fontWeight: 'bold',
+          lineHeight: 1.2
+        }}>TỔNG QUAN HỆ THỐNG</Title>
         <Space direction="vertical" align="end">
           <Text type="secondary">Xem báo cáo theo ngày:</Text>
           <DatePicker
@@ -124,16 +128,16 @@ const Dashboard = () => {
 
           {/* 🔴 CARD CẦN HOÀN TIỀN (NỢ) */}
           <Col xs={24} sm={12} lg={8}>
-            <Card 
-              hoverable 
-              style={{ height: '100%', borderRadius: 12, borderLeft: `5px solid #ff4d4f` }} 
+            <Card
+              hoverable
+              style={{ height: '100%', borderRadius: 12, borderLeft: `5px solid #ff4d4f` }}
               onClick={() => navigate("/dashboard/orders?status=REFUND_PENDING")}
             >
-              <Statistic 
-                title={<Text strong style={{ color: '#8c8c8c' }}>CẦN HOÀN TIỀN (NỢ)</Text>} 
-                value={summary.pendingRefunds} 
-                prefix={<AlertOutlined />} 
-                valueStyle={{ color: '#ff4d4f', fontWeight: 'bold' }} 
+              <Statistic
+                title={<Text strong style={{ color: '#8c8c8c' }}>CẦN HOÀN TIỀN (NỢ)</Text>}
+                value={summary.pendingRefunds}
+                prefix={<AlertOutlined />}
+                valueStyle={{ color: '#ff4d4f', fontWeight: 'bold' }}
               />
               <Button type="link" danger size="small" style={{ marginTop: 8, padding: 0 }}>
                 Xử lý danh sách nợ <RightOutlined />

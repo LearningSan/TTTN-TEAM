@@ -63,7 +63,7 @@ useEffect(() => {
   return (
     <div style={{ padding: 0, background: '#f5f5f5', minHeight: '100vh' }}>
       <Card
-        title={<><UserOutlined /> Quản lý Người dùng</>}
+        title={<h2>Quản lý Người dùng</h2>}
         extra={<Button icon={<ReloadOutlined />} onClick={handleReset}>Làm mới</Button>}
         bordered={false}
         style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
