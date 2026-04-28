@@ -6,7 +6,7 @@ import TicketInvoiceModal from '../components/TicketInvoiceModal';
 import TicketOverview from '../components/TicketOverview';
 import TicketZoneStats from '../components/TicketZoneStats';
 import TicketListTable from '../components/TicketListTable';
-
+import SeatMapDetailView from '../components/SeatMapDetailView';
 const { Title, Text } = Typography;
 
 const TicketManagement = () => {
@@ -185,6 +185,14 @@ const TicketManagement = () => {
           {/* Reuse các component cũ với dữ liệu từ selectedConcert */}
           <TicketOverview stats={calculateStats(selectedConcert)} loading={false} />
           <TicketZoneStats zones={selectedConcert?.zones || []} loading={false} />
+          <Card title="🗺️ Sơ đồ vị trí (Chấm đỏ: Ghế đã bán | Chữ: Hàng ghế)" style={{ marginBottom: 24 }}>
+            <SeatMapDetailView
+              data={selectedConcert}
+              // Lấy danh sách seatLabel từ các vé đã load để tô màu đỏ
+              bookedSeats={tickets.map(t => t.seatLabel)}
+              loadingSeats={loadingTickets}
+            />
+          </Card>
           <TicketListTable
             tickets={tickets}
             loading={loadingTickets}
