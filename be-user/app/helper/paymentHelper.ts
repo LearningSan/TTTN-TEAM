@@ -2,7 +2,7 @@ import { connectDB } from "../lib/data";
 import { getPaymentById, insertPayment, updateOrderPayment, markPaymentSuccess, markPaymentFailed } from "../lib/payment_transaction";
 import { markOrderPaid } from "../lib/order";
 import { markSeatsBookedByOrder } from "../lib/seat";
-import { updateTicketQR, createTicketRecords, updateTicketToken } from "../lib/ticket";
+import { updateTicketQR, createTicketRecords, updateTicketToken,createTicket } from "../lib/ticket";
 import { updateZoneAfterPayment } from "../lib/zone";
 import { getContract } from "../lib/contract";
 
@@ -102,32 +102,22 @@ export async function confirmPaymentService(payment_id: string, tx_hash: string)
   const pool = await connectDB();
   const transaction = pool.transaction();
 
-  let tickets: any[] = [];
+  let ticketIntents: any[] = [];
 
   try {
     await transaction.begin();
 
-    // =========================
-    // 🔒 PHASE 1 - DB ONLY
-    // =========================
-
-    await markPaymentSuccess(
-      payment_id,
-      tx_hash,
-      receipt.blockNumber,
-      transaction
-    );
-
+    // ======================
+    // PHASE 1: DB ONLY
+    // ======================
+    await markPaymentSuccess(payment_id, tx_hash, receipt.blockNumber, transaction);
     await markOrderPaid(payment.order_id, transaction);
-
     await updateZoneAfterPayment(payment.order_id, transaction);
-
     await markSeatsBookedByOrder(payment.order_id, transaction);
 
-    tickets = await createTicketRecords(payment, transaction);
+    ticketIntents = await createTicketRecords(payment, transaction);
 
     await transaction.commit();
-
   } catch (err) {
     await transaction.rollback();
     throw err;
@@ -136,27 +126,44 @@ export async function confirmPaymentService(payment_id: string, tx_hash: string)
 
   const contract = getContract();
 
-  for (const t of tickets) {
+  const createdTickets: any[] = [];
+
+  for (const t of ticketIntents) {
     try {
-      if (!payment.from_wallet) {
-        throw new Error("Missing from_wallet");
-      }
       const tx = await contract.mint(payment.from_wallet);
       const rec = await tx.wait();
 
       const tokenId = extractTokenId(rec, contract);
-      await updateTicketToken(t.ticketId, tokenId, tx.hash);
 
-      const qrData = `ticket_id=${t.ticketId}&token_id=${tokenId}`;
+      const ticketId = await createTicket({
+        order_id: t.order_id,
+        order_item_id: t.order_item_id,
+        user_id: t.user_id,
+        concert_id: t.concert_id,
+        zone_id: t.zone_id,
+        seat_id: t.seat_id,
+        payment_id: t.payment_id,
+        wallet_address: t.wallet_address,
+        tier_id: t.tier_id,
+
+        token_id: tokenId,
+        mint_tx_hash: tx.hash,
+        contract_address: process.env.CONTRACT_ADDRESS!
+      });
+
+      await updateTicketToken(ticketId, tokenId, tx.hash);
+
+      const qrData = `ticket_id=${ticketId}&token_id=${tokenId}`;
       const qrUrl = await generateQRCode(qrData);
-      if (!qrUrl) {
-        throw new Error(`Failed to generate QR for ticket ${t.ticketId}`);
-      }
-      await updateTicketQR(t.ticketId, qrData, qrUrl);
+
+      if (!qrUrl) throw new Error("QR fail");
+
+      await updateTicketQR(ticketId, qrData, qrUrl);
+
+      createdTickets.push({ ticketId, tokenId });
 
     } catch (err) {
-      console.error("Mint failed ticket:", t.ticketId, err);
-      // retry sau (optional queue)
+      console.error("Mint failed ticket:", t, err);
     }
   }
 
@@ -164,10 +171,9 @@ export async function confirmPaymentService(payment_id: string, tx_hash: string)
     success: true,
     tx_hash,
     block_number: receipt.blockNumber,
-    tickets
+    tickets: createdTickets
   };
 }
-
 
 export async function generateQRCode(data: string) {
   try {

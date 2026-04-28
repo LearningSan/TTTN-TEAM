@@ -27,24 +27,14 @@ export async function createOrder(data: CreateOrderInput) {
 
   try {
 
-    // =========================
-    // STEP 1: VALIDATE (READ ONLY)
-    // =========================
     const { total } = await validateSeats(items);
 
-    // =========================
-    // STEP 2: BEGIN TRANSACTION
-    // =========================
+ 
     await transaction.begin();
 
-    // =========================
-    // STEP 3: LOCK SEATS
-    // =========================
+
     await lockSeats(user_id, items, transaction);
 
-    // =========================
-    // STEP 4: CREATE ORDER
-    // =========================
     const order_id = await insertOrder(transaction, {
       user_id,
       concert_id,
@@ -53,37 +43,38 @@ export async function createOrder(data: CreateOrderInput) {
       note,
       wallet_address
     });
+for (const item of items) {
+  const req = transaction.request();
 
-    for (const item of items) {
-      const req = transaction.request();
+  const tier_id = await resolveTier(item, transaction);
 
-      req.input("order_id", order_id);
-      req.input("zone_id", item.zone_id);
-      req.input("seat_id", item.seat_id || null);
-      req.input("quantity", item.quantity);
-      req.input("unit_price", item.unit_price || 0);
+  req.input("order_id", order_id);
+  req.input("zone_id", item.zone_id);
+  req.input("seat_id", item.seat_id || null);
+  req.input("quantity", item.quantity);
+  req.input("unit_price", item.unit_price || 0);
+  req.input("tier_id", tier_id);
 
-      await req.query(`
-        INSERT INTO order_items (
-          order_id,
-          zone_id,
-          seat_id,
-          quantity,
-          unit_price
-        )
-        VALUES (
-          @order_id,
-          @zone_id,
-          @seat_id,
-          @quantity,
-          @unit_price
-        )
-      `);
-    }
-
-    // =========================
-    // COMMIT
-    // =========================
+  await req.query(`
+    INSERT INTO order_items (
+      order_id,
+      zone_id,
+      seat_id,
+      quantity,
+      unit_price,
+      tier_id
+    )
+    VALUES (
+      @order_id,
+      @zone_id,
+      @seat_id,
+      @quantity,
+      @unit_price,
+      @tier_id
+    )
+  `);
+}
+    
     await transaction.commit();
 
     return {
@@ -110,4 +101,21 @@ try {
   throw new Error(error.message);
 }
 
+}
+
+
+async function resolveTier(item: any, transaction: any) {
+  const zone = await getZoneById(item.zone_id);
+
+  // CASE 1: có seat map
+  if (zone.has_seat_map) {
+    const seat = await getSeatById(item.seat_id, transaction);
+
+    if (!seat) throw new Error("Seat not found");
+
+    return seat.tier_id;
+  }
+
+  // CASE 2: không seat map → tier = zone default tier
+  return item.tier_id || null;
 }
