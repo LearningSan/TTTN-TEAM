@@ -1,98 +1,81 @@
 import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { HiOutlineLocationMarker, HiOutlineCalendar } from "react-icons/hi";
-import { GiTicket } from "react-icons/gi";
-import { FaWallet } from "react-icons/fa"; // 1. Thêm import icon
-import { ethers } from "ethers"; // 2. Thêm import ethers
+import { FaUserAlt, FaEnvelope, FaPhoneAlt } from "react-icons/fa";
+import { ethers } from "ethers";
 import axios from "axios";
 
 const Checkout = () => {
   const { state } = useLocation();
-  console.log("Dữ liệu nhận được từ Link/Navigate:", state);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
+  // Lấy dữ liệu từ state được truyền sang từ trang chọn vé
   const selectedSeats = state?.selectedSeats || [];
+  const standingTickets = state?.standingTickets || {};
   const concert = state?.concert || null;
-  const concertId = state?.concertId;
+  const totalAmount = state?.total || 0;
 
-  const subtotal = selectedSeats.reduce(
-    (sum, seat) => sum + (seat.price || 0),
-    0,
-  );
-
+  // Hàm định dạng ngày tháng sang tiếng Việt
   const formatDate = (dateString) => {
     if (!dateString) return "Đang cập nhật";
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN", {
       day: "2-digit",
-      month: "2-digit",
+      month: "long",
       year: "numeric",
     });
   };
 
-  // Khởi tạo thông tin khách hàng từ Local Storage
-  const [customerInfo, setCustomerInfo] = useState(() => {
+  const [customerInfo] = useState(() => {
     try {
       const savedUser = JSON.parse(localStorage.getItem("user"));
       return {
-        fullName:
-          savedUser?.name || savedUser?.full_name || savedUser?.username || "",
-        email: savedUser?.email || "",
-        phone: savedUser?.phone || "",
-        // Lấy ví từ LocalStorage thay vì dùng biến customerInfo chưa tồn tại
-        walletAddress:
-          savedUser?.wallet_address ||
-          "0x0000000000000000000000000000000000000000",
+        fullName: savedUser?.name || savedUser?.full_name || "Khách hàng",
+        email: savedUser?.email || "Chưa cập nhật",
+        phone: savedUser?.phone || "Chưa cập nhật",
       };
     } catch (e) {
-      console.error("Lỗi lấy dữ liệu từ LocalStorage:", e);
-      return { fullName: "", email: "", phone: "", walletAddress: "" };
+      return { fullName: "", email: "", phone: "" };
     }
   });
-
-  // Kiểm tra nếu không có state (do reload trang hoặc truy cập trực tiếp)
-  if (!state) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center font-black">
-        <p className="mb-4 text-red-600">
-          Dữ liệu đơn hàng bị mất do bạn vừa tải lại trang.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-black text-white px-6 py-2 rounded-lg"
-        >
-          Về trang chủ chọn lại ghế
-        </button>
-      </div>
-    );
-  }
 
   const handleContinue = async () => {
     if (!window.ethereum) {
       alert("Vui lòng cài đặt MetaMask!");
       return;
     }
-
     setLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();
 
-      // --- BƯỚC MỚI: XÁC THỰC CHỮ KÝ VÍ VỚI SERVER ---
-      // 1. Lấy nonce từ server
+      // Chuẩn bị dữ liệu vé để gửi lên backend
+      const seatItems = selectedSeats.map((s) => ({
+        zone_id: s.zone_id,
+        seat_id: s.seat_id,
+        quantity: 1,
+      }));
+      const standingItems = Object.entries(standingTickets)
+        .filter(([_, qty]) => qty > 0)
+        .map(([zoneId, qty]) => ({
+          zone_id: zoneId,
+          seat_id: null, // ĐẢM BẢO vé đứng thì seat_id là null để tránh Backend bị nhầm
+          quantity: qty,
+        }));
+
+      const allItems = [...seatItems, ...standingItems];
+
       const nonceRes = await axios.get(
         `${import.meta.env.VITE_API_URL}/wallet/nonce`,
-        {
-          withCredentials: true,
-        },
+        { withCredentials: true },
       );
-
-      // 2. Ký message nonce
       const signature = await signer.signMessage(nonceRes.data.message);
 
-      // 3. Gửi verify để server lưu địa chỉ ví vào session/cookie
+      // Bây giờ log ở đây sẽ không bị lỗi ReferenceError nữa
+      console.log("Dữ liệu chuẩn bị gửi đi:", allItems);
+
       await axios.post(
         `${import.meta.env.VITE_API_URL}/wallet/verify`,
         {
@@ -103,28 +86,19 @@ const Checkout = () => {
         { withCredentials: true },
       );
 
-      // --- BƯỚC TẠO ORDER (Bây giờ đã có đủ Auth và Wallet Verify) ---
-      const items = selectedSeats.map((seat) => ({
-        zone_id: seat.zone_id,
-        seat_id: seat.seat_id,
-        quantity: 1,
-      }));
-
       const orderRes = await axios.post(
         `${import.meta.env.VITE_API_URL}/order`,
         {
-          concert_id: concertId,
+          concert_id: concert?.concert_id || state?.id,
           currency: "ETH",
-          items: items,
+          items: allItems, // Sử dụng allItems đã khai báo phía trên
           wallet_address: walletAddress,
         },
-        { withCredentials: true },
+        { withCredentials: true, timeout: 30000 },
       );
 
       if (orderRes.data?.success) {
         const orderData = orderRes.data.data;
-
-        // Bước 5: Tạo Payment
         const paymentRes = await axios.post(
           `${import.meta.env.VITE_API_URL}/payment`,
           {
@@ -148,157 +122,172 @@ const Checkout = () => {
         }
       }
     } catch (error) {
-      console.error("Lỗi Checkout:", error);
-      const msg =
-        error.response?.data?.message ||
-        "Không thể khởi tạo đơn hàng. Vui lòng kiểm tra lại kết nối ví.";
-      alert(msg);
+      console.error(error);
+      alert(error.response?.data?.message || "Lỗi xử lý thanh toán");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] font-sans text-gray-900">
-      <main className="max-w-7xl mx-auto px-6 py-12">
-        <div className="flex flex-col lg:flex-row gap-12">
-          {/* Left Column: Customer Information */}
-          <div className="lg:w-2/3">
-            <h2 className="text-3xl font-black mb-8 flex items-center gap-3">
-              <span className="w-2 h-8 bg-[#8D1B1B] rounded-full"></span>
-              THÔNG TIN KHÁCH HÀNG
-            </h2>
+    <div className="min-h-screen bg-[#111827] text-white p-6 md:p-12 font-sans">
+      <main className="max-w-5xl mx-auto space-y-8">
+        {/* Banner thông tin sự kiện */}
 
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <div className="space-y-6">
+        <div className="border-2 border-[#EB2E91] rounded-2xl p-6 bg-black">
+          <h2 className="text-[#EB2E91] text-xl font-bold uppercase tracking-wide">
+            {concert?.title || "Tên sự kiện chưa cập nhật"}
+          </h2>
+          <div className="mt-4 space-y-2 text-gray-300 text-sm">
+            {/* Hiển thị Địa điểm */}
+            <div className="flex items-center gap-3">
+              <HiOutlineLocationMarker className="text-[#EB2E91] text-lg" />
+              <span>{concert?.venue_name || "Địa điểm đang cập nhật"}</span>
+            </div>
+
+            {/* Hiển thị Thời gian - Sử dụng hàm formatDate có sẵn trong file */}
+            <div className="flex items-center gap-3">
+              <HiOutlineCalendar className="text-[#EB2E91] text-lg" />
+              <span>{formatDate(concert?.concert_date)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-[1fr,380px] gap-8 items-start">
+          {/* Cột trái: Form thông tin */}
+          <div className="border-2 border-[#00A991] rounded-2xl p-6 bg-black h-full">
+            <h3 className="text-[#00A991] text-lg font-bold mb-6">
+              Information Form
+            </h3>
+            <div className="bg-white text-black p-6 rounded-xl space-y-5">
+              <div className="bg-gray-200 px-4 py-2 rounded text-sm font-bold text-gray-700">
+                Ticket Holder Information
+              </div>
+
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
-                    Họ và tên
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Full name
                   </label>
-                  <input
-                    type="text"
-                    value={customerInfo.fullName} // Đã gắn value
-                    onChange={(e) =>
-                      setCustomerInfo({
-                        ...customerInfo,
-                        fullName: e.target.value,
-                      })
-                    }
-                    placeholder="Nhập họ và tên"
-                    className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
-                  />
+                  <div className="relative">
+                    <FaUserAlt className="absolute left-3 top-3 text-gray-400 size-3" />
+                    <input
+                      type="text"
+                      readOnly
+                      value={customerInfo.fullName}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-md p-2.5 pl-10 text-sm outline-none text-gray-600"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
                     Email
                   </label>
-                  <input
-                    type="email"
-                    value={customerInfo.email} // Đã gắn value
-                    onChange={(e) =>
-                      setCustomerInfo({
-                        ...customerInfo,
-                        email: e.target.value,
-                      })
-                    }
-                    placeholder="example@gmail.com"
-                    className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
-                  />
+                  <div className="relative">
+                    <FaEnvelope className="absolute left-3 top-3 text-gray-400 size-3" />
+                    <input
+                      type="text"
+                      readOnly
+                      value={customerInfo.email}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-md p-2.5 pl-10 text-sm outline-none text-gray-600"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
-                    Số điện thoại
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Phone Number
                   </label>
-                  <input
-                    type="text"
-                    value={customerInfo.phone} // Đã gắn value
-                    onChange={(e) =>
-                      setCustomerInfo({
-                        ...customerInfo,
-                        phone: e.target.value,
-                      })
-                    }
-                    maxLength={10}
-                    placeholder="0901234567"
-                    className="w-full border-2 border-gray-800 rounded-lg px-4 py-3 text-sm focus:outline-none"
-                  />
+                  <div className="relative">
+                    <FaPhoneAlt className="absolute left-3 top-3 text-gray-400 size-3" />
+                    <input
+                      type="text"
+                      readOnly
+                      value={customerInfo.phone}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-md p-2.5 pl-10 text-sm outline-none text-gray-600"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Order Summary (Giữ nguyên giao diện của bạn) */}
-          <div className="lg:w-1/3">
-            {/* ... Phần Order Summary giữ nguyên như file cũ của bạn ... */}
-            <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-gray-900 sticky top-28">
-              <h3 className="text-xl font-black mb-6 uppercase italic">
-                Tóm tắt đơn hàng
-              </h3>
-              {/* Concert Info */}
-              <div className="mb-6">
-                <h4 className="font-black text-[#8D1B1B] text-lg leading-tight mb-2">
-                  {concert?.title}
-                </h4>
-                <div className="space-y-1">
-                  <p className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                    <HiOutlineLocationMarker size={14} />{" "}
-                    {concert?.venue_name || "Chưa xác định địa điểm"}
-                  </p>
-                  <p className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                    <HiOutlineCalendar size={14} /> {formatDate(concert?.date)}
-                  </p>
-                </div>
-              </div>
+          {/* Cột phải: Thông tin vé & Tổng tiền */}
+          <div className="bg-white text-black p-6 rounded-2xl shadow-xl">
+            <h3 className="font-bold text-center text-gray-800 mb-6 border-b pb-4">
+              Ticket Information
+            </h3>
 
-              {/* Selected Seats List */}
-              <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2">
-                {selectedSeats.map((seat, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-50 p-4 rounded-xl border border-gray-100"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <GiTicket className="text-[#8D1B1B]" size={20} />
-                        <span className="text-sm font-black px-2 py-1 bg-white rounded border border-gray-200">
-                          {seat.seat_label}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-black text-[#8D1B1B]">
-                          {seat.price.toLocaleString()} đ
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-dashed border-gray-400 pt-4 mb-6">
-                <div className="flex justify-between items-center font-black">
-                  <span>Tổng tiền</span>
-                  <span className="text-[#8D1B1B] text-xl">
-                    {subtotal.toLocaleString()} đ
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleContinue}
-                disabled={loading}
-                className="w-full bg-[#8D1B1B] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-50"
-              >
-                {loading ? (
-                  "Đang xử lý..."
-                ) : (
-                  <>
-                    <FaWallet /> Kết nối ví & Tiếp tục
-                  </>
-                )}
-              </button>
+            <div className="max-h-60 overflow-y-auto mb-4">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="text-gray-400 border-b">
+                    <th className="text-left font-bold py-2">Ticket type</th>
+                    <th className="text-right font-bold py-2">Quantity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {selectedSeats.map((seat) => (
+                    <tr key={seat.seat_id}>
+                      <td className="py-3 pr-2">
+                        <div className="font-bold text-gray-700">
+                          Khu {seat.zone_name}
+                        </div>
+                        <div className="text-gray-500">
+                          - Ghế {seat.seat_label}
+                        </div>
+                        <div className="text-gray-400 text-xs italic">
+                          ({seat.tier_name})
+                        </div>
+                        <div className="text-[#EB2E91] font-semibold">
+                          {seat.price} ETH
+                        </div>
+                      </td>
+                      <td className="text-right font-bold py-3">1</td>
+                    </tr>
+                  ))}
+                  {Object.entries(standingTickets).map(
+                    ([zoneId, qty]) =>
+                      qty > 0 && (
+                        <tr key={zoneId}>
+                          <td className="py-3 pr-2">
+                            <div className="font-bold text-gray-700">
+                              Vé đứng (Khu {zoneId})
+                            </div>
+                            <div className="text-[#EB2E91] font-semibold">
+                              {(0.0001).toFixed(4)} ETH
+                            </div>
+                          </td>
+                          <td className="text-right font-bold py-3">{qty}</td>
+                        </tr>
+                      ),
+                  )}
+                </tbody>
+              </table>
             </div>
+
+            <div className="flex justify-between items-center font-bold text-sm border-t-2 border-dashed border-gray-200 pt-5 mb-6">
+              <span className="text-gray-600 uppercase">Subtotal</span>
+              <span className="text-2xl text-[#F24E61] tracking-tighter">
+                {totalAmount} <span className="text-sm">ETH</span>
+              </span>
+            </div>
+
+            <button
+              onClick={handleContinue}
+              disabled={loading}
+              className="w-full bg-[#EB2E91] text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all hover:bg-[#c9267c] active:scale-95 disabled:opacity-50"
+            >
+              {loading ? "Processing..." : "CONTINUE"}
+            </button>
+
+            <button
+              onClick={() => navigate(-1)}
+              className="w-full mt-4 text-[11px] text-gray-400 font-bold text-center underline hover:text-gray-600"
+            >
+              Re-select ticket
+            </button>
           </div>
         </div>
       </main>

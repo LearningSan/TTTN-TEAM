@@ -1,157 +1,190 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react"; // Đã thêm useRef vào đây
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { GiTicket } from "react-icons/gi";
-import { FaUserCircle } from "react-icons/fa";
+import { FaUserCircle, FaChevronDown, FaRegUser } from "react-icons/fa"; // Thêm FaRegUser
+import { FiLogOut } from "react-icons/fi"; // Thêm FiLogOut
 import { AiFillHome } from "react-icons/ai";
-import axios from "axios"; // Đảm bảo đã import axios
+import axios from "axios";
 
 const MainLayout = () => {
-  // 1. Khởi tạo state user từ localStorage để hiển thị ngay lập tức (tránh bị nháy)
   const location = useLocation();
   const navigate = useNavigate();
+  const dropdownRef = useRef(null); // Ref đã hoạt động vì đã import ở trên
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
-  // Kiểm tra nếu đang ở trang chi tiết concert
-  const isDetailPage = location.pathname.includes("/concert/");
-  // Thiết lập class dựa trên trang
-  const headerBgColor = isDetailPage ? "bg-black" : "bg-white";
-  const textColor = isDetailPage ? "text-white" : "text-gray-700";
-  const borderColor = isDetailPage ? "border-none" : "border-b border-gray-100";
+  // Logic kiểm tra trang để đổi màu giao diện
+  const isDetailPage =
+    location.pathname === "/" ||
+    location.pathname.includes("/concert/") ||
+    location.pathname.includes("/my-tickets") ||
+    location.pathname.includes("/resale-market") ||
+    location.pathname.includes("/profile") ||
+    location.pathname.includes("/order-success") ||
+    // location.pathname.includes("/selection") ||
+    // location.pathname.includes("/payment") ||
+    // location.pathname.includes("/nhap") ||
+    location.pathname.includes("/checkout");
+  const headerStyles = isDetailPage
+    ? "bg-gradient-to-r from-[#FF0080] via-[#7928CA] to-[#00F2FF] border-none shadow-lg"
+    : "bg-white border-b border-gray-100 shadow-sm";
 
-  // 2. Sử dụng useEffect để đồng bộ dữ liệu mới nhất từ server qua API /api/me
-  // Trong MainLayout.jsx
+  const textColor = isDetailPage ? "text-white" : "text-gray-700";
+
+  // Đồng bộ User từ Server/Storage
   useEffect(() => {
-    // Hàm cập nhật user từ localStorage
     const syncUser = () => {
       const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
-        setUser(null);
-      }
+      setUser(storedUser ? JSON.parse(storedUser) : null);
     };
-
-    // 1. Lắng nghe sự kiện 'storage' (khi tab/popup khác thay đổi localStorage)
     window.addEventListener("storage", syncUser);
 
-    // 2. Đồng bộ ngay lập tức từ server (giữ nguyên logic của bạn)
     const fetchUserProfile = async () => {
       try {
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/me`, {
           withCredentials: true,
         });
-        if (response.data && response.data.user_id) {
-          const userData = response.data;
-          setUser(userData);
-          localStorage.setItem("user", JSON.stringify(userData));
+        if (response.data?.user_id) {
+          setUser(response.data);
+          localStorage.setItem("user", JSON.stringify(response.data));
         }
       } catch (error) {
-        console.error("Lỗi xác thực:", error);
-        // Nếu lỗi 401 (chưa đăng nhập) thì xóa local
         if (error.response?.status === 401) {
           localStorage.removeItem("user");
           setUser(null);
         }
       }
     };
-
     fetchUserProfile();
-
-    // Cleanup khi unmount
     return () => window.removeEventListener("storage", syncUser);
-  }, [location]); // Chạy lại khi chuyển trang hoặc mount
+  }, [location]);
+
+  // Xử lý đóng Dropdown khi bấm ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleLogout = async () => {
     try {
-      // 1. Gọi API Logout để xóa Session/Cookie trên Server
       await axios.post(
         `${import.meta.env.VITE_API_URL}/logout`,
         {},
         { withCredentials: true },
       );
-    } catch (error) {
-      console.error("Lỗi Logout Server:", error);
-    }
-
-    // 2. Xóa sạch dữ liệu trong localStorage
+    } catch (e) {}
     localStorage.removeItem("user");
-
-    // 3. Cập nhật state về null ngay lập tức
     setUser(null);
-
-    // 4. Làm mới trang để xóa sạch mọi dấu vết
     window.location.href = "/";
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <header
-        className={`${headerBgColor} ${borderColor} py-4 px-12 flex items-center justify-between shadow-sm sticky top-0 z-50 transition-colors duration-300`}
+        className={`${headerStyles} py-4 px-12 flex items-center justify-between sticky top-0 z-50 transition-all duration-500`}
       >
+        {/* LOGO */}
         <Link to="/">
-          <h1 className="text-3xl font-bold tracking-tighter uppercase">
-            {/* Phần TICKET màu hồng */}
-            <span className="text-[#FF40B4]">T I C K E T</span>
-            {/* Phần X màu xanh cyan */}
-            <span className="text-[#00F2FF]"> X</span>
+          <h1 className="text-3xl font-[900] tracking-tighter uppercase transition-colors">
+            {isDetailPage ? (
+              <span className="text-white">TICKETX</span>
+            ) : (
+              <>
+                <span className="text-[#FF2D95]">TICKET</span>
+                <span className="text-[#00F2FF]">X</span>
+              </>
+            )}
           </h1>
         </Link>
 
+        {/* MENU BÊN PHẢI */}
         <div
-          className={`flex items-center gap-6 text-[13px] font-bold uppercase ${textColor}`}
+          className={`flex items-center gap-6 text-[13px] font-black uppercase ${textColor}`}
         >
-          {" "}
-          {/* Hiển thị tên người dùng */}
           {user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4 relative">
               <Link
                 to="/my-tickets"
-                className="flex items-center gap-1 hover:text-[#8D1B1B]"
+                className="flex items-center gap-1 hover:opacity-80"
               >
                 <GiTicket size={18} /> My ticket
               </Link>
-              {/* Thay 'flex-col' thành 'flex-row' hoặc xóa hẳn 'flex-col' đi */}
-              <Link
-                to="/resale-market"
-                className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-1 rounded font-bold hover:bg-gray-200 transition-colors"
-              >
-                Mua bán lại vé
-              </Link>
-              <div className="flex flex-row items-center gap-1">
-                <span className="text-[#8D1B1B] text-[11px] font-black whitespace-nowrap">
-                  WELCOME,
-                </span>
-                <span className="text-gray-900 font-black whitespace-nowrap">
-                  {user.name || user.email}
-                </span>
-              </div>
-              <Link
-                to="/profile"
-                className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-1 rounded font-bold hover:bg-gray-200 transition-colors"
-              >
-                Profile
-              </Link>
 
-              <button
-                onClick={handleLogout}
-                className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-1 rounded font-bold hover:bg-gray-200 transition-colors"
-              >
-                Logout
-              </button>
+              {/* Account Button */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
+                    isDetailPage
+                      ? "bg-white/20 backdrop-blur-md text-white border border-white/10"
+                      : "bg-gray-100 text-gray-900 border border-transparent"
+                  } hover:scale-105 active:scale-95`}
+                >
+                  <div className="w-6 h-6 bg-black rounded-full overflow-hidden border border-white/30">
+                    <FaUserCircle className="text-white w-full h-full" />
+                  </div>
+                  <span className="normal-case font-bold">
+                    {user.name || "Account"}
+                  </span>
+                  <FaChevronDown
+                    size={10}
+                    className={`transition-transform duration-300 ${dropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {/* DROPDOWN MENU */}
+                {dropdownOpen && (
+                  <div
+                    className={`absolute top-full right-0 mt-3 w-48 rounded-xl shadow-2xl p-2 border transition-all z-[100] ${
+                      isDetailPage
+                        ? "bg-black/90 border-white/10 backdrop-blur-xl text-white"
+                        : "bg-white border-gray-100 text-gray-800"
+                    }`}
+                  >
+                    <Link
+                      to="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
+                        isDetailPage ? "hover:bg-white/10" : "hover:bg-gray-100"
+                      }`}
+                    >
+                      <FaRegUser size={14} /> Profile
+                    </Link>
+
+                    <div
+                      className={`my-1 h-px ${isDetailPage ? "bg-white/10" : "bg-gray-100"}`}
+                    />
+
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <FiLogOut size={14} /> Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <Link
               to="/login"
-              className="flex items-center gap-1 hover:text-[#8D1B1B]"
+              className="flex items-center gap-1 hover:text-[#FF2D95]"
             >
               <FaUserCircle size={18} /> Sign in
             </Link>
           )}
-          <Link to="/">
-            <AiFillHome size={20} />
+
+          <Link to="/" className="hover:scale-110 transition-transform">
+            <AiFillHome size={22} />
           </Link>
         </div>
       </header>

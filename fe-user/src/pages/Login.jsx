@@ -8,12 +8,27 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { HiOutlineChevronDown } from "react-icons/hi";
 import { AiFillHome } from "react-icons/ai";
+import { useSearchParams } from "react-router-dom";
+
 const Login = () => {
   // 1. Khai báo State để lưu thông tin
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [searchParams] = useSearchParams();
+  const verified = searchParams.get("verified");
+  const error = searchParams.get("error");
+
+  useEffect(() => {
+    if (verified === "true") {
+      alert("Xác thực email thành công! Bây giờ bạn có thể đăng nhập.");
+    }
+    if (error) {
+      alert("Lỗi xác thực: " + error);
+    }
+  }, [verified, error]);
+
   useEffect(() => {
     // Lấy origin từ .env, nếu không có thì lấy từ API URL nhưng cắt bỏ phần /api
     const rawOrigin =
@@ -138,123 +153,165 @@ const Login = () => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="min-h-screen flex flex-col bg-[#101114] font-sans"
+      className="min-h-screen flex flex-col bg-white font-sans relative overflow-hidden"
     >
-      <main className="flex-1 flex items-center justify-center bg-white p-4 relative overflow-hidden">
-        {/* Hiệu ứng nền đỏ mờ ở phía dưới như trong ảnh */}
-        <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-[#8D1B1B] to-transparent opacity-80" />
+      <div
+        className="absolute bottom-0 left-0 w-[500px] h-[500px] 
+          translate-x-[-75%] translate-y-[50%]
+          bg-[#FF2D95] opacity-[0.5] blur-[120px] rounded-full pointer-events-none"
+      />
 
-        <div className="z-10 w-full max-auto flex justify-center">
-          {/* Box chính với viền xanh */}
-          <div className="bg-white w-[450px] border-[3px] border-[#31A1EE] rounded-[40px] p-10 shadow-xl">
-            {/* Header text */}
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-[#444] mb-2 uppercase tracking-tight">
-                Welcome Back!
-              </h2>
-              <p className="text-sm text-gray-500">
-                Don't have an account?{" "}
-                <Link to="/register" className="text-blue-500 hover:underline">
-                  Sign up
-                </Link>
-              </p>
-            </div>
+      <div
+        className="absolute bottom-0 right-0 w-[500px] h-[500px] 
+          translate-x-[75%] translate-y-[25%]
+          bg-[#00E5FF] opacity-[0.5] blur-[120px] rounded-full pointer-events-none"
+      />
 
-            <form className="space-y-6" onSubmit={handleLogin}>
-              {/* Email Field */}
-              <div className="text-left">
-                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+      <main className="flex-1 flex items-center justify-center p-4 z-10">
+        {/* KHUNG VIỀN GRADIENT: Giảm padding xuống 1px để viền thanh mảnh hơn */}
+        <div className="relative p-[3px] rounded-[40px] bg-gradient-to-r from-[#FF2D95] to-[#00E5FF] overflow-hidden">
+          <div className="bg-white w-[400px] rounded-[39px] p-10 flex flex-col items-start">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2 tracking-wider">
+              WELCOME BACK!
+            </h1>
+            <p className="text-xm text-gray-400 mb-8 font-medium">
+              Don't have an account,{" "}
+              <Link to="/register" className="text-blue-400 hover:underline">
+                Sign up
+              </Link>
+            </p>
+
+            <form className="w-full space-y-5" onSubmit={handleLogin}>
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="text-xm font-semibold font-['Nunito'] ml-2 tracking-wider">
                   Email
                 </label>
-                <input
-                  type="email"
-                  placeholder="deniel123@gmail.com......"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-5 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
+                <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                  <input
+                    type="email"
+                    placeholder="deniel123@gmail.com......."
+                    className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
               </div>
 
-              {/* Password Field */}
-              <div className="text-left">
-                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+              {/* Password với viền Gradient */}
+              <div className="space-y-2">
+                <label className="text-xm font-semibold font-['Nunito'] ml-2 tracking-wider">
                   Password
                 </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full px-5 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                  <div
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <RiEyeLine size={20} />
-                    ) : (
-                      <RiEyeOffLine size={20} />
-                    )}
+                <div className="p-px rounded-full bg-linear-to-r from-[#FF2D95] to-[#00E5FF]">
+                  <div className="relative bg-white rounded-full">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••"
+                      className="w-full px-6 py-3 rounded-full bg-transparent outline-none text-sm"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <div
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-blue-300 cursor-pointer"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <RiEyeLine size={18} />
+                      ) : (
+                        <RiEyeOffLine size={18} />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Remember me & Forgot Pass */}
-              <div className="flex justify-between items-center px-1 text-xs font-medium text-gray-500">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 accent-blue-500" />
-                  Remember me
+              {/* Remember & Forgot */}
+              <div className="flex justify-between items-center px-2 text-[11px] text-gray-500 font-semibold">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  {/* 1. Input vẫn là peer */}
+                  <input type="checkbox" className="sr-only peer" />
+
+                  {/* 2. Vòng tròn ngoài: Ta thêm class: peer-checked:[&_div]:opacity-100 
+                    Nghĩa là: Khi peer được check, tìm thẻ div bên trong và cho nó hiện lên.*/}
+                  <div
+                    className="
+                      w-6 h-6 rounded-full border-2 border-blue-200 
+                      flex items-center justify-center 
+                      transition-all duration-200
+                    peer-checked:border-blue-400 peer-checked:bg-blue-50
+                      peer-checked:[&_div]:opacity-100 peer-checked:[&_div]:scale-100
+                      "
+                  >
+                    {/* 3. Chấm tròn nhỏ: Bỏ hoàn toàn peer-checked ở đây để tránh xung đột. */}
+                    <div
+                      className="
+                        w-3 h-3 rounded-full bg-blue-500
+                        opacity-0 scale-0
+                        transition-all duration-200
+                        "
+                    />
+                  </div>
+
+                  <span className="hover:text-gray-800 select-none">
+                    Remember me
+                  </span>
                 </label>
-                <Link to="/forgot-password" className="hover:text-blue-600">
+                <Link
+                  to="/forgot-password"
+                  size={18}
+                  className="hover:text-gray-800"
+                >
                   Forget password?
                 </Link>
               </div>
 
-              {/* Submit Button */}
+              {/* Button Sign In */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[#7A2121] text-white font-bold rounded-full text-lg shadow-lg hover:bg-[#5a1818] transition-all"
+                className="w-full py-4 
+                  bg-gradient-to-r from-[#FF2D95] via-[#9181C4] to-[#2BF3E0] 
+                  text-lg  text-white font-extrabold font-['Nunito'] tracking-wider 
+                  rounded-full 
+                  shadow-[0_10px_20px_-5px_rgba(255,45,149,0.4)] 
+                  ring-1 ring-inset ring-white/20 /* Tạo viền sáng xung quanh button */
+                  hover:brightness-120 hover:shadow-[0_15px_25px_-5px_rgba(255,45,149,0.5)] 
+                  transition-all duration-300 active:scale-[0.97]"
               >
                 Sign In
               </button>
 
-              {/* Divider */}
-              <div className="relative flex py-4 items-center">
-                <div className="flex-grow border-t border-gray-300"></div>
-                <span className="flex-shrink mx-4 text-gray-400 text-xs">
+              {/* Or continue with */}
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="flex-shrink mx-4 text-[10px] text-gray-500 font-medium uppercase tracking-widest">
                   or continue with
                 </span>
-                <div className="flex-grow border-t border-gray-300"></div>
+                <div className="flex-grow border-t border-gray-200"></div>
               </div>
 
               {/* Social Buttons */}
-              <div className="flex gap-10 justify-center">
+              <div className="flex gap-4 w-full">
                 <button
-                  type="button"
                   onClick={handleGoogleLogin}
-                  className="p-3 border border-blue-400 rounded-xl hover:bg-gray-50"
-                >
-                  <FcGoogle size={30} />
-                </button>
-                <button
                   type="button"
-                  onClick={handleFacebookLogin}
-                  className="p-3 border border-blue-400 rounded-xl hover:bg-gray-50"
+                  className="flex-1 py-3 border border-blue-400 rounded-xl flex justify-center items-center hover:bg-gray-200"
                 >
-                  <FaFacebook size={30} className="text-[#1877F2]" />
+                  <FcGoogle size={24} />
+                </button>
+                <div className="flex-1 py-3 rounded-xl flex justify-center items-center"></div>
+                <button
+                  onClick={handleFacebookLogin}
+                  type="button"
+                  className="flex-1 py-3 border border-blue-400 rounded-xl flex justify-center items-center hover:bg-gray-200"
+                >
+                  <FaFacebook size={24} className="text-[#1877F2]" />
                 </button>
               </div>
             </form>
           </div>
         </div>
       </main>
-      {/* </div> */}
     </motion.div>
   );
 };

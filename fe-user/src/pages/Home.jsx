@@ -1,147 +1,174 @@
 import React, { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import {
-  EffectCoverflow,
-  Pagination,
-  Autoplay,
-  Navigation,
-} from "swiper/modules";
+import { Pagination, Autoplay, Navigation } from "swiper/modules";
 import "swiper/css";
-import "swiper/css/effect-coverflow";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
-import { Link, useNavigate } from "react-router-dom";
-import { GiTicket } from "react-icons/gi";
-import { FaUserCircle, FaSearch } from "react-icons/fa";
-import { AiFillHome } from "react-icons/ai";
+import { useNavigate } from "react-router-dom";
+import { FaSearch, FaFilter } from "react-icons/fa"; // Thêm FaFilter
 import { HiOutlineChevronLeft, HiOutlineChevronRight } from "react-icons/hi";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 const Home = () => {
   const [events, setEvents] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState(""); // Lưu từ khóa nhập vào
-  const [filteredEvents, setFilteredEvents] = useState([]); // Lưu danh sách sau khi lọc
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // --- LOGIC PHÂN TRANG ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8; // Tăng số lượng item mỗi trang
+
+  const totalPages = Math.ceil(events.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = events.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Cập nhật hình ảnh banner mới (thay cho ảnh cũ)
   const sliderImages = [
     "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?q=80&w=1000",
     "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1000",
     "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=1000",
     "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1000",
   ];
-  useEffect(() => {
-    // Lọc danh sách events dựa trên searchTerm
-    const results = events.filter(
-      (event) =>
-        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (event.location &&
-          event.location.toLowerCase().includes(searchTerm.toLowerCase())),
-    );
-    setFilteredEvents(results);
-  }, [searchTerm, events]);
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/concert`,
-        );
-        if (response.data?.success) {
-          const uniqueEvents = response.data.data.filter(
-            (v, i, a) =>
-              a.findIndex((t) => t.concert_id === v.concert_id) === i,
-          );
-          setEvents(uniqueEvents);
-        }
-      } catch (error) {
-        console.error("Lỗi:", error);
-      } finally {
-        setLoading(false);
+
+  const fetchData = async (searchKeyword = "") => {
+    setLoading(true);
+    try {
+      let endpoint = "";
+      if (searchKeyword) {
+        endpoint = `${import.meta.env.VITE_API_URL}/concert/search?keyword=${searchKeyword}&page=1&pageSize=200`;
+      } else {
+        endpoint = `${import.meta.env.VITE_API_URL}/concert?pageSize=200`;
       }
-    };
+
+      const response = await axios.get(endpoint);
+
+      if (response.data?.success) {
+        const resData = response.data.data;
+        const rawData = Array.isArray(resData) ? resData : resData?.items || [];
+
+        // --- CẬP NHẬT LOGIC LỌC TẠI ĐÂY ---
+        const activeEvents = rawData.filter((event, index, self) => {
+          // 1. Chỉ lấy những concert có is_on_sale là true
+          const isOnSale =
+            event.is_on_sale === true || event.status === "ON_SALE";
+
+          // 2. Lọc unique concert_id (để không bị trùng card khi có nhiều zone)
+          const isUnique =
+            self.findIndex((t) => t.concert_id === event.concert_id) === index;
+
+          return isOnSale && isUnique;
+        });
+
+        setEvents(activeEvents);
+      }
+    } catch (error) {
+      console.error("Lỗi fetch data:", error);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchData(searchTerm);
+  };
+
   return (
-    <div className="min-h-screen bg-white font-sans">
-      {/* Lớp nền đỏ nhạt lan tỏa ở dưới cùng */}
-      <div
-        className="fixed bottom-0 left-0 w-full h-[60%] pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(to top, rgba(141, 27, 27, 0.4) 0%, rgba(255, 255, 255, 0) 100%)",
-          zIndex: 0,
-        }}
-      />
-      <nav className="bg-white py-3 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto flex justify-start gap-16 text-[16px] font-black uppercase tracking-tight px-12">
-          <a
-            href="#"
-            className="text-[#8D1B1B] hover:opacity-70 transition-opacity"
-          >
-            Theatre & Arts
-          </a>
-          <a
-            href="#"
-            className="text-[#8D1B1B] hover:opacity-70 transition-opacity"
-          >
-            Sports
-          </a>
-          <a
-            href="#"
-            className="text-[#8D1B1B] hover:opacity-70 transition-opacity"
-          >
-            Seminars & Workshops
-          </a>
-          <a
-            href="#"
-            className="text-[#8D1B1B] hover:opacity-70 transition-opacity"
-          >
-            Resale ticket
-          </a>
+    // Chuyển nền trang sang màu đen (giống image_a2333d.png)
+    <div className="min-h-screen bg-[#111827] font-sans text-white">
+      {/* Nav Section */}
+      <nav className="bg-[#0A0A0A] py-6 border-b border-gray-900 relative z-10">
+        <div className="max-w-7xl mx-auto flex justify-start gap-12 text-[18px] font-[900] uppercase tracking-tighter px-12 items-end">
+          {[
+            {
+              name: "Theatre & Arts",
+              color: "bg-[#FF2D95]",
+              shadow: "shadow-[0_0_10px_#FF2D95]",
+              path: "#",
+            },
+            {
+              name: "Sports",
+              color: "bg-[#00E5FF]",
+              shadow: "shadow-[0_0_10px_#00E5FF]",
+              path: "#",
+            },
+            {
+              name: "Seminars & Workshops",
+              color: "bg-[#FF2D95]",
+              shadow: "shadow-[0_0_10px_#FF2D95]",
+              path: "#",
+            },
+            // Mục Resale Ticket sẽ dùng Link đặc biệt
+            {
+              name: "Resale Ticket",
+              color: "bg-[#00E5FF]",
+              shadow: "shadow-[0_0_10px_#00E5FF]",
+              path: "/resale-market",
+              isLink: true,
+            },
+          ].map((item) => (
+            <div
+              key={item.name}
+              className="flex flex-col items-center group cursor-pointer"
+            >
+              {item.isLink ? (
+                <Link
+                  to={item.path}
+                  className="text-white hover:text-[#00E5FF] transition-colors duration-200"
+                >
+                  {item.name}
+                </Link>
+              ) : (
+                <a
+                  href={item.path}
+                  className="text-white hover:text-gray-300 transition-colors duration-200"
+                >
+                  {item.name}
+                </a>
+              )}
+
+              {/* Thanh line neon phía dưới giữ nguyên để đồng bộ giao diện */}
+              <div
+                className={`h-[3px] w-full mt-2 ${item.color} ${item.shadow} transition-transform duration-300 group-hover:scale-x-110`}
+              ></div>
+            </div>
+          ))}
         </div>
       </nav>
 
-      {/* 2. Banner Slider - Chỉnh sửa tỉ lệ hình chữ nhật đứng */}
-      <section className="bg-gradient-to-b from-[#8D1B1B] to-[#0A0000] py-12 relative overflow-hidden">
+      {/* Slider Section - Cập nhật theo image_a2335d.png */}
+      <section className="bg-111827 py-12 relative overflow-hidden">
         <Swiper
-          effect={"coverflow"}
-          grabCursor={true}
-          centeredSlides={true}
-          slidesPerView={1.8}
+          // Chuyển sang slider phẳng đơn giản
+          slidesPerView={1}
+          spaceBetween={30}
           loop={true}
-          autoplay={{ delay: 10000 }}
-          coverflowEffect={{
-            rotate: 0,
-            stretch: -50,
-            depth: 150,
-            modifier: 1,
-            slideShadows: false,
-          }}
+          autoplay={{ delay: 5000 }}
           pagination={{ clickable: true, el: ".custom-pagination" }}
           navigation={{ nextEl: ".next-btn", prevEl: ".prev-btn" }}
-          modules={[EffectCoverflow, Pagination, Autoplay, Navigation]}
+          modules={[Pagination, Autoplay, Navigation]}
           className="max-w-7xl"
         >
           {sliderImages.map((img, index) => (
             <SwiperSlide key={index}>
-              {({ isActive }) => (
-                <div
-                  className={`transition-all duration-500 rounded-[35px] overflow-hidden shadow-2xl border-2 border-white/5 
-                  ${isActive ? "opacity-100 scale-105" : "opacity-40 scale-90 grayscale-[0.5]"}`}
-                >
-                  <img
-                    src={img}
-                    className="w-full h-[450px] object-cover"
-                    alt="Event"
-                  />
-                </div>
-              )}
+              <div className="rounded-[20px] overflow-hidden shadow-2xl border border-gray-800">
+                <img
+                  src={img}
+                  className="w-full h-[450px] object-cover"
+                  alt="Event Banner"
+                />
+              </div>
             </SwiperSlide>
           ))}
         </Swiper>
-
-        {/* Nút điều khiển - Trắng tinh khôi */}
         <div className="flex items-center justify-center gap-6 mt-8 relative z-20">
           <button className="prev-btn text-white/70 hover:text-white transition-colors cursor-pointer">
             <HiOutlineChevronLeft size={28} />
@@ -153,79 +180,153 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Section Search Bar */}
-      <section className="max-w-5xl mx-auto mt-12 mb-10 px-4">
-        <div className="bg-[#F9EAEA] p-3 rounded-md shadow-sm border border-[#8D1B1B]/30 flex items-center gap-3">
+      {/* Search Bar Section - Cập nhật theo image_a2335d.png */}
+      <section className="max-w-5xl mx-auto mt-12 mb-10 px-4 relative z-10">
+        {/* Thêm shadow-[0_0_15px_rgba(255,45,149,0.5)] để tạo hiệu ứng Glow hồng bao quanh */}
+        <div className="bg-[#E5E5E5] p-2 rounded-lg flex items-center gap-3 border border-[#FF2D95] shadow-[0_0_20px_2px_rgba(255,45,149,0.6)]">
           <div className="flex-1 flex items-center px-4">
-            <FaSearch className="text-gray-400 mr-3" />
+            {/* Icon search nhỏ và đậm hơn */}
+            <FaSearch className="text-black text-sm mr-4" />
             <input
               type="text"
               placeholder="Search Events"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)} // Cập nhật từ khóa khi gõ
-              className="bg-transparent w-full outline-none text-sm font-semibold text-gray-700"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              // Chỉnh text-black và font-bold
+              className="bg-transparent w-full outline-none text-lg font-bold text-black placeholder:text-gray-700"
             />
           </div>
-          <button className="bg-[#8D1B1B] text-white px-10 py-2 rounded-md text-sm font-bold shadow-md hover:bg-black transition-all">
+
+          <button
+            onClick={handleSearch}
+            // Nền hồng đậm, bo góc ít hơn (rounded-lg), chữ đen cực đậm (font-black)
+            className="bg-[#FF2D95] text-black px-8 py-3 rounded-md text-xl font-black transition-all hover:bg-[#ff4fa7]"
+          >
             Search
           </button>
         </div>
       </section>
 
-      {/* Section Event List */}
-      <section className="max-w-5xl mx-auto py-16 px-6 space-y-12">
+      {/* Event List Section - Cập nhật thẻ mới theo image_a2333d.png */}
+      <section className="max-w-6xl mx-auto py-10 px-6 space-y-8 relative z-10">
         {loading ? (
-          <div className="text-center font-bold">Loading...</div>
-        ) : filteredEvents.length > 0 ? (
-          filteredEvents.map((event) => (
-            <div
-              key={event.concert_id}
-              className="bg-[#F7F7E8] rounded-xl flex flex-col md:flex-row items-center p-6 
-             shadow-[0_0_20px_rgba(255,223,137,0.5)] border-y-4 border-orange-100/30
-             relative transition-transform hover:scale-[1.02]"
-            >
-              {/* Ảnh Concert */}
-              <div className="w-full md:w-80 h-52 rounded-xl overflow-hidden shrink-0 shadow-lg">
-                <img
-                  src={
-                    event.banner_url || "https://placehold.co/600x400?text=Ảnh"
-                  }
-                  className="w-full h-full object-cover"
-                  alt={event.title}
-                />
-              </div>
-
-              {/* Thông tin */}
-              <div className="flex-1 px-10 py-4 text-center md:text-left">
-                <h4 className="text-xl font-black text-gray-900 leading-tight mb-4 tracking-tight">
-                  {event.title}
-                </h4>
-                <p className="text-gray-800 font-bold text-base">
-                  {event.location ||
-                    "Bangkok | Impact Arena, Muang Thong Thani"}
-                </p>
-              </div>
-
-              {/* Nút Find Ticket - Thêm onClick để chuyển trang */}
-              <button
-                onClick={() => navigate(`/concert/${event.concert_id}`)}
-                className="absolute top-6 right-6 md:static bg-[#8D1B1B] text-white px-5 py-2 text-sm font-black rounded-xl uppercase border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+          <div className="text-center py-20">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-[#FF2D95] border-t-transparent rounded-full mb-2"></div>
+            <p className="font-bold text-gray-400">Loading Events...</p>
+          </div>
+        ) : currentItems.length > 0 ? (
+          <>
+            {currentItems.map((event) => (
+              <div
+                key={event.concert_id}
+                // Viền hồng neon tỏa sáng (Glow effect)
+                className="bg-[#1A1A1A] rounded-xl flex flex-col md:flex-row items-center p-5 border border-[#FF2D95]/30 shadow-[0_0_20px_rgba(255,45,149,0.4)] transition-all hover:scale-[1.01]"
               >
-                FIND TICKET
+                {/* Hình ảnh banner */}
+                <div className="w-full md:w-80 h-52 rounded-lg overflow-hidden shrink-0 shadow-2xl">
+                  <img
+                    src={
+                      event.banner_url ||
+                      `https://picsum.photos/seed/${event.concert_id}/600/400`
+                    }
+                    className="w-full h-full object-cover"
+                    alt={event.title}
+                  />
+                </div>
+
+                {/* Nội dung thông tin */}
+                <div className="flex-1 px-8 py-4 text-center md:text-left">
+                  <h4 className="text-2xl font-bold text-white mb-4 leading-tight tracking-tight">
+                    {event.title}
+                  </h4>
+                  <div className="space-y-1">
+                    <p className="text-gray-400 text-lg font-medium italic">
+                      {event.artist}
+                    </p>
+                    <p className="text-gray-500 text-base">
+                      {event.city} | {event.venue_name}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Nút Find Ticket kiểu Outline Xanh Neon */}
+                <div className="w-full md:w-auto px-6">
+                  <button
+                    onClick={() => navigate(`/concert/${event.concert_id}`)}
+                    className="border-2 border-[#00F0FF] text-[#00F0FF] px-6 py-2 rounded-lg text-sm font-black uppercase tracking-widest hover:bg-[#00F0FF] hover:text-black transition-all duration-300 shadow-[0_0_10px_rgba(0,240,255,0.2)]"
+                  >
+                    Find Ticket
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Pagination Controls */}
+            <div className="flex justify-center items-center gap-2 mt-12 mb-20">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => {
+                  setCurrentPage((prev) => prev - 1);
+                  window.scrollTo({ top: 500, behavior: "smooth" });
+                }}
+                className="px-4 py-2 bg-[#1A1A1A] text-white border border-gray-700 rounded-lg disabled:opacity-30 font-bold hover:bg-gray-800 transition-all"
+              >
+                Prev
+              </button>
+
+              <div className="flex gap-2">
+                {[...Array(totalPages)].map((_, index) => {
+                  const p = index + 1;
+                  if (
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= currentPage - 1 && p <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          setCurrentPage(p);
+                          window.scrollTo({ top: 500, behavior: "smooth" });
+                        }}
+                        className={`w-10 h-10 rounded-lg font-bold transition-all ${
+                          currentPage === p
+                            ? "bg-[#00E5FF] text-black shadow-[0_0_15px_rgba(0,229,255,0.6)]"
+                            : "bg-[#1A1A1A] text-gray-400 border border-gray-800 hover:bg-gray-800"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => {
+                  setCurrentPage((prev) => prev + 1);
+                  window.scrollTo({ top: 500, behavior: "smooth" });
+                }}
+                className="px-4 py-2 bg-[#1A1A1A] text-white border border-gray-700 rounded-lg disabled:opacity-30 font-bold hover:bg-gray-800 transition-all"
+              >
+                Next
               </button>
             </div>
-          ))
+          </>
         ) : (
-          <div className="text-center py-10 text-gray-500 font-bold">
-            Không tìm thấy concert nào phù hợp với "{searchTerm}"
+          <div className="text-center py-20 text-gray-500 font-bold text-xl">
+            No concerts found for "{searchTerm}".
           </div>
         )}
       </section>
 
-      {/* Style tùy chỉnh cho Swiper dots */}
       <style>{`
-        .custom-pagination .swiper-pagination-bullet { background: #888 !important; opacity: 0.5; width: 8px; height: 8px; margin: 0 4px !important; }
-        .custom-pagination .swiper-pagination-bullet-active { background: #7C4DFF !important; opacity: 1; transform: scale(1.2); }
+        /* Cập nhật style pagination của slider theo màu đỏ của UI */
+        .custom-pagination .swiper-pagination-bullet { background: #fff !important; opacity: 0.5; width: 8px; height: 8px; }
+        .custom-pagination .swiper-pagination-bullet-active { background: #FF2D95 !important; opacity: 1; transform: scale(1.3); }
       `}</style>
     </div>
   );

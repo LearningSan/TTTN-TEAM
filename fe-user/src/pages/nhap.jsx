@@ -1,246 +1,444 @@
 import React, { useState, useEffect } from "react";
-import { RiEyeOffLine, RiEyeLine } from "react-icons/ri";
-import { FcGoogle } from "react-icons/fc";
-import { FaFacebook } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { motion } from "framer-motion";
-import { AiFillHome } from "react-icons/ai";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import {
+  HiOutlineChevronLeft,
+  HiZoomIn,
+  HiZoomOut,
+  HiRefresh,
+  HiMinus,
+  HiPlus,
+} from "react-icons/hi";
 
-const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+const Selection = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [concert, setConcert] = useState(null);
+  const [zones, setZones] = useState([]);
+  const [seatsByTier, setSeatsByTier] = useState({}); // Lưu ghế theo Tier (VIP, MID...)
 
-  // 2. Hàm mở Popup Google
-  const handleGoogleLogin = () => {
-    const width = 500;
-    const height = 600;
-    const left = window.screen.width / 2 - width / 2;
-    const top = window.screen.height / 2 - height / 2;
+  const [activeZone, setActiveZone] = useState(null);
+  const [selectedSeats, setSelectedSeats] = useState([]);
+  const [standingQty, setStandingQty] = useState({});
 
-    const apiUrl = import.meta.env.VITE_API_URL;
+  const zoneColors = ["#bb69db", "#380c0c", "#F5DEB3", "#8D1B1B", "#00F0FF"];
 
-    const popup = window.open(
-      `${apiUrl}/auth/google`,
-      "Google Login",
-      `width=${width},height=${height},left=${left},top=${top}`,
-    );
+  useEffect(() => {
+    const initData = async () => {
+      if (!id || id === "undefined") return;
+      try {
+        setLoading(true);
+        const concertRes = await axios.post(
+          `${import.meta.env.VITE_API_URL}/concert/${id}`,
+          { concert_id: id },
+        );
+        setConcert(concertRes.data?.data || concertRes.data);
 
-    if (!popup || popup.closed || typeof popup.closed === "undefined") {
-      alert("Vui lòng cho phép trình duyệt mở Popup để đăng nhập Google!");
-    }
-  };
-  // 3. Hàm mở Popup Facebook
-  const handleFacebookLogin = () => {
-    const width = 600;
-    const height = 700;
-    const left = window.screen.width / 2 - width / 2;
-    const top = window.screen.height / 2 - height / 2;
+        const zonesRes = await axios.post(
+          `${import.meta.env.VITE_API_URL}/zone`,
+          { concert_id: id },
+        );
+        const allZones = zonesRes.data?.data || [];
+        setZones(allZones);
 
-    const apiUrl = import.meta.env.VITE_API_URL;
-
-    // Gọi đến Route khởi tạo Facebook Auth trên Backend
-    window.open(
-      `${apiUrl}/auth/facebook`,
-      "Facebook Login",
-      `width=${width},height=${height},left=${left},top=${top}`,
-    );
-  };
-  const validatePassword = (pass) => {
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
-    return regex.test(pass);
-  };
-  // 4. Hàm xử lý Login thông thường
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    // Kiểm tra định dạng mật khẩu trước khi gọi API
-    if (!validatePassword(password)) {
-      alert("Mật khẩu phải bao gồm chữ hoa, chữ thường và số!");
-      return;
-    }
-    try {
-      const response = await axios({
-        method: "post",
-        url: `${import.meta.env.VITE_API_URL}/login`,
-        data: {
-          email: email,
-          password: password,
-        },
-        withCredentials: true,
-        // CHỈ để lại Content-Type, không thêm bất kỳ header nào khác
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      // Trong handleLogin
-      if (response.data && (response.data.user_id || response.data.email)) {
-        const userData = response.data; // Giả sử API login cũng trả về Object user trực tiếp
-        localStorage.setItem("user", JSON.stringify(userData));
-
-        // QUAN TRỌNG: Kích hoạt sự kiện để MainLayout nhận diện tên ngay lập tức
-        window.dispatchEvent(new Event("storage"));
-
-        alert("Đăng nhập thành công!");
-        navigate("/");
+        if (allZones.length > 0) setActiveZone(allZones[0].zone_id);
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      const serverMessage = error.response?.data?.message || "Lỗi hệ thống!";
-      alert(serverMessage);
-      console.error("Login error:", error);
-    }
+    };
+    initData();
+  }, [id]);
+
+  useEffect(() => {
+    const fetchSeats = async () => {
+      if (!activeZone) return;
+      const currentZone = zones.find((z) => z.zone_id === activeZone);
+
+      if (currentZone?.has_seat_map) {
+        try {
+          const res = await axios.post(`${import.meta.env.VITE_API_URL}/seat`, {
+            concert_id: id,
+            zone_id: activeZone,
+          });
+          if (res.data?.success) {
+            setSeatsByTier(res.data.data);
+          }
+        } catch (err) {
+          console.error("Lỗi lấy danh sách ghế", err);
+          setSeatsByTier({});
+        }
+      } else {
+        setSeatsByTier({});
+      }
+    };
+    fetchSeats();
+  }, [activeZone, id, zones]);
+
+  const handleSeatClick = (seat, zone) => {
+    if (seat.status !== "AVAILABLE") return;
+    setSelectedSeats((prev) => {
+      if (prev.find((s) => s.seat_id === seat.seat_id)) {
+        return prev.filter((s) => s.seat_id !== seat.seat_id);
+      }
+      return [
+        ...prev,
+        { ...seat, zone_id: zone.zone_id, zone_name: zone.zone_name },
+      ];
+    });
   };
+
+  const handleUpdateStandingQty = (zoneId, delta, available) => {
+    setStandingQty((prev) => {
+      const current = prev[zoneId] || 0;
+      const newVal = Math.max(0, Math.min(current + delta, available));
+      return { ...prev, [zoneId]: newVal };
+    });
+  };
+
+  const calculateTotal = () => {
+    const seatTotal = selectedSeats.reduce((sum, s) => sum + (s.price || 0), 0);
+    const standingTotal = zones.reduce((sum, z) => {
+      if (!z.has_seat_map) {
+        return sum + (standingQty[z.zone_id] || 0) * z.price;
+      }
+      return sum;
+    }, 0);
+    return seatTotal + standingTotal;
+  };
+
+  // Vị trí hiển thị các Zone trên sơ đồ tổng quát
+  const getZoneStyle = (index) => ({
+    left: `${(index % 3) * 320 + 50}px`,
+    top: `${Math.floor(index / 3) * 220 + 150}px`,
+    width: "280px",
+    height: "180px",
+  });
+
+  if (loading)
+    return (
+      <div className="h-screen bg-black text-white flex items-center justify-center font-black">
+        ĐANG TẢI...
+      </div>
+    );
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen flex flex-col bg-white font-sans relative overflow-hidden"
-    >
-      {/* 2 Đốm màu Glow ở nền (Hồng bên trái trên, Xanh bên phải dưới) */}
-      <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-[#FF2D95] opacity-[0.08] blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#00E5FF] opacity-[0.08] blur-[120px] rounded-full pointer-events-none" />
-      {/* Header */}
-
-      <main className="flex-1 flex items-center justify-center p-4 z-10">
-        {/* KHUNG VIỀN GRADIENT: Giảm padding xuống 1px để viền thanh mảnh hơn */}
-        <div className="relative p-[3px] rounded-[40px] bg-gradient-to-r from-[#FF2D95] to-[#00E5FF] overflow-hidden">
-          <div className="bg-white w-[400px] rounded-[39px] p-10 flex flex-col items-start">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2 tracking-tight">
-              WELCOME BACK !
-            </h1>
-            <p className="text-xm text-gray-400 mb-8 font-medium">
-              Don't have an account,{" "}
-              <Link to="/register" className="text-blue-400 hover:underline">
-                Sign up
-              </Link>
+    <div className="flex h-screen bg-[#0A0A0A] text-white overflow-hidden font-sans">
+      {/* CỘT TRÁI: SƠ ĐỒ TRỰC QUAN */}
+      <div className="flex-[0.7] relative flex flex-col border-r border-gray-900 bg-black">
+        {/* Header điều hướng */}
+        <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between z-20 bg-gradient-to-b from-black to-transparent">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 hover:text-[#8D1B1B] font-black uppercase text-xs"
+          >
+            <HiOutlineChevronLeft size={24} /> Trở về
+          </button>
+          {/* Tiêu đề & hướng dẫn */}
+          <div className="text-center">
+            <h2 className="text-white text-xl font-black uppercase tracking-tighter">
+              Sơ đồ sân khấu
+            </h2>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+              Nhấp vào khu vực để xem chi tiết
             </p>
+          </div>
+          <div className="w-20" />
+        </div>
+        {/* Khu vực chính giữa: Sơ đồ tổng quát & Chọn ghế chi tiết */}
+        <div className="flex-1 flex items-center justify-center relative">
+          <TransformWrapper minScale={0.1} initialScale={0.5} centerOnInit>
+            {({ zoomIn, zoomOut, resetTransform }) => (
+              <>
+                <div className="absolute bottom-10 left-10 z-20 flex flex-col gap-3">
+                  <button
+                    onClick={() => zoomIn()}
+                    className="p-3 bg-white/10 rounded-full border border-white/20 hover:bg-white/20"
+                  >
+                    <HiZoomIn size={20} />
+                  </button>
+                  <button
+                    onClick={() => zoomOut()}
+                    className="p-3 bg-white/10 rounded-full border border-white/20 hover:bg-white/20"
+                  >
+                    <HiZoomOut size={20} />
+                  </button>
+                  <button
+                    onClick={() => resetTransform()}
+                    className="p-3 bg-[#8D1B1B] rounded-full shadow-lg shadow-red-900/40"
+                  >
+                    <HiRefresh size={20} />
+                  </button>
+                </div>
+                {/* Sơ đồ tổng quát */}
+                <TransformComponent wrapperClass="!w-full !h-full">
+                  <div
+                    className="relative bg-[#111] border border-gray-900 shadow-2xl rounded-lg"
+                    style={{ width: 1100, height: 700 }}
+                  >
+                    {/* Sân khấu */}
+                    <div
+                      className="absolute bg-gray-700 flex items-center justify-center border-b-8 border-gray-600 rounded-b-xl shadow-xl"
+                      style={{ left: 350, top: 20, width: 400, height: 80 }}
+                    >
+                      <span className="text-xl font-black text-gray-400 uppercase tracking-[0.5em]">
+                        SÂN KHẤU
+                      </span>
+                    </div>
 
-            <form className="w-full space-y-5" onSubmit={handleLogin}>
-              {/* Email với viền Gradient */}
-              <div className="space-y-2">
-                <label className="text-xm font-semibold font-['Nunito'] ml-2">
-                  Email
-                </label>
-                <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
-                  <input
-                    type="email"
-                    placeholder="deniel123@gmail.com......."
-                    className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                    {/* Danh sách các khu vực (Zone) */}
+                    {zones.map((zone, index) => {
+                      const isActive = activeZone === zone.zone_id;
+                      const style = getZoneStyle(index);
+                      return (
+                        <div
+                          key={zone.zone_id}
+                          onClick={() => setActiveZone(zone.zone_id)}
+                          className={`absolute flex flex-col items-center justify-center cursor-pointer transition-all border-4 rounded-2xl p-4 text-center
+                            ${isActive ? "bg-[#8D1B1B]/40 border-white scale-105 z-10 shadow-[0_0_30px_rgba(255,255,255,0.2)]" : "bg-gray-900/60 border-gray-800 hover:border-gray-500"}`}
+                          style={style}
+                        >
+                          <span className="font-black text-sm uppercase mb-1 tracking-tighter">
+                            {zone.zone_name}
+                          </span>
+                          <span className="text-[9px] text-gray-400 font-bold uppercase mb-2">
+                            {zone.has_seat_map
+                              ? "(Chọn chỗ ngồi)"
+                              : "(Khu đứng)"}
+                          </span>
+                          <span className="text-sm font-black text-[#FFD700] bg-black/40 px-3 py-1 rounded-full border border-yellow-600/30">
+                            {zone.price} ETH
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </TransformComponent>
+              </>
+            )}
+          </TransformWrapper>
+
+          {/* Sơ đồ chọn ghế chi tiết hiện lên khi nhấn vào khu vực Ngồi */}
+          {activeZone &&
+            zones.find((z) => z.zone_id === activeZone)?.has_seat_map && (
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] bg-black/90 backdrop-blur-xl p-6 rounded-[32px] border border-white/10 shadow-2xl z-30 animate-fadeIn">
+                <div className="flex justify-between items-center mb-4 px-4">
+                  <h3 className="font-black text-xs uppercase tracking-widest text-gray-400">
+                    Khu vực:{" "}
+                    <span className="text-white">
+                      {zones.find((z) => z.zone_id === activeZone)?.zone_name}
+                    </span>
+                  </h3>
+                  <div className="flex gap-4 text-[10px] font-bold uppercase">
+                    <span className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>{" "}
+                      Trống
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>{" "}
+                      Đang chọn
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-red-600 rounded-full"></div> Đã
+                      bán
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-6 max-h-[250px] overflow-y-auto p-2 scrollbar-hide">
+                  {Object.keys(seatsByTier).length > 0 ? (
+                    Object.entries(seatsByTier).map(([tierName, seatList]) => (
+                      <div
+                        key={tierName}
+                        className="flex flex-col items-center gap-2"
+                      >
+                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">
+                          {tierName}
+                        </span>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {seatList.map((seat) => {
+                            const isSelected = selectedSeats.some(
+                              (s) => s.seat_id === seat.seat_id,
+                            );
+                            const isOccupied = seat.status !== "AVAILABLE";
+                            return (
+                              <button
+                                key={seat.seat_id}
+                                disabled={isOccupied}
+                                onClick={() =>
+                                  handleSeatClick(
+                                    seat,
+                                    zones.find((z) => z.zone_id === activeZone),
+                                  )
+                                }
+                                className={`w-9 h-9 rounded-lg text-[10px] font-black transition-all border
+                                ${
+                                  isOccupied
+                                    ? "bg-red-600 border-transparent text-white opacity-40 cursor-not-allowed"
+                                    : isSelected
+                                      ? "bg-green-500 border-white text-black scale-110 shadow-lg"
+                                      : "bg-white text-black hover:bg-gray-200"
+                                }`}
+                              >
+                                {seat.seat_label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 font-bold uppercase py-10">
+                      Đang tải ghế...
+                    </p>
+                  )}
                 </div>
               </div>
+            )}
+        </div>
+      </div>
 
-              {/* Password với viền Gradient */}
-              <div className="space-y-2">
-                <label className="text-xm font-bold text-gray-700 ml-2">
-                  Password
-                </label>
-                <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
-                  <div className="relative bg-white rounded-full">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••"
-                      className="w-full px-6 py-3 rounded-full bg-transparent outline-none text-sm"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
+      {/* CỘT PHẢI: GIỎ HÀNG & THANH TOÁN */}
+      <div className="flex-[0.3] bg-[#0F0F0F] flex flex-col p-8 border-l border-gray-900">
+        <div className="mb-8">
+          <h1 className="text-2xl font-black uppercase tracking-tighter mb-2 leading-tight">
+            {concert?.concert?.title || concert?.title}
+          </h1>
+          <p className="text-gray-500 font-bold text-sm">
+            📍 {concert?.venue?.name || "Địa điểm chưa xác định"}
+          </p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+          <p className="text-gray-600 font-black text-[10px] uppercase tracking-widest mb-4">
+            Hạng vé & Số lượng
+          </p>
+          {zones.map((zone, index) => {
+            const isSelected = activeZone === zone.zone_id;
+            const quantity = zone.has_seat_map
+              ? selectedSeats.filter((s) => s.zone_id === zone.zone_id).length
+              : standingQty[zone.zone_id] || 0;
+
+            return (
+              <div
+                key={zone.zone_id}
+                onClick={() => setActiveZone(zone.zone_id)}
+                className={`p-5 rounded-2xl transition-all border-2 cursor-pointer ${isSelected ? "bg-[#1A1A1A] border-[#8D1B1B]" : "bg-transparent border-gray-900 hover:border-gray-800"}`}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
                     <div
-                      className="absolute right-5 top-1/2 -translate-y-1/2 text-blue-300 cursor-pointer"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <RiEyeLine size={18} />
-                      ) : (
-                        <RiEyeOffLine size={18} />
-                      )}
+                      className="w-2 h-10 rounded-full"
+                      style={{
+                        backgroundColor: zoneColors[index % zoneColors.length],
+                      }}
+                    ></div>
+                    <div>
+                      <p className="font-black text-xs uppercase">
+                        {zone.zone_name}
+                      </p>
+                      <p className="text-xs text-[#FFD700] font-black">
+                        {zone.price} ETH
+                      </p>
+                      <p className="text-[9px] text-gray-500 font-bold">
+                        CÒN TRỐNG: {zone.available_seats}
+                      </p>
                     </div>
                   </div>
+                  {!zone.has_seat_map ? (
+                    <div className="flex items-center gap-3 bg-black rounded-full p-1.5 border border-gray-800">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUpdateStandingQty(
+                            zone.zone_id,
+                            -1,
+                            zone.available_seats,
+                          );
+                        }}
+                        className="w-8 h-8 flex items-center justify-center bg-gray-900 rounded-full text-gray-400 hover:text-white"
+                      >
+                        <HiMinus />
+                      </button>
+                      <span className="w-4 text-center font-black text-sm">
+                        {quantity}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUpdateStandingQty(
+                            zone.zone_id,
+                            1,
+                            zone.available_seats,
+                          );
+                        }}
+                        className="w-8 h-8 flex items-center justify-center bg-[#8D1B1B] rounded-full text-white"
+                      >
+                        <HiPlus />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-right">
+                      <span className="text-2xl font-black text-white">
+                        {quantity}
+                      </span>
+                      <span className="text-[8px] text-gray-500 font-bold uppercase ml-1">
+                        vé
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Remember & Forgot */}
-              <div className="flex justify-between items-center px-2 text-[11px] text-gray-500 font-semibold">
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  {/* 1. Input vẫn là peer */}
-                  <input type="checkbox" className="sr-only peer" />
-
-                  {/* 2. Vòng tròn ngoài: Ta thêm class: peer-checked:[&_div]:opacity-100 
-                  Nghĩa là: Khi peer được check, tìm thẻ div bên trong và cho nó hiện lên.*/}
-                  <div
-                    className="
-                    w-6 h-6 rounded-full border-2 border-blue-200 
-                    flex items-center justify-center 
-                    transition-all duration-200
-                  peer-checked:border-blue-400 peer-checked:bg-blue-50
-                    peer-checked:[&_div]:opacity-100 peer-checked:[&_div]:scale-100
-                    "
-                  >
-                    {/* 3. Chấm tròn nhỏ: Bỏ hoàn toàn peer-checked ở đây để tránh xung đột. */}
-                    <div
-                      className="
-                      w-3 h-3 rounded-full bg-blue-500
-                      opacity-0 scale-0
-                      transition-all duration-200
-                      "
-                    />
-                  </div>
-
-                  <span className="text-gray-800 select-none">Remember me</span>
-                </label>
-                <Link
-                  to="/forgot-password"
-                  size={18}
-                  className="hover:text-gray-800"
-                >
-                  Forget password?
-                </Link>
-              </div>
-
-              {/* Button Sign In */}
-              <button
-                type="submit"
-                className="w-full py-4 bg-gradient-to-r from-[#FF2D95] to-[#00E5FF] text-white font-bold rounded-full text-base shadow-md hover:opacity-90 transition-all active:scale-[0.98]"
-              >
-                Sign In
-              </button>
-
-              {/* Or continue with */}
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="flex-shrink mx-4 text-[10px] text-gray-500 font-medium uppercase tracking-widest">
-                  or continue with
-                </span>
-                <div className="flex-grow border-t border-gray-200"></div>
-              </div>
-
-              {/* Social Buttons */}
-              <div className="flex gap-4 w-full">
-                <button
-                  onClick={handleGoogleLogin}
-                  type="button"
-                  className="flex-1 py-3 border border-blue-400 rounded-xl flex justify-center items-center hover:bg-gray-200"
-                >
-                  <FcGoogle size={24} />
-                </button>
-                <div className="flex-1 py-3 rounded-xl flex justify-center items-center"></div>
-                <button
-                  onClick={handleFacebookLogin}
-                  type="button"
-                  className="flex-1 py-3 border border-blue-400 rounded-xl flex justify-center items-center hover:bg-gray-200"
-                >
-                  <FaFacebook size={24} className="text-[#1877F2]" />
-                </button>
-              </div>
-            </form>
-          </div>
+            );
+          })}
         </div>
-      </main>
-    </motion.div>
+
+        <div className="mt-8 pt-6 border-t border-gray-900 bg-[#0F0F0F]">
+          <div className="flex justify-between items-end mb-6">
+            <div>
+              <p className="text-[10px] font-black text-gray-600 uppercase mb-1">
+                Tổng cộng (
+                {selectedSeats.length +
+                  Object.values(standingQty).reduce((a, b) => a + b, 0)}{" "}
+                vé)
+              </p>
+              <p className="text-4xl font-black text-white">
+                {calculateTotal()}{" "}
+                <span className="text-xs text-gray-500 font-bold uppercase">
+                  ETH
+                </span>
+              </p>
+            </div>
+          </div>
+          <button
+            disabled={calculateTotal() === 0}
+            onClick={() =>
+              navigate(`/concert/${id}/checkout`, {
+                state: {
+                  selectedSeats,
+                  standingTickets: standingQty,
+                  concert: concert?.concert || concert,
+                  total: calculateTotal(),
+                },
+              })
+            }
+            className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest transition-all text-sm
+              ${calculateTotal() > 0 ? "bg-[#8D1B1B] text-white shadow-xl shadow-red-900/30 hover:scale-105 active:scale-95" : "bg-gray-800 text-gray-600 cursor-not-allowed"}`}
+          >
+            Tiếp tục thanh toán <span className="ml-1">→</span>
+          </button>
+        </div>
+      </div>
+      <style>{`
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+      `}</style>
+    </div>
   );
 };
 
-export default Login;
+export default Selection;

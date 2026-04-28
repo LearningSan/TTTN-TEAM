@@ -20,6 +20,7 @@ import MyTicket from "./pages/MyTicket";
 import Payment from "./pages/Payment";
 import ProfilePage from "./pages/Profile";
 import ResaleMarket from "./pages/ResaleMarket";
+import Selection from "./pages/Selection";
 
 import LoginButton from "./pages/nhap";
 
@@ -43,6 +44,7 @@ function AnimatedRoutes() {
         </Route>
 
         {/* NHÓM 2: Các trang KHÔNG dùng Header (Login/Register/Quên mật khẩu) */}
+        <Route path="/concert/:id/selection" element={<Selection />} />
         <Route path="/payment" element={<Payment />} />
         <Route
           path="/concert/:concertId/zone/:zoneId"
