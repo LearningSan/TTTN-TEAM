@@ -66,13 +66,13 @@ const OrderDetailModal = ({ orderId, open, onCancel }) => {
               <Descriptions.Item label="Mã giao dịch nạp (Mua)" span={2}>
                 {data.paymentTxHash ? <Text copyable type="secondary">{data.paymentTxHash}</Text> : 'N/A'}
               </Descriptions.Item>
-              <Descriptions.Item label="Mã giao dịch trả (Hoàn tiền)" span={2}>
+              {/* <Descriptions.Item label="Mã giao dịch trả (Hoàn tiền)" span={2}>
                 {data.refundTxHash ? (
                   <a href={`https://sepolia.etherscan.io/tx/${data.refundTxHash}`} target="_blank" rel="noreferrer">
                     <Text strong type="success">{data.refundTxHash}</Text>
                   </a>
                 ) : <Text italic type="secondary">Chưa hoàn tiền</Text>}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
               <Descriptions.Item label="Ghi chú" span={2}>{data.note || 'Không có ghi chú'}</Descriptions.Item>
             </Descriptions>

@@ -18,7 +18,7 @@ const OrderFilterBar = ({ keyword, setKeyword, filterStatus, setFilterStatus, on
   return (
     <div style={{ marginBottom: 16, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
       <Input
-        placeholder="Tìm theo Mã đơn, Email, Tên khách..."
+        placeholder="Tìm theo Email, Tên khách, Tên Concert.."
         allowClear
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}

@@ -27,9 +27,11 @@ const OrderManagement = () => {
       message.error("Lỗi khi tải danh sách đơn hàng!");
     } finally { setLoading(false); }
   }, [filterStatus, keyword]);
+
   const handleFilter = useCallback((st) => {
-    fetchOrders(1, pagination.pageSize, keyword, st !== undefined ? st : filterStatus);
+    fetchOrders(1, pagination.pageSize, st !== undefined ? st : filterStatus, keyword);
   }, [fetchOrders, pagination.pageSize, keyword, filterStatus]);
+
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
@@ -37,7 +39,7 @@ const OrderManagement = () => {
   const handleReset = () => {
     setFilterStatus(null);
     setKeyword('');
-    fetchOrders(1, 10, '', null);
+    fetchOrders(1, 10, null, '');
   };
 
   return (
