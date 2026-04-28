@@ -321,7 +321,7 @@ const ResaleMarket = () => {
                       className="font-black text-right text-lg mt-2 tracking-wide" 
                       style={{ color: themeColor }}
                     >
-                      {(ticket.price?.unit_price || 0).toLocaleString()} VNĐ
+                      {(ticket.price?.unit_price || 0).toLocaleString()} Đ
                     </div>
                   </div>
                 </div>

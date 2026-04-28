@@ -18,6 +18,7 @@ const Login = () => {
   const location = useLocation();
   const from = location.state?.from || "/";
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchParams] = useSearchParams();
   const verified = searchParams.get("verified");
   const error = searchParams.get("error");
@@ -52,9 +53,6 @@ const Login = () => {
 
       if (event.origin !== serverOrigin) return;
 
-      // Sửa đoạn code trong image_c05f7a.png của bạn
-      // Trong file Login.jsx, đoạn xử lý Google Login
-      // TRONG FILE Login.jsx
       if (event.data === "LOGIN_SUCCESS") {
         axios
           .get(`${import.meta.env.VITE_API_URL}/me`, { withCredentials: true })
@@ -119,7 +117,7 @@ const Login = () => {
     );
   };
   const validatePassword = (pass) => {
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     return regex.test(pass);
   };
   // 4. Hàm xử lý Login thông thường
@@ -127,9 +125,13 @@ const Login = () => {
     e.preventDefault();
     // Kiểm tra định dạng mật khẩu trước khi gọi API
     if (!validatePassword(password)) {
-      alert("Mật khẩu phải bao gồm chữ hoa, chữ thường và số!");
+      alert("Mật khẩu phải bao gồm chữ hoa, chữ thường và số và có ít nhất 8 ký tự!");
       return;
     }
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
     try {
       const response = await axios({
         method: "post",
@@ -157,9 +159,14 @@ const Login = () => {
         navigate(from);
       }
     } catch (error) {
-      const serverMessage = error.response?.data?.message || "Lỗi hệ thống!";
+      let serverMessage = error.response?.data?.message || "Lỗi hệ thống!";
+      if (serverMessage === "Invalid email or password") {
+        serverMessage = "Email hoặc mật khẩu không chính xác!";
+      }
       alert(serverMessage);
       console.error("Login error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
   return (
@@ -282,16 +289,18 @@ const Login = () => {
               {/* Button Sign In */}
               <button
                 type="submit"
-                className="w-full py-4 
+                disabled={isSubmitting}
+                className={`w-full py-4 
                   bg-gradient-to-r from-[#FF2D95] via-[#9181C4] to-[#2BF3E0] 
-                  text-lg  text-white font-extrabold font-['Nunito'] tracking-wider 
+                  text-lg text-white font-extrabold font-['Nunito'] tracking-wider 
                   rounded-full 
                   shadow-[0_10px_20px_-5px_rgba(255,45,149,0.4)] 
-                  ring-1 ring-inset ring-white/20 /* Tạo viền sáng xung quanh button */
+                  ring-1 ring-inset ring-white/20 
                   hover:brightness-120 hover:shadow-[0_15px_25px_-5px_rgba(255,45,149,0.5)] 
-                  transition-all duration-300 active:scale-[0.97]"
+                  transition-all duration-300 active:scale-[0.97]
+                  ${isSubmitting ? "opacity-70 cursor-not-allowed" : ""}`}
               >
-                Sign In
+                {isSubmitting ? "Processing..." : "Sign In"}
               </button>
 
               {/* Or continue with */}

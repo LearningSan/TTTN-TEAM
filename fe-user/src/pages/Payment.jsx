@@ -5,22 +5,39 @@ import axios from "axios";
 import { IoShieldCheckmarkSharp } from "react-icons/io5";
 
 const Payment = () => {
-  const { state } = useLocation();
+  const { state: locationState } = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentAccount, setCurrentAccount] = useState("");
 
+  // 🔄 Logic khôi phục dữ liệu khi Refresh trang
+  const [state, setState] = useState(locationState);
+
+  useEffect(() => {
+    if (locationState) {
+      // Nếu vào từ điều hướng bình thường, lưu vào sessionStorage
+      sessionStorage.setItem("pendingPaymentData", JSON.stringify(locationState));
+      setState(locationState);
+    } else {
+      // Nếu refresh (locationState null), thử lấy từ sessionStorage
+      const savedData = sessionStorage.getItem("pendingPaymentData");
+      if (savedData) {
+        setState(JSON.parse(savedData));
+      }
+    }
+  }, [locationState]);
+
   if (!state) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-red-500 font-bold">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0A0A0A]">
+        <p className="text-red-500 font-bold mb-4">
           Không tìm thấy thông tin giao dịch!
         </p>
         <button
-          onClick={() => navigate("/my-tickets")}
-          className="mt-4 text-blue-500 underline"
+          onClick={() => navigate("/")}
+          className="px-6 py-2 bg-[#00E5FF] text-black font-bold rounded-full uppercase text-xs"
         >
-          Quay lại trang vé của tôi
+          Quay lại Home
         </button>
       </div>
     );
@@ -28,10 +45,12 @@ const Payment = () => {
 
   const isResale = state?.isResale;
   const nftData = state?.nftData;
-  const amountVND = state?.amount || 0;
+  const rawAmount = state?.amount || 0;
   const paymentId = state?.paymentId || state?.payment_id;
 
-  const ethAmount = (amountVND / 60000000).toFixed(6);
+  // Nếu là Resale, rawAmount đã là ETH. Nếu là Official, rawAmount là VNĐ.
+  const ethAmount = isResale ? rawAmount : (rawAmount / 60000000).toFixed(6);
+  const vmdAmount = isResale ? (rawAmount * 60000000) : rawAmount;
   const NFT_ABI = [
     "function transferFrom(address from, address to, uint256 tokenId) public",
     "function approve(address to, uint256 tokenId) public",
@@ -80,8 +99,16 @@ const Payment = () => {
     }
     setLoading(true);
     try {
+      console.log("📦 NFT Data Debug:", nftData);
+
+      if (!nftData.contract_address || !nftData.token_id) {
+        throw new Error("Dữ liệu vé NFT không hợp lệ hoặc bị thiếu (Token ID/Contract Address).");
+      }
+
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
+      const currentAccount = (await signer.getAddress()).toLowerCase();
+
       const contract = new ethers.Contract(
         nftData.contract_address,
         NFT_ABI,
@@ -89,10 +116,11 @@ const Payment = () => {
       );
 
       if (isSeller) {
-        console.log("🔌 Seller approving...");
-        const owner = await contract.ownerOf(nftData.token_id);
-        if (owner.toLowerCase() !== currentAccount.toLowerCase()) {
-          throw new Error("Bạn không sở hữu NFT này trên Blockchain!");
+        console.log(`🔌 Seller checking ownership for Token #${nftData.token_id}...`);
+        const owner = (await contract.ownerOf(nftData.token_id)).toLowerCase();
+        
+        if (owner !== currentAccount) {
+          throw new Error("Bạn không sở hữu NFT này trên Blockchain! (Chủ sở hữu hiện tại: " + owner + ")");
         }
 
         const tx = await contract.approve(nftData.to_wallet, nftData.token_id);
@@ -301,7 +329,7 @@ const Payment = () => {
               <div className="flex justify-between items-end">
                 <div>
                   <p className="text-gray-500 text-[10px] uppercase tracking-widest mb-1">Total Amount</p>
-                  <p className="text-3xl text-[#FF2D95] font-bold">{amountVND.toLocaleString()} đ</p>
+                  <p className="text-3xl text-[#FF2D95] font-bold">{vmdAmount.toLocaleString()} đ</p>
                 </div>
                 <div className="text-right">
                   <p className="text-gray-500 text-[10px] uppercase tracking-widest mb-1">Crypto Equivalent</p>
