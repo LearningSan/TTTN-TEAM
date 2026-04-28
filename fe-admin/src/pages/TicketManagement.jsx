@@ -21,6 +21,7 @@ const TicketManagement = () => {
   const [ticketPagination, setTicketPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [invoiceModal, setInvoiceModal] = useState({ open: false, ticketId: null });
   const isFirstRender = useRef(true);
+  const [allBookedLabels, setAllBookedLabels] = useState([]);
   // 🚀 Hàm tính toán stats cho 1 concert (Dùng chung cho cả Bảng và Overview)
   const calculateStats = useCallback((concert) => {
     if (!concert?.zones) return { total: 0, available: 0, sold: 0, revenueMap: {} };
@@ -53,7 +54,20 @@ const TicketManagement = () => {
     });
     return { total, available, sold, revenueMap, totalValue };
   }, []);
+  const fetchAllTicketsForMap = useCallback(async (concertId) => {
+    try {
+      // Gọi API với size=1000 theo đúng tài liệu [cite: 90, 93]
+      const res = await API.get(`/admin/concerts/${concertId}/tickets`, {
+        params: { page: 0, size: 1000 }
+      });
 
+      // Lấy danh sách seatLabel từ kết quả trả về [cite: 205, 210]
+      const labels = (res.data?.content || []).map(t => t.seatLabel);
+      setAllBookedLabels(labels);
+    } catch (error) {
+      console.error("Lỗi khi lấy dữ liệu ghế cho sơ đồ:", error);
+    }
+  }, []);
   // 🚀 Tải danh sách Concert (Phân trang chuẩn)
   const fetchConcertList = useCallback(async (page = 1, size = 10, kw = keyword) => {
     setLoading(true);
@@ -94,7 +108,9 @@ const TicketManagement = () => {
   const handleOpenDetail = (record) => {
     setSelectedConcert(record);
     setViewMode('detail');
-    fetchTickets(record.concertId, 0, 10);
+    const concertId = record.concertId || record.id;
+    fetchTickets(concertId, 0, 10);
+    fetchAllTicketsForMap(concertId);
   };
 
   const handleBack = () => {
@@ -156,7 +172,7 @@ const TicketManagement = () => {
   return (
     <div style={{ padding: 0, background: '#f5f5f5', minHeight: '100vh' }}>
       {viewMode === 'list' ? (
-        <Card title={<Space><Title level={3} style={{ margin: 0,fontWeight: 'bold' }}>Quản lý Vé & Doanh thu</Title></Space>} bordered={false}>
+        <Card title={<Space><Title level={3} style={{ margin: 0, fontWeight: 'bold' }}>Quản lý Vé & Doanh thu</Title></Space>} bordered={false}>
           <div style={{ marginBottom: 16 }}>
             <Input
               placeholder="Tìm tên concert hoặc nghệ sĩ..."
@@ -185,11 +201,10 @@ const TicketManagement = () => {
           {/* Reuse các component cũ với dữ liệu từ selectedConcert */}
           <TicketOverview stats={calculateStats(selectedConcert)} loading={false} />
           <TicketZoneStats zones={selectedConcert?.zones || []} loading={false} />
-          <Card title="🗺️ Sơ đồ vị trí (Chấm đỏ: Ghế đã bán | Chữ: Hàng ghế)" style={{ marginBottom: 24 }}>
+          <Card title="Sơ đồ vị trí" style={{ marginBottom: 24 }}>
             <SeatMapDetailView
               data={selectedConcert}
-              // Lấy danh sách seatLabel từ các vé đã load để tô màu đỏ
-              bookedSeats={tickets.map(t => t.seatLabel)}
+              bookedSeats={allBookedLabels}
               loadingSeats={loadingTickets}
             />
           </Card>
