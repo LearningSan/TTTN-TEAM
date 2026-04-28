@@ -280,7 +280,7 @@ const ConcertManagement = () => {
 
             {/* 🗑️ XÓA VĨNH VIỄN: Chỉ cho phép xóa hẳn khỏi DB khi còn là DRAFT (chưa bán vé) */}
             {isDraft && (
-              <Popconfirm title="Xóa vĩnh viễn concert này?" onConfirm={() => API.delete(`/admin/concerts/${r.concertId || r.id}`).then(() => { message.success('Đã xóa!'); fetchData(pagination.current); }).catch(() => message.error('Thất bại!'))}>
+              <Popconfirm title="Xóa vĩnh viễn concert này?" onConfirm={() => API.delete(`/admin/concerts/${r.concertId || r.id}`).then(() => { message.success('Xóa concert thành công!'); fetchData(pagination.current); }).catch(() => message.error('Thất bại!'))}>
                 <Button size="small" type="text" danger icon={<DeleteOutlined />} />
               </Popconfirm>
             )}
