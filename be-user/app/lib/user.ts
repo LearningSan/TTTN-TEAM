@@ -138,29 +138,38 @@ export async function getUserByWalletAddress(wallet_address: string): Promise<us
     throw new Error('Failed to fetch user by wallet.');
   }
 }
-export async function updatePersonalInfo(name:string,avatar_url:string,phone:string,email:string) {
+export async function updatePersonalInfo(
+  name?: string,
+  phone?: string,
+  avatar_url?: string,
+  newEmail?: string,
+  oldEmail?: string
+) {
   try {
-    const db=await connectDB();
-    const request= db.request()
-    .input("name", name)
-    .input("avatar_url", avatar_url)
-    .input("phone", phone)
-    .input("email", email);
-      const result = await request.query(`
+    const db = await connectDB();
+    const request = db.request()
+      .input("name", name ?? null)
+      .input("phone", phone ?? null)
+      .input("avatar_url", avatar_url ?? null)
+      .input("newEmail", newEmail ?? null)
+      .input("oldEmail", oldEmail);
+
+    const result = await request.query(`
       UPDATE users
-      SET name = @name,
-          avatar_url = @avatar_url,
-          phone = @phone,
+      SET name = COALESCE(@name, name),
+          phone = COALESCE(@phone, phone),
+          avatar_url = COALESCE(@avatar_url, avatar_url),
+          email = COALESCE(@newEmail, email),
           updated_at = GETDATE()
-      WHERE email = @email
+      WHERE email = @oldEmail
     `);
+
     return result;
   } catch (error) {
     console.error("updatePersonalInfo error:", error);
     throw new Error("FAILED_TO_UPDATE_PERSONAL_INFO");
   }
 }
-
 export async function getUserById(user_id: string, transaction?: any) {
   try {
     const request = transaction

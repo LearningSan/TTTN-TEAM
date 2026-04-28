@@ -77,8 +77,8 @@ export async function getConcertList(
 
     let query = `
       SELECT 
-        c.concert_id, c.title, c.artist, c.concert_date, c.end_date,
-        c.sale_start_at, c.sale_end_at,
+        c.concert_id, c.title, c.artist, c.banner_url,c.concert_date, c.end_date,
+        c.sale_start_at, c.sale_end_at,c.layout_config,
         z.zone_id, z.zone_name, z.price, z.total_seats, z.available_seats, z.sold_seats,
         v.venue_id, v.name AS venue_name, v.address, v.district, v.city, v.country,
         CASE 

@@ -1,5 +1,5 @@
 import { connectDB } from "./data";
-
+import { getOrderItems } from "./order";
 
 export async function createTicket(ticket: any, transaction?: any) {
   try {
@@ -655,4 +655,61 @@ export async function updateTicketStatus(
     SET status = @status
     WHERE ticket_id = @ticket_id
   `);
+}
+
+export async function updateTicketToken(
+  ticket_id: string,
+  token_id: string,
+  tx_hash: string
+) {
+  const db = await connectDB();
+
+  await db.request()
+    .input("ticket_id", ticket_id)
+    .input("token_id", token_id)
+    .input("tx_hash", tx_hash)
+    .query(`
+      UPDATE tickets
+      SET 
+        token_id = @token_id,
+        mint_tx_hash = @tx_hash,
+        updated_at = GETDATE()
+      WHERE ticket_id = @ticket_id
+    `);
+}
+export async function createTicketRecords(payment: any, transaction?: any) {
+  const items = await getOrderItems(payment.order_id, transaction);
+
+  const tickets: any[] = [];
+
+  for (const item of items) {
+    for (let i = 0; i < item.quantity; i++) {
+
+      const ticketId = await createTicket(
+        {
+          order_id: payment.order_id,
+          order_item_id: item.order_item_id,
+          user_id: payment.user_id,
+          concert_id: payment.concert_id,
+          zone_id: item.zone_id,
+          seat_id: item.seat_id ?? null,
+          payment_id: payment.payment_id,
+          wallet_address: payment.from_wallet ?? "",
+          tier_id: item.tier_id ?? null,
+          token_id: null,
+          mint_tx_hash: null,
+          contract_address: process.env.CONTRACT_ADDRESS!
+        },
+        transaction
+      );
+
+      tickets.push({
+        ticketId,
+        seat_id: item.seat_id ?? null,
+        zone_id: item.zone_id
+      });
+    }
+  }
+
+  return tickets;
 }

@@ -1,88 +1,90 @@
 import { connectDB } from "./data";
+import sql from "mssql";
 
-export async function insertOrder(data: any): Promise<string> {
-  const db = await connectDB();
-
+export async function insertOrder(transaction: sql.Transaction, data: any) {
   try {
-   const request = db.request()
-    .input("user_id", data.user_id)
-    .input("concert_id", data.concert_id)
-    .input("total_amount", data.total_amount)
-    .input("currency", data.currency)
-    .input("note", data.note || null)
-    .input("wallet_address", data.wallet_address);
+      const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
 
-  const query = `
-    INSERT INTO orders (
-      user_id,
-      concert_id,
-      wallet_address,
-      total_amount,
-      currency,
-      order_status,
-      note,
-      created_at,
-      expires_at,
-      updated_at
-    )
-    OUTPUT INSERTED.order_id
-    VALUES (
-      @user_id,
-      @concert_id,
-      @wallet_address,
-      @total_amount,
-      @currency,
-      'PENDING',
-      @note,
-      GETDATE(),
-      DATEADD(MINUTE, 15, GETDATE()),
-      GETDATE()
-    )
-  `;
+    const result = await request
+      .input("user_id", data.user_id)
+      .input("concert_id", data.concert_id)
+      .input("total_amount", data.total_amount)
+      .input("currency", data.currency)
+      .input("note", data.note || null)
+      .input("wallet_address", data.wallet_address)
+      .query(`
+        INSERT INTO orders (
+          user_id,
+          concert_id,
+          wallet_address,
+          total_amount,
+          currency,
+          order_status,
+          note,
+          created_at,
+          expires_at,
+          updated_at
+        )
+        OUTPUT INSERTED.order_id
+        VALUES (
+          @user_id,
+          @concert_id,
+          @wallet_address,
+          @total_amount,
+          @currency,
+          'PENDING',
+          @note,
+          GETDATE(),
+          DATEADD(MINUTE, 15, GETDATE()),
+          GETDATE()
+        )
+      `);
 
-  const result = await request.query(query);
-
-  return result.recordset[0].order_id;
+    return result.recordset[0].order_id;
 
   } catch (error) {
     console.error("insertOrder DB error:", error);
     throw error;
   }
 }
+export async function insertOrderItem(data: any, transaction?: any) {
+  try {
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
 
-export async function insertOrderItem(data: any) {
-  const db = await connectDB();
+    await request
+      .input("order_id", data.order_id)
+      .input("zone_id", data.zone_id)
+      .input("tier_id", data.tier_id || null)
+      .input("seat_id", data.seat_id || null)
+      .input("quantity", data.quantity)
+      .input("unit_price", data.unit_price)
+      .query(`
+        INSERT INTO order_items (
+          order_id,
+          zone_id,
+          tier_id,
+          seat_id,
+          quantity,
+          unit_price
+        )
+        VALUES (
+          @order_id,
+          @zone_id,
+          @tier_id,
+          @seat_id,
+          @quantity,
+          @unit_price
+        )
+      `);
 
-  const request = db.request()
-    .input("order_id", data.order_id)
-    .input("zone_id", data.zone_id)
-    .input("tier_id", data.tier_id || null)
-    .input("seat_id", data.seat_id || null)
-    .input("quantity", data.quantity)
-    .input("unit_price", data.unit_price);
-
-  const query = `
-    INSERT INTO order_items (
-      order_id,
-      zone_id,
-      tier_id,
-      seat_id,
-      quantity,
-      unit_price
-    )
-    VALUES (
-      @order_id,
-      @zone_id,
-      @tier_id,
-      @seat_id,
-      @quantity,
-      @unit_price
-    )
-  `;
-
-  await request.query(query);
-
-  return true;
+  } catch (error) {
+    console.error("insertOrderItem error:", error);
+    throw error;
+  }
 }
 export async function getOrderById(order_id: string) {
   const db = await connectDB();
@@ -124,24 +126,27 @@ export async function getOrderById(order_id: string) {
     throw error;
   }
 }
-export async function getOrderItems(order_id: string) {
+export async function getOrderItems(order_id: string, transaction?: any) {
   try {
-    const db = await connectDB();
+    const request = transaction
+      ? transaction.request()
+      : (await connectDB()).request();
 
-    const result = await db.request()
+    const result = await request
       .input("order_id", order_id)
       .query(`
-        SELECT * FROM order_items
+        SELECT *
+        FROM order_items
         WHERE order_id = @order_id
       `);
 
     return result.recordset;
+
   } catch (error) {
     console.error("Error in getOrderItems:", error);
     throw new Error("Lấy danh sách order items thất bại");
   }
 }
-
 export async function markOrderCompleted(order_id: string, transaction?: any) {
   try {
     const request = transaction ? transaction.request() : (await connectDB()).request();

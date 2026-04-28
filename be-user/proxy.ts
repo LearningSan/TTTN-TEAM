@@ -47,6 +47,7 @@ export default async function middleware(req: NextRequest) {
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
+  "http://localhost:5174"
 ];
 const origin = req.headers.get("origin") || "";
 

@@ -80,40 +80,27 @@ export async function getSeatsWithTier(zone_id: string) {
 }
 
 
-export async function getSeatById(seat_id: string) {
-  const db = await connectDB();
-
+export async function getSeatById(seat_id: string, transaction?: any) {
   try {
-    const result = await db.request()
+    if (!seat_id) throw new Error("seat_id is required");
+
+    const db = transaction || await connectDB();
+
+    const request = db.request();
+    request.timeout = 30000;
+
+    const result = await request
       .input("seat_id", seat_id)
       .query(`
         SELECT 
           s.seat_id,
-          s.row_label,
-          s.seat_number,
-          s.seat_label,
-          s.status,
-
           s.zone_id,
-          z.zone_name,
-
+          s.status,
           s.tier_id,
-          t.tier_name,
           t.price,
-
-          s.locked_at,
-          s.locked_by_user_id,
-          s.lock_expires_at,
-          s.created_at
-
+          s.lock_expires_at
         FROM seats s
-
-        INNER JOIN zones z 
-          ON s.zone_id = z.zone_id
-
-        INNER JOIN seat_tiers t 
-          ON s.tier_id = t.tier_id
-
+        JOIN seat_tiers t ON s.tier_id = t.tier_id
         WHERE s.seat_id = @seat_id
       `);
 
@@ -124,111 +111,74 @@ export async function getSeatById(seat_id: string) {
     throw error;
   }
 }
-export async function validateSeats(concert_id: string, items: any[]) {
-  const db = await connectDB();
-
+export async function validateSeats(items: any[]) {
   try {
+    let total = 0;
+
     for (const item of items) {
       const zone = await getZoneById(item.zone_id);
 
-      // ===== ZONE NO SEAT MAP =====
+      // =====================
+      // NO SEAT MAP
+      // =====================
       if (!zone.has_seat_map) {
         if (item.seat_id) {
           throw new Error(`Zone ${item.zone_id} does not accept seat_id`);
         }
 
-        const request = db.request()
-          .input("zone_id", item.zone_id);
-
-        const result = await request.query(`
-          SELECT 
-            z.total_seats,
-            z.sold_seats,
-            ISNULL(SUM(oi.quantity), 0) AS pending_locked
-          FROM zones z
-          LEFT JOIN order_items oi ON z.zone_id = oi.zone_id
-          LEFT JOIN orders o ON oi.order_id = o.order_id
-            AND o.order_status = 'PENDING'
-            AND o.expires_at > GETDATE()
-          WHERE z.zone_id = @zone_id
-          GROUP BY z.total_seats, z.sold_seats
-        `);
-
-        const row = result.recordset[0];
-
-        const available =
-          row.total_seats - row.sold_seats - row.pending_locked;
-
-        if (item.quantity > available) {
-          throw new Error(
-            `Zone ${item.zone_id} not enough tickets. Available: ${available}`
-          );
-        }
-
+        total += zone.price * item.quantity;
         continue;
       }
 
-      // ===== SEAT MAP =====
+      // =====================
+      // SEAT MAP
+      // =====================
       if (!item.seat_id) {
         throw new Error(`seat_id required for zone ${item.zone_id}`);
       }
 
-      const request = db.request()
-        .input("seat_id", item.seat_id);
+      const seat = await getSeatById(item.seat_id);
 
-      const result = await request.query(`
-        SELECT seat_id
-        FROM seats
-        WHERE seat_id = @seat_id
-      `);
-
-      if (result.recordset.length === 0) {
-        throw new Error(`Seat ${item.seat_id} not found`);
+      if (!seat) {
+        throw new Error(`Seat not found ${item.seat_id}`);
       }
+
+      total += seat.price * item.quantity;
     }
 
-    return true;
+    return { total };
 
   } catch (error) {
-    console.error("validateSeats DB error:", error);
+    console.error("validateSeats error:", error);
     throw error;
   }
 }
-export async function lockSeats(user_id: string, items: any[]) {
-  const db = await connectDB();
-
+export async function lockSeats(user_id: string, items: any[], transaction: any) {
   try {
-    for (const item of items) {
-      const zone = await getZoneById(item.zone_id);
+    const seatItems = items.filter(i => i.seat_id);
 
-      if (!zone.has_seat_map) {
-        if (item.seat_id) {
-          throw new Error(`Zone ${item.zone_id} does not accept seat_id`);
-        }
-        continue;
-      }
+    for (const item of seatItems) {
+      const req = transaction.request();
 
-      if (!item.seat_id) {
-        throw new Error(`seat_id required for zone ${item.zone_id}`);
-      }
-
-      const request = db.request()
+      const result = await req
         .input("seat_id", item.seat_id)
-        .input("user_id", user_id);
-
-      const result = await request.query(`
-        UPDATE seats
-        SET 
-          status = 'LOCKED',
-          locked_by_user_id = @user_id,
-          locked_at = GETDATE(),
-          lock_expires_at = DATEADD(MINUTE, 10, GETDATE())
-        WHERE seat_id = @seat_id
-          AND status = 'AVAILABLE'
-      `);
+        .input("user_id", user_id)
+        .query(`
+          UPDATE seats
+          SET 
+            status = 'LOCKED',
+            locked_by_user_id = @user_id,
+            locked_at = GETDATE(),
+            lock_expires_at = DATEADD(MINUTE, 10, GETDATE())
+          WHERE seat_id = @seat_id
+            AND (
+              status = 'AVAILABLE'
+              OR lock_expires_at < GETDATE()
+            )
+        `);
 
       if (result.rowsAffected[0] === 0) {
-        throw new Error(`Seat ${item.seat_id} already locked or booked`);
+        throw new Error(`Seat already locked: ${item.seat_id}`);
       }
     }
 
