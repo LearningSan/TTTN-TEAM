@@ -39,7 +39,7 @@ const OrderManagement = () => {
   return (
     <div style={{ padding: 0, background: '#f5f5f5', minHeight: '100vh' }}>
       <Card
-        title={<><ShoppingCartOutlined /> Quản lý doanh thu & Đơn hàng</>}
+        title={<h2>Quản lý Đơn hàng</h2>}
         extra={<Button icon={<ReloadOutlined />} onClick={handleReset}>Làm mới</Button>}
         bordered={false}
       >

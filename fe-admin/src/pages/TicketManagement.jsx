@@ -156,7 +156,7 @@ const TicketManagement = () => {
   return (
     <div style={{ padding: 0, background: '#f5f5f5', minHeight: '100vh' }}>
       {viewMode === 'list' ? (
-        <Card title={<Space><ShoppingCartOutlined /> <Title level={4} style={{ margin: 0 }}>Quản lý Vé & Doanh thu</Title></Space>} bordered={false}>
+        <Card title={<Space><Title level={3} style={{ margin: 0,fontWeight: 'bold' }}>Quản lý Vé & Doanh thu</Title></Space>} bordered={false}>
           <div style={{ marginBottom: 16 }}>
             <Input
               placeholder="Tìm tên concert hoặc nghệ sĩ..."
