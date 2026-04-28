@@ -2,10 +2,7 @@ package com.example.tttnbe.concert.dto;
 
 import com.example.tttnbe.zone.dto.ZoneRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,9 +13,11 @@ import java.util.UUID;
 public class ConcertRequest {
 
     @NotBlank(message = "Tên sự kiện không được để trống hoặc chỉ chứa khoảng trắng")
+    @Size(min = 2, max = 200, message = "Tên sự kiện phải có độ dài từ 2 đến 200 ký tự")
     private String title;
 
     @NotBlank(message = "Tên nghệ sĩ không được để trống")
+    @Size(min = 2, max = 150, message = "Tên nghệ sĩ phải từ 2 đến 150 ký tự")
     private String artist;
 
     @NotNull(message = "Ngày giờ diễn ra sự kiện không được để trống")
