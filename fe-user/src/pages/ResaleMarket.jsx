@@ -8,31 +8,78 @@ import {
 } from "react-icons/hi";
 import { FaEthereum } from "react-icons/fa";
 import { ethers } from "ethers";
+import CategoryNav from "../components/CategoryNav";
 
 const ResaleMarket = () => {
   const [resaleTickets, setResaleTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false); // State riêng cho việc bấm nút mua
+  const [processing, setProcessing] = useState(false); 
+  const [currentUser, setCurrentUser] = useState(null);
+  const [myTransfers, setMyTransfers] = useState([]); // Danh sách vé của chính mình đang bán
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   useEffect(() => {
     const fetchResaleTickets = async () => {
       try {
         setLoading(true);
+        
+        // 1. Lấy danh sách tất cả vé đang bán trên sàn
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/ticket`,
           {
             params: {
               status: "TRANSFERRED",
               page: 1,
-              pageSize: 10,
+              pageSize: 50,
             },
             withCredentials: true,
             timeout: 60000,
           },
         );
 
+        // 2. Lấy danh sách vé của chính mình đang rao bán (để so sánh)
+        let myTransfersData = [];
+        let myListedTicketsData = [];
+        
+        try {
+          // Lấy vé đang có người mua (PENDING)
+          const resMyTrans = await axios.get(
+            `${import.meta.env.VITE_API_URL}/resale/my-transfers`,
+            { withCredentials: true }
+          );
+          myTransfersData = resMyTrans.data?.data || resMyTrans.data || [];
+          console.log("🛠️ My Pending Transfers:", myTransfersData);
+          
+          // Lấy vé mình đã đăng lên sàn nhưng chưa có người mua
+          const resMyListed = await axios.get(
+            `${import.meta.env.VITE_API_URL}/ticket/user`,
+            { 
+              params: { status: "TRANSFERRED" },
+              withCredentials: true 
+            }
+          );
+          // API /ticket/user có thể trả về mảng trực tiếp hoặc mảng lồng trong data.data
+          let listedOrders = resMyListed.data?.data?.data || resMyListed.data?.data || [];
+          if (!Array.isArray(listedOrders)) listedOrders = [];
+          
+          myListedTicketsData = listedOrders.flatMap(order => order.tickets || []);
+          console.log("🛠️ My Listed Tickets (Waiting Buyer):", myListedTicketsData);
+
+          // Gộp cả 2 danh sách để nhận diện vé của mình
+          setMyTransfers([...myTransfersData, ...myListedTicketsData]);
+        } catch (err) {
+          console.error("Không thể lấy danh sách vé của tôi:", err);
+        }
+
         const orders = response.data?.data?.data || [];
+        console.log("🎟️ Market Orders:", orders);
 
         if (Array.isArray(orders)) {
           const flattenedTickets = orders.flatMap((orderItem) =>
@@ -47,96 +94,100 @@ const ResaleMarket = () => {
         }
       } catch (error) {
         console.error("Lỗi lấy danh sách resale:", error);
+        if (error.response?.status === 401) {
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
+          alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          navigate("/login");
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchResaleTickets();
-  }, []);
+  }, [navigate]);
 
   // Trong ResaleMarket.jsx, hàm handleBuy
   const handleBuy = async (ticketId, price) => {
     try {
+      setProcessing(true);
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/resale/buy`,
         { ticket_id: ticketId },
         { withCredentials: true },
       );
 
-      // Chuyển hướng người mua sang Payment
+      const ticket = resaleTickets.find((t) => t.ticket_id === ticketId);
+
+      // Chuyển hướng người mua sang Payment với đầy đủ thông tin để hiển thị
       navigate("/payment", {
         state: {
           isResale: true,
-          nftData: res.data, // Chứa transfer_id, from_wallet, to_wallet, token_id...
+          isBuyer: true,
+          isSeller: false,
+          nftData: res.data?.data || res.data,
           amount: price,
+          concert: {
+            ...ticket?.concert,
+            venue_name: ticket?.venue?.name
+          },
+          // Map lại thông tin ghế để khớp với Payment.jsx (seat.row_name, seat.seat_number...)
+          selectedSeats: ticket?.seat ? [{
+            ...ticket.seat,
+            row_name: ticket.seat.row,
+            seat_number: ticket.seat.number,
+            zone_name: ticket.zone?.zone_name,
+            price: price
+          }] : [],
+          standingTickets: !ticket?.seat ? {
+            [ticket?.zone?.zone_id || "resale"]: 1
+          } : {},
+          zones: [ticket?.zone], // Để Payment.jsx tìm thấy zone_name và giá
+          orderId: ticket?.order_id
         },
       });
     } catch (err) {
-      alert("Lỗi mua vé: " + err.message);
+      const errorMsg = err.response?.data?.message || err.message;
+      if (errorMsg === "Cannot buy your own ticket") {
+        alert("Bạn không thể mua lại vé của chính mình!");
+      } else if (errorMsg === "Ticket is being transferred") {
+        alert("Vé này đang trong quá trình chuyển nhượng hoặc đã có người mua!");
+      } else {
+        alert("Lỗi mua vé: " + errorMsg);
+      }
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCancelResale = async (ticketId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy pass vé này không?")) return;
+
+    try {
+      setProcessing(true);
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/resale/cancel`,
+        { ticket_id: ticketId },
+        { withCredentials: true },
+      );
+      alert("Hủy pass vé thành công!");
+      window.location.reload();
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message;
+      if (errorMsg === "Cannot cancel: ticket already in transfer") {
+        alert("Không thể hủy vì vé đã có người mua và đang trong quá trình chuyển nhượng!");
+      } else {
+        alert("Lỗi hủy pass: " + errorMsg);
+      }
+    } finally {
+      setProcessing(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#11131A] text-white font-sans selection:bg-pink-500/30">
       {/* Nav Section */}
-      <nav className="bg-[#0A0A0A] py-6 border-b border-gray-900 relative z-10">
-        <div className="max-w-7xl mx-auto flex justify-start gap-12 text-[18px] font-[900] uppercase tracking-tighter px-12 items-end">
-          {[
-            {
-              name: "Theatre & Arts",
-              color: "bg-[#FF2D95]",
-              shadow: "shadow-[0_0_10px_#FF2D95]",
-              path: "/",
-              isLink: true,
-            },
-            {
-              name: "Sports",
-              color: "bg-[#00E5FF]",
-              shadow: "shadow-[0_0_10px_#00E5FF]",
-              path: "#",
-            },
-            {
-              name: "Seminars & Workshops",
-              color: "bg-[#FF2D95]",
-              shadow: "shadow-[0_0_10px_#FF2D95]",
-              path: "#",
-            },
-            {
-              name: "Resale Ticket",
-              color: "bg-[#00E5FF]",
-              shadow: "shadow-[0_0_10px_#00E5FF]",
-              path: "/resale-market",
-              isLink: true,
-            },
-          ].map((item) => (
-            <div
-              key={item.name}
-              className="flex flex-col items-center group cursor-pointer"
-            >
-              {item.isLink ? (
-                <Link
-                  to={item.path}
-                  className={`transition-colors duration-200 ${item.name === "Resale Ticket" ? "text-[#00E5FF]" : "text-white hover:text-[#00E5FF]"}`}
-                >
-                  {item.name}
-                </Link>
-              ) : (
-                <a
-                  href={item.path}
-                  className="text-white hover:text-gray-300 transition-colors duration-200"
-                >
-                  {item.name}
-                </a>
-              )}
-
-              {/* Thanh line neon phía dưới giữ nguyên để đồng bộ giao diện */}
-              <div
-                className={`h-[3px] w-full mt-2 ${item.color} ${item.shadow} transition-transform duration-300 group-hover:scale-x-110`}
-              ></div>
-            </div>
-          ))}
-        </div>
-      </nav>
+      <CategoryNav />
 
       <div className="max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-3xl font-black uppercase text-center mb-16 tracking-widest text-white drop-shadow-md">
@@ -149,28 +200,56 @@ const ResaleMarket = () => {
           </div>
         ) : resaleTickets.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-            {resaleTickets.map((ticket) => {
+            {resaleTickets.map((ticket, index) => {
+              const isEven = index % 2 === 0;
               const isVIP = ticket.zone?.zone_name?.toLowerCase().includes("vip");
-              const themeColor = isVIP ? "#F06292" : "#4DD0E1"; // Pink for VIP, Cyan for Standard
-              const glowShadow = isVIP 
-                ? "0 10px 25px -5px rgba(240, 98, 146, 0.4)" 
-                : "0 10px 25px -5px rgba(77, 208, 225, 0.4)";
+              const themeColor = isEven ? "#FF2D95" : "#00E5FF"; // Pink for even, Cyan for odd
+              const glowShadow = isEven 
+                ? "0 10px 25px -5px rgba(255, 45, 149, 0.4)" 
+                : "0 10px 25px -5px rgba(0, 229, 255, 0.4)";
+
+              const isOwnTicket = myTransfers.some(tr => {
+                const myId = tr.ticket_id || tr.ticket?.ticket_id;
+                return String(myId) === String(ticket.ticket_id);
+              });
 
               return (
                 <div
                   key={ticket.ticket_id}
-                  onClick={() => handleBuy(ticket.ticket_id, ticket.price?.unit_price || 0)}
-                  className={`bg-[#2A2D3A] rounded-2xl p-6 cursor-pointer transform hover:-translate-y-1 transition-all duration-300 relative group`}
+                  className={`bg-[#2A2D3A] rounded-2xl p-6 relative group transform hover:-translate-y-1 transition-all duration-300`}
                   style={{ 
                     borderBottom: `3px solid ${themeColor}`,
                     boxShadow: glowShadow
                   }}
                 >
-                  {/* Overlay for hover state to indicate clickability */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl backdrop-blur-[2px] z-10">
-                    <span className="text-white font-black uppercase tracking-widest border-2 border-white px-6 py-2 rounded-full">
-                      {processing ? "Processing..." : "Buy Ticket"}
-                    </span>
+                  {/* Overlay for hover state */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center rounded-2xl backdrop-blur-[2px] z-10 p-4">
+                    {isOwnTicket ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelResale(ticket.ticket_id);
+                        }}
+                        disabled={processing}
+                        className="px-8 py-3 bg-[#FF2D95] text-white font-black rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,45,149,0.5)]"
+                      >
+                        {processing ? "Đang xử lý..." : "Hủy Pass"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBuy(ticket.ticket_id, ticket.price?.unit_price || 0);
+                        }}
+                        disabled={processing}
+                        className={`px-8 py-3 ${isEven ? 'bg-[#FF2D95] shadow-[0_0_20px_rgba(255,45,149,0.5)]' : 'bg-[#00E5FF] shadow-[0_0_20px_rgba(0,229,255,0.5)]'} text-white font-black rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all`}
+                      >
+                        {processing ? "Đang xử lý..." : "Mua Vé"}
+                      </button>
+                    )}
+                    {isOwnTicket && (
+                      <p className="text-[10px] text-gray-300 mt-3 font-bold uppercase tracking-wider">Đây là vé của bạn</p>
+                    )}
                   </div>
 
                   {/* Header: Event Name & Venue */}
@@ -189,7 +268,7 @@ const ResaleMarket = () => {
                       style={{ backgroundColor: themeColor, boxShadow: `0 0 10px ${themeColor}` }}
                     ></div>
                     <span className="text-lg font-black text-white tracking-widest">
-                      {ticket.tier?.name || (isVIP ? "VIP" : "Standard")}
+                      {ticket.tier?.name || (isVIP ? "VIP" : "Standing")}
                     </span>
                   </div>
 

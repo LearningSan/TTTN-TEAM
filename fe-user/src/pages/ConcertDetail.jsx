@@ -192,7 +192,6 @@ const ConcertDetail = () => {
           ))}
         </div>
       </nav>
-
       <main className="max-w-6xl mx-auto py-10 px-4">
         {/* SECTION 1: TICKET PASS */}
         <div className="relative group px-2">

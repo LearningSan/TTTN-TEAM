@@ -6,12 +6,12 @@ import { motion } from "framer-motion";
 const OrderSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { id } = useParams();
+  const { orderId: paramOrderId } = useParams();
   const [searchParams] = useSearchParams();
 
   // Lấy mã đơn hàng từ URL params, query string hoặc state
   const orderId =
-    id ||
+    paramOrderId ||
     searchParams.get("order_id") ||
     location.state?.orderId ||
     "N/A";
@@ -48,7 +48,6 @@ const OrderSuccess = () => {
             
             <p className="font-sans text-gray-400 text-sm leading-relaxed mb-10 tracking-widest uppercase">
               Chúc mừng! Đơn hàng của bạn đã được ghi nhận. <br/>
-              Vé NFT đang được khởi tạo trên Blockchain.
             </p>
 
             <div className="bg-black/60 rounded-3xl p-6 mb-10 border border-[#FF2D95]/30 group-hover:border-[#FF2D95]/60 transition-colors">

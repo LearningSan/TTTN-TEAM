@@ -54,10 +54,13 @@ const Payment = () => {
     checkWallet();
   }, []);
 
-  const isSeller =
-    currentAccount && nftData?.from_wallet?.toLowerCase() === currentAccount;
-  const isBuyer =
-    currentAccount && nftData?.to_wallet?.toLowerCase() === currentAccount;
+  const isSeller = state?.isSeller !== undefined 
+    ? state.isSeller 
+    : (currentAccount && nftData?.from_wallet?.toLowerCase() === currentAccount);
+    
+  const isBuyer = state?.isBuyer !== undefined 
+    ? state.isBuyer 
+    : (currentAccount && nftData?.to_wallet?.toLowerCase() === currentAccount);
 
   const handleResaleFlow = async () => {
     if (!nftData) return;
@@ -82,8 +85,8 @@ const Payment = () => {
         await tx.wait();
 
         const approved = await contract.getApproved(nftData.token_id);
-        alert(`✅ Đã cấp quyền cho người mua: ${approved}`);
-        window.location.reload();
+        alert(`✅ Đã xác thực thành công! Quyền sở hữu NFT đã sẵn sàng chuyển giao.`);
+        navigate("/my-tickets");
       } else if (isBuyer) {
         const approved = await contract.getApproved(nftData.token_id);
 
@@ -303,7 +306,7 @@ const Payment = () => {
                       disabled={loading}
                       className="w-full bg-gradient-to-r from-[#00E5FF] to-[#00A991] hover:opacity-90 text-black font-black py-5 rounded-2xl uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
                     >
-                      {loading ? "Processing..." : "Approve Sale (Step 1)"}
+                      {loading ? "Processing..." : "Approve Sale"}
                     </button>
                   ) : isBuyer ? (
                     <button
@@ -311,7 +314,7 @@ const Payment = () => {
                       disabled={loading}
                       className="w-full bg-gradient-to-r from-[#FF2D95] to-[#FF69B4] hover:opacity-90 text-white font-black py-5 rounded-2xl uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
                     >
-                      {loading ? "Processing..." : "Complete Purchase (Step 2)"}
+                      {loading ? "Processing..." : "Complete Purchase"}
                     </button>
                   ) : (
                     <div className="text-center p-6 bg-red-950/20 border border-red-900/50 rounded-2xl text-red-400 text-xs">

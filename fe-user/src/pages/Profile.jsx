@@ -57,22 +57,19 @@ const ProfilePage = () => {
   const handleSaveChanges = async () => {
     setLoading(true);
     try {
-      // Dùng FormData để hỗ trợ gửi cả chữ và file ảnh
-      const formData = new FormData();
-      formData.append("name", user.full_name);
-      formData.append("phone", user.phone);
-      formData.append("email", user.email);
-
-      if (selectedFile) {
-        formData.append("avatar", selectedFile); // "avatar" phải khớp với tên field backend yêu cầu
-      }
+      // Chuyển sang gửi JSON thay vì FormData vì API yêu cầu application/json
+      const payload = {
+        name: user.full_name,
+        phone: user.phone,
+        email: user.email,
+        avatar_url: user.avatar_url, // Gửi URL (nếu có)
+      };
 
       const response = await axios.post(
         `${apiUrl}/personal-info/update`,
-        formData, // Gửi formData thay vì object JSON
+        payload,
         {
           withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" }, // Header quan trọng khi gửi file
         },
       );
 
