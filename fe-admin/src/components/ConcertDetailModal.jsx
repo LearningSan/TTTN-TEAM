@@ -14,8 +14,7 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
       const fetchBookedSeats = async () => {
         setLoadingSeats(true);
         try {
-          // Gọi API lấy maximum vé (ví dụ size=5000) để map lên sơ đồ
-          const res = await API.get(`/admin/concerts/${data.concertId}/tickets?size=5000`);
+          const res = await API.get(`/admin/concerts/${data.concertId}/tickets?size=1000`);
           const tickets = res.data?.content || [];
 
           // Lọc ra các vé không bị Hủy và gom seatLabel vào 1 mảng
