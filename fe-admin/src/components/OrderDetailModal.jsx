@@ -53,6 +53,9 @@ const OrderDetailModal = ({ orderId, open, onCancel }) => {
           <>
             <Descriptions bordered size="small" column={2}>
               <Descriptions.Item label="Khách hàng"><b>{data.userName}</b> ({data.userEmail})</Descriptions.Item>
+              <Descriptions.Item label="Ví khách hàng" span={2}>
+                {data.userWallet ? <Text copyable>{data.userWallet}</Text> : <Text type="secondary">N/A</Text>}
+              </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 <Tag color={getStatusColor(data.orderStatus)}>{data.orderStatus}</Tag>
               </Descriptions.Item>
