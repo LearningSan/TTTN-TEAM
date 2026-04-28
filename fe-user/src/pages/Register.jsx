@@ -20,9 +20,20 @@ const Register = () => {
     });
   };
 
+  const validatePassword = (pass) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    return regex.test(pass);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Kiểm tra định dạng mật khẩu
+    if (!validatePassword(formData.password)) {
+      setError("Mật khẩu phải tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường và số!");
+      return;
+    }
 
     // Kiểm tra khớp mật khẩu
     if (formData.password !== formData.confirmPassword) {
@@ -47,9 +58,20 @@ const Register = () => {
         navigate("/login");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.",
-      );
+      let msg = err.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.";
+      
+      // Việt hóa các thông báo lỗi từ Backend
+      if (msg === "Name must be between 2 and 50 characters") {
+        msg = "Họ tên phải từ 2 đến 50 ký tự!";
+      } else if (msg.includes("Password must be at least 8 characters")) {
+        msg = "Mật khẩu phải tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường và số!";
+      } else if (msg === "Invalid phone number format") {
+        msg = "Số điện thoại không đúng định dạng! bắt đầu từ 0 và có 10 ký tự!";
+      } else if (msg === "User already exists") {
+        msg = "Email đã được sử dụng!";
+      }
+      
+      setError(msg);
     }
   };
 
