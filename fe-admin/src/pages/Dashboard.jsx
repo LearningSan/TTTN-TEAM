@@ -87,7 +87,7 @@ const Dashboard = () => {
             <Card
               hoverable
               style={{ height: '100%', borderRadius: 12, borderLeft: `5px solid #fa8c16` }}
-              onClick={() => navigate("/dashboard/orders")}
+              onClick={() => navigate("/dashboard/tickets")}
             >
               <div style={{ color: '#8c8c8c', fontWeight: 'bold', marginBottom: 8 }}>DOANH THU TỔNG</div>
               <div style={{ marginBottom: 12 }}>
