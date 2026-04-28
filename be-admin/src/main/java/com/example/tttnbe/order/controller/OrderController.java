@@ -21,17 +21,17 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
-    // API 1: Lấy toàn bộ danh sách Đơn hàng (Có phân trang và lọc)
+    // API 1: Lấy toàn bộ danh sách Đơn hàng (Có phân trang, lọc và TÌM KIẾM)
     @GetMapping
     public ResponseEntity<PageResponse<OrderResponse>> getAllOrders(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword) { // 👈 Thêm dòng này
 
-        // Gọi sang Service để lấy data đã được gọt dũa
-        PageResponse<OrderResponse> response = orderService.getAllOrders(page, size, status);
+        // Gọi sang Service truyền thêm keyword
+        PageResponse<OrderResponse> response = orderService.getAllOrders(page, size, status, keyword);
 
-        // Trả về mã 200 OK kèm theo cục JSON
         return ResponseEntity.ok(response);
     }
 

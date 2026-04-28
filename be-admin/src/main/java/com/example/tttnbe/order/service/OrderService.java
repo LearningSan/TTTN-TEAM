@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public interface OrderService {
-    public PageResponse<OrderResponse> getAllOrders(int page, int size, String status);
+    public PageResponse<OrderResponse> getAllOrders(int page, int size, String status, String keyword);
 
     public DashboardStatsResponse getDashboardStats(LocalDate selectedDate);
 

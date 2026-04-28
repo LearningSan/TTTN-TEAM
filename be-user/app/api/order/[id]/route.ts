@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { order_id } = await req.json();
-
+     const user_id = decoded.user_id;
     if (!order_id) {
       return NextResponse.json(
         { message: "order_id is required" },
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await getSpecificOrder(order_id);
+    const result = await getSpecificOrder(order_id, user_id);
 
     return NextResponse.json({
       success: true,

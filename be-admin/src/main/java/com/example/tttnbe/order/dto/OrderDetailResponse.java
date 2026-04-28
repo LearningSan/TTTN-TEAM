@@ -24,6 +24,11 @@ public class OrderDetailResponse {
     private String userName;
     private String userEmail;
 
+    // 🌟 THÔNG TIN BLOCKCHAIN (THÊM MỚI)
+    private String userWallet;
+    private String paymentTxHash;
+    private String refundTxHash;
+
     // Thông tin sự kiện
     private String concertTitle;
     private String venueName;

@@ -6,9 +6,9 @@ import bcrypt from 'bcrypt';
 export async function getUser(email: string): Promise<users | undefined> {
   try {
     const db = await connectDB();
-
-    const result = await db.request()
-      .input("email", email)
+const normalizedEmail = email.trim().toLowerCase();   
+ const result = await db.request()
+      .input("email", normalizedEmail)
       .query(`
         SELECT * 
         FROM users 
@@ -27,7 +27,7 @@ export async function createUser(
   email: string,
   password: string | null,
   name: string,
-  phone?: string ,
+  phone?: string | null,
   avatar_url?: string
 ): Promise<users | null> {
   try {

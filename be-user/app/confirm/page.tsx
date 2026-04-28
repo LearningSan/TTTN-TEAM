@@ -19,16 +19,18 @@ export default function ResalePage() {
     setLog((prev) => prev + "\n" + msg);
   };
 
-  const getSigner = async () => {
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
-    await provider.send("eth_requestAccounts", []);
-    const signer = await provider.getSigner();
-    const address = await signer.getAddress();
+ const getSigner = async () => {
+  const provider = new ethers.BrowserProvider((window as any).ethereum);
 
-    appendLog("👤 Current wallet: " + address);
+  await provider.send("eth_requestAccounts", []);
 
-    return signer;
-  };
+  const signer = await provider.getSigner();
+  const address = await signer.getAddress();
+
+  console.log("👤 ACTIVE WALLET =", address);
+
+  return signer;
+};
 
   // =============================
   // 🟢 1. SELLER LIST
@@ -55,7 +57,6 @@ export default function ResalePage() {
       }
 
       appendLog("✅ Listed successfully");
-
     } catch (err: any) {
       appendLog("❌ ERROR: " + err.message);
     }
@@ -70,7 +71,8 @@ export default function ResalePage() {
 
       const signer = await getSigner();
       const buyer = await signer.getAddress();
-      appendLog("🧑‍💻 BUYER wallet (FE): " + buyer);
+
+      appendLog("🧑‍💻 BUYER wallet: " + buyer);
 
       const res = await fetch("/api/resale/buy", {
         method: "POST",
@@ -89,13 +91,9 @@ export default function ResalePage() {
       setData(result);
 
       appendLog("✅ Transfer created");
-      appendLog("📦 FROM (seller): " + result.from_wallet);
-      appendLog("📦 TO (buyer): " + result.to_wallet);
-
-      if (result.from_wallet.toLowerCase() === result.to_wallet.toLowerCase()) {
-        appendLog("❌ BUG: buyer = seller (SAI)");
-      }
-
+      appendLog("📦 FROM: " + result.from_wallet);
+      appendLog("📦 TO: " + result.to_wallet);
+      appendLog("🔒 STATUS: LOCKED (PENDING)");
     } catch (err: any) {
       appendLog("❌ ERROR: " + err.message);
     }
@@ -104,137 +102,139 @@ export default function ResalePage() {
   // =============================
   // 🟠 3. SELLER APPROVE
   // =============================
-  const handleApprove = async () => {
-    try {
-      if (!data) return appendLog("❌ No data");
+ const handleApprove = async () => {
+  const signer = await getSigner();
+  const seller = await signer.getAddress();
 
-      appendLog("🔌 Seller approving...");
+  const transfer = data;
 
-      const signer = await getSigner();
-      const seller = await signer.getAddress();
+  if (seller.toLowerCase() !== transfer.from_wallet.toLowerCase()) {
+    appendLog("❌ NOT SELLER");
+    return;
+  }
 
-      const { token_id, contract_address, from_wallet, to_wallet } = data;
+  const contract = new ethers.Contract(
+    transfer.contract_address,
+    ABI,
+    signer
+  );
 
-      appendLog("📦 Expected SELLER: " + from_wallet);
-      appendLog("📦 Expected BUYER: " + to_wallet);
+  const tx = await contract.approve(
+    transfer.to_wallet,
+    transfer.token_id
+  );
 
-      if (seller.toLowerCase() !== from_wallet.toLowerCase()) {
-        appendLog("❌ Sai ví SELLER");
-        return;
-      }
+  await tx.wait();
 
-      const contract = new ethers.Contract(contract_address, ABI, signer);
+  appendLog("✅ APPROVED");
+};
+ 
 
-      const owner = await contract.ownerOf(token_id);
-      appendLog("👑 Owner on-chain: " + owner);
+const handleTransfer = async () => {
+  try {
+    if (!data) return appendLog("❌ No data");
 
-      if (owner.toLowerCase() !== seller.toLowerCase()) {
-        appendLog("❌ Bạn không sở hữu NFT");
-        return;
-      }
+    appendLog("🔌 Buyer transferring...");
 
-      const tx = await contract.approve(to_wallet, token_id);
-      await tx.wait();
 
-      const approved = await contract.getApproved(token_id);
-      appendLog("✅ APPROVED FOR: " + approved);
+    const checkRes = await fetch("/api/resale/check-pending", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticket_id: ticketId }),
+    });
 
-    } catch (err: any) {
-      appendLog("❌ ERROR: " + err.message);
+    const check = await checkRes.json();
+    console.log(check.transfer_id)
+    console.log("CHECK =", check);
+
+    if (!check.ok) {
+      appendLog("❌ BLOCKED: BE NOT READY");
+      return;
     }
-  };
 
-  // =============================
-  // 🔴 4. BUYER TRANSFER
-  // =============================
-  const handleTransfer = async () => {
-    try {
-      if (!data) return appendLog("❌ No data");
+    const transfer = check.transfer;
 
-      appendLog("🔌 Buyer transferring...");
-
-      const signer = await getSigner();
-      const buyer = await signer.getAddress();
-
-      const {
-        transfer_id,
-        from_wallet,
-        to_wallet,
-        token_id,
-        contract_address,
-      } = data;
-
-      appendLog("📦 FROM (seller): " + from_wallet);
-      appendLog("📦 TO (buyer): " + to_wallet);
-
-      if (buyer.toLowerCase() !== to_wallet.toLowerCase()) {
-        appendLog("❌ Sai ví BUYER");
-        return;
-      }
-
-      if (from_wallet.toLowerCase() === to_wallet.toLowerCase()) {
-        appendLog("❌ BUG: self-transfer");
-        return;
-      }
-
-      const contract = new ethers.Contract(contract_address, ABI, signer);
-
-      const owner = await contract.ownerOf(token_id);
-      appendLog("👑 Owner before: " + owner);
-
-      if (owner.toLowerCase() !== from_wallet.toLowerCase()) {
-        appendLog("❌ Owner không khớp seller");
-        return;
-      }
-
-      appendLog("🚀 TRANSFER EXECUTING...");
-      appendLog(`➡️ ${from_wallet} → ${to_wallet}`);
-
-      const tx = await contract.transferFrom(
-        from_wallet,
-        to_wallet,
-        token_id
-      );
-
-      await tx.wait();
-
-      appendLog("✅ TRANSFER DONE");
-      appendLog("TX: " + tx.hash);
-
-      // =============================
-      // CONFIRM
-      // =============================
-      appendLog("📡 Confirming BE...");
-
-      const res = await fetch("/api/resale/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transfer_id,
-          tx_hash: tx.hash,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        appendLog("❌ CONFIRM ERROR: " + result.message);
-        return;
-      }
-
-      const newOwner = await contract.ownerOf(token_id);
-      appendLog("👑 NEW OWNER: " + newOwner);
-
-      appendLog("🎉 SUCCESS");
-
-    } catch (err: any) {
-      appendLog("❌ ERROR: " + err.message);
+    if (!transfer?.contract_address) {
+      appendLog("❌ CONTRACT NULL");
+      return;
     }
-  };
+if (transfer.from_wallet === transfer.to_wallet) {
+  appendLog("❌ BLOCK SELF TRANSFER");
+  return;
+}
+    const signer = await getSigner();
+    const buyer = await signer.getAddress();
+console.log("METAMASK SENDER =", await signer.getAddress());
+console.log("EXPECTED FROM =", transfer.from_wallet);
+console.log("EXPECTED TO =", transfer.to_wallet);
+
+if (!transfer?.from_wallet || !transfer?.to_wallet) {
+  appendLog("❌ INVALID TRANSFER");
+  return;
+}
+
+    console.log("SIGNER =", buyer);
+    console.log("FROM =", transfer.from_wallet);
+    console.log("TO =", transfer.to_wallet);
+
+    const contract = new ethers.Contract(
+      transfer.contract_address,
+      ABI,
+      signer
+    );
+
+    const owner = await contract.ownerOf(transfer.token_id);
+
+    appendLog("👑 OWNER: " + owner);
+
+    if (owner.toLowerCase() !== transfer.from_wallet.toLowerCase()) {
+      appendLog("❌ OWNER MISMATCH");
+      return;
+    }
+
+    appendLog("🚀 TRANSFER START...");
+
+    const tx = await contract.transferFrom(
+      transfer.from_wallet,
+      transfer.to_wallet,
+      transfer.token_id
+    );
+
+    await tx.wait();
+
+    appendLog("✅ DONE: " + tx.hash);
+
+    const confirm = await fetch("/api/resale/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transfer_id: transfer.transfer_id,
+        tx_hash: tx.hash,
+      }),
+    });
+
+    const result = await confirm.json();
+
+    if (!confirm.ok) {
+      appendLog("❌ CONFIRM FAIL");
+      return;
+    }
+console.log("FINAL TRANSFER =", {
+  from: transfer.from_wallet,
+  to: transfer.to_wallet,
+  token: transfer.token_id,
+  contract: transfer.contract_address
+});
+    appendLog("🎉 SUCCESS COMPLETE");
+
+  } catch (err: any) {
+    appendLog("❌ ERROR: " + err.message);
+  }
+};
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>🔥 Resale Flow (DEBUG VERSION)</h2>
+      <h2>🔥 Resale Flow (FIXED - SAFE VERSION)</h2>
 
       <input
         placeholder="ticket_id"

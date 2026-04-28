@@ -69,25 +69,31 @@ public class ConcertServiceImpl implements ConcertService {
         if (concert.getZones() != null && !concert.getZones().isEmpty()) {
             zoneResponses = concert.getZones().stream().map(zone -> {
 
-                // 1. Móc danh sách Tiers từ trong Zone ra và biến thành TierResponse
-                List<TierResponse> tierResponses = null;
+                List<TierResponse> tierResponses = new ArrayList<>();
+                int calculatedZoneTotalSeats = 0;       // 🌟 Biến tạm cộng dồn tổng ghế
+                int calculatedZoneAvailableSeats = 0;   // 🌟 Biến tạm cộng dồn ghế trống
 
-
-                // (⚠️ Đảm bảo trong Entity Zone của bạn đã có quan hệ:
-                // @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL) private List<SeatTier> seatTiers;)
                 if (zone.getSeatTiers() != null && !zone.getSeatTiers().isEmpty()) {
-                    tierResponses = zone.getSeatTiers().stream().map(tier -> {
+                    // Dùng vòng lặp for thường thay vì stream().map() để dễ dàng cộng dồn biến bên ngoài
+                    for (SeatTier tier : zone.getSeatTiers()) {
 
-                        // 🌟 DÙNG SEAT REPOSITORY ĐỂ LẤY 3 THÔNG SỐ VẼ SƠ ĐỒ CHO FE 🌟
                         String rowPrefix = seatRepository.findFirstRowLabelByTierId(tier.getTierId());
                         Integer rowCount = seatRepository.countRowsByTierId(tier.getTierId());
                         Integer seatsPerRow = seatRepository.findMaxSeatNumberByTierId(tier.getTierId());
 
-                        // 2. Lấy thông số thống kê số lượng vé (MỚI THÊM)
-                        Integer totalSeats = seatRepository.countTotalSeatsByTierId(tier.getTierId());
-                        Integer availableSeats = seatRepository.countAvailableSeatsByTierId(tier.getTierId());
+                        // Lấy thông số ghế tươi từ DB
+                        Integer tierTotalSeats = seatRepository.countTotalSeatsByTierId(tier.getTierId());
+                        Integer tierAvailableSeats = seatRepository.countAvailableSeatsByTierId(tier.getTierId());
 
-                        return new TierResponse(
+                        // Chống NullPointerException
+                        int safeTierTotal = tierTotalSeats != null ? tierTotalSeats : 0;
+                        int safeTierAvail = tierAvailableSeats != null ? tierAvailableSeats : 0;
+
+                        // 🌟 CỘNG DỒN LÊN ZONE
+                        calculatedZoneTotalSeats += safeTierTotal;
+                        calculatedZoneAvailableSeats += safeTierAvail;
+
+                        tierResponses.add(new TierResponse(
                                 tier.getTierId(),
                                 tier.getTierName(),
                                 tier.getPrice(),
@@ -98,20 +104,26 @@ public class ConcertServiceImpl implements ConcertService {
                                 rowPrefix,
                                 rowCount,
                                 seatsPerRow,
-                                totalSeats,      // 👈 Trả về cho FE
-                                availableSeats
-                        );
-                    }).collect(Collectors.toList());
+                                safeTierTotal,
+                                safeTierAvail
+                        ));
+                    }
                 }
 
-                // 2. Nhét Tiers vào trong ZoneResponse
+                // 🌟 QUYẾT ĐỊNH LẤY SỐ NÀO:
+                // Nếu là Zone ngồi (có sơ đồ) -> Lấy số đã cộng dồn từ các Tier
+                // Nếu là Zone đứng (không sơ đồ) -> Lấy số lưu sẵn trong bảng Zone
+                int finalTotalSeats = zone.isHasSeatMap() ? calculatedZoneTotalSeats : zone.getTotalSeats();
+                int finalAvailableSeats = zone.isHasSeatMap() ? calculatedZoneAvailableSeats : zone.getAvailableSeats();
+
+                // 2. Nhét vào trong ZoneResponse
                 return new ZoneResponse(
                         zone.getZoneId(),
                         zone.getZoneName(),
                         zone.getPrice(),
                         zone.getCurrency(),
-                        zone.getTotalSeats(),
-                        zone.getAvailableSeats(),
+                        finalTotalSeats,       // 👈 Đã fix: Trả về số cộng dồn
+                        finalAvailableSeats,   // 👈 Đã fix: Trả về số cộng dồn
                         zone.getColorCode(),
                         zone.isHasSeatMap(),
                         zone.getDisplayOrder(),
@@ -121,6 +133,7 @@ public class ConcertServiceImpl implements ConcertService {
         }
 
         return ConcertResponse.builder()
+                // ... (phần dưới của ông giữ nguyên y chang)
                 .concertId(concert.getConcertId())
                 .title(concert.getTitle())
                 .artist(concert.getArtist())
@@ -131,7 +144,6 @@ public class ConcertServiceImpl implements ConcertService {
                 .saleStartAt(concert.getSaleStartAt())
                 .saleEndAt(concert.getSaleEndAt())
                 .status(concert.getStatus())
-                // Lấy nhẹ cái id, tên của Organizer và Venue
                 .organizerId(concert.getOrganizer().getUserId())
                 .organizerName(concert.getOrganizer().getName())
                 .venueId(concert.getVenue().getVenueId())
