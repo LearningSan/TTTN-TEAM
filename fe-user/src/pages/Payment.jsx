@@ -188,71 +188,159 @@ const Payment = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
-      <div className="max-w-md w-full bg-white border-[3px] border-[#8D1B1B] rounded-[40px] p-8 shadow-2xl">
-        <h2 className="text-2xl font-black text-center text-gray-800 mb-6 uppercase italic">
-          {isResale ? "Resale Confirmation" : "Payment Method"}
-        </h2>
+  const concert = state?.concert;
+  const selectedSeats = state?.selectedSeats || [];
+  const standingTickets = state?.standingTickets || {};
+  const zones = state?.zones || [];
 
-        <div className="bg-red-50 rounded-2xl p-6 mb-6 border border-red-100">
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-500 font-bold">Mã GD:</span>
-            <span className="font-black text-red-700">
-              #{nftData?.transfer_id || paymentId || "N/A"}
-            </span>
-          </div>
-          <div className="flex justify-between mb-2 text-sm">
-            <span className="text-gray-500 font-bold">Token ID:</span>
-            <span className="font-bold italic">
-              #{nftData?.token_id || "N/A"}
-            </span>
-          </div>
-          <div className="border-t border-red-200 pt-2 mt-2">
-            <p className="text-[10px] text-gray-400 font-bold uppercase">
-              Ví hiện tại:
-            </p>
-            <p className="text-[10px] font-mono truncate">{currentAccount}</p>
-          </div>
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "Đang cập nhật";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("vi-VN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] text-white p-6 md:p-12 font-sans tracking-wide">
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-10">
+
+          <h1 className="text-4xl md:text-5xl text-white uppercase tracking-[0.2em] mb-2 font-black">
+             Payment
+          </h1>
+          <p className="text-gray-400 tracking-widest text-xs uppercase">
+            {isResale ? "NFT Ticket Resale" : "Official Ticket Booking"}
+          </p>
         </div>
 
-        {isResale ? (
-          <>
-            {isSeller ? (
-              <button
-                onClick={handleResaleFlow}
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl"
-              >
-                {loading ? "Đang xử lý..." : "Xác nhận bán (Approve)"}
-              </button>
-            ) : isBuyer ? (
-              <button
-                onClick={handleResaleFlow}
-                disabled={loading}
-                className="w-full bg-[#8D1B1B] hover:bg-black text-white font-black py-4 rounded-2xl"
-              >
-                {loading ? "Đang xử lý..." : "Hoàn tất mua vé (Transfer)"}
-              </button>
-            ) : (
-              <div className="text-center p-4 border-2 border-dashed border-red-200 rounded-2xl text-red-500 text-xs">
-                Vui lòng kết nối đúng ví giao dịch: <br />{" "}
-                {nftData?.from_wallet || nftData?.to_wallet}
+        <div className="relative group">
+          <div className="absolute inset-0 bg-[#00E5FF]/20 blur-[30px] pointer-events-none rounded-[30px]" />
+          
+          <div className="relative border-2 border-[#00E5FF] rounded-[30px] p-8 md:p-10 bg-[#111827] shadow-[0_0_50px_rgba(0,229,255,0.15)] z-10 overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF2D95]/5 rounded-full blur-[80px] -mr-32 -mt-32" />
+            
+            <div className="relative z-20 border-b border-gray-700 pb-8 mb-8">
+              <h2 className="text-[#00E5FF] text-3xl mb-4 leading-tight uppercase tracking-wider font-bold">
+                {concert?.title || "Tên sự kiện"}
+              </h2>
+              <div className="flex flex-col gap-3 text-sm text-gray-300">
+                <div className="flex items-center gap-3">
+                  <span className="w-2 h-2 rounded-full bg-[#FF2D95]" />
+                  <span>{formatDate(concert?.concert_date)}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="w-2 h-2 rounded-full bg-[#00E5FF]" />
+                  <span>{concert?.venue_name || concert?.venue?.name || "Địa điểm chưa cập nhật"}</span>
+                </div>
               </div>
-            )}
-          </>
-        ) : (
-          <button
-            onClick={handlePrimaryPayment}
-            disabled={loading}
-            className="w-full bg-black text-white font-black py-4 rounded-2xl"
-          >
-            {loading ? "Processing..." : "Pay with MetaMask"}
-          </button>
-        )}
+            </div>
+
+            <div className="relative z-20 space-y-6 mb-8">
+              <h3 className="text-[#FF2D95] text-lg uppercase tracking-widest border-l-4 border-[#FF2D95] pl-4 mb-6 font-bold">
+                Ticket Details
+              </h3>
+              
+              <div className="space-y-4">
+                {selectedSeats.map((seat, index) => (
+                  <div key={`seat-${index}`} className="flex justify-between items-center bg-black/40 p-4 rounded-xl border border-gray-800">
+                    <div>
+                      <p className="text-[#00E5FF] font-bold text-sm uppercase">{seat.zone_name}</p>
+                      <p className="text-gray-400 text-xs">Hàng {seat.row_name} - Ghế {seat.seat_number}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-bold">{seat.price?.toLocaleString()} đ</p>
+                    </div>
+                  </div>
+                ))}
+
+                {Object.entries(standingTickets).map(([zoneId, qty]) => {
+                  if (qty <= 0) return null;
+                  const zone = zones?.find(z => String(z.zone_id) === String(zoneId));
+                  const price = zone?.price || 0;
+                  return (
+                    <div key={`standing-${zoneId}`} className="flex justify-between items-center bg-black/40 p-4 rounded-xl border border-gray-800">
+                      <div>
+                        <p className="text-[#00E5FF] font-bold text-sm uppercase">{zone?.name || "Khu vực đứng"}</p>
+                        <p className="text-gray-400 text-xs">Số lượng: {qty}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white font-bold">{(price * qty).toLocaleString()} đ</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="relative z-20 bg-black/60 rounded-[20px] p-6 border border-[#FF2D95]/30">
+              <div className="flex justify-between items-center mb-4 text-gray-400 text-xs uppercase tracking-[0.2em]">
+                <span>Transaction ID</span>
+                <span className="font-mono">#{nftData?.transfer_id || paymentId || "PENDING"}</span>
+              </div>
+              
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-gray-500 text-[10px] uppercase tracking-widest mb-1">Total Amount</p>
+                  <p className="text-3xl text-[#FF2D95] font-bold">{amountVND.toLocaleString()} đ</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-gray-500 text-[10px] uppercase tracking-widest mb-1">Crypto Equivalent</p>
+                  <p className="text-xl text-[#00E5FF] font-bold">{ethAmount} ETH</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-10 relative z-20">
+              {isResale ? (
+                <>
+                  {isSeller ? (
+                    <button
+                      onClick={handleResaleFlow}
+                      disabled={loading}
+                      className="w-full bg-gradient-to-r from-[#00E5FF] to-[#00A991] hover:opacity-90 text-black font-black py-5 rounded-2xl uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {loading ? "Processing..." : "Approve Sale (Step 1)"}
+                    </button>
+                  ) : isBuyer ? (
+                    <button
+                      onClick={handleResaleFlow}
+                      disabled={loading}
+                      className="w-full bg-gradient-to-r from-[#FF2D95] to-[#FF69B4] hover:opacity-90 text-white font-black py-5 rounded-2xl uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {loading ? "Processing..." : "Complete Purchase (Step 2)"}
+                    </button>
+                  ) : (
+                    <div className="text-center p-6 bg-red-950/20 border border-red-900/50 rounded-2xl text-red-400 text-xs">
+                      <p className="mb-2 uppercase font-black tracking-widest">Wrong Wallet Detected</p>
+                      Please connect: <br />
+                      <span className="font-mono text-gray-300 select-all">{nftData?.from_wallet || nftData?.to_wallet}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button
+                  onClick={handlePrimaryPayment}
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF] hover:opacity-90 text-white font-black py-5 rounded-2xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_0_30px_rgba(0,229,255,0.3)]"
+                >
+                  {loading ? "Initializing..." : "Complete Order with MetaMask"}
+                </button>
+              )}
+              
+              <div className="mt-6 flex items-center justify-center gap-2 text-gray-500 text-[10px] uppercase tracking-widest">
+                <IoShieldCheckmarkSharp className="text-[#00E5FF]" />
+                Protected by Ethereum Smart Contract
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
-}; // <--- ĐÃ THÊM DẤU ĐÓNG COMPONENT Payment
+};
 
 export default Payment;

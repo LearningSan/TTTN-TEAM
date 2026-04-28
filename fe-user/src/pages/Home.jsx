@@ -51,9 +51,8 @@ const Home = () => {
 
         // --- CẬP NHẬT LOGIC LỌC TẠI ĐÂY ---
         const activeEvents = rawData.filter((event, index, self) => {
-          // 1. Chỉ lấy những concert có is_on_sale là true
-          const isOnSale =
-            event.is_on_sale === true || event.status === "ON_SALE";
+          // 1. Chỉ lấy những concert có status là ON_SALE
+          const isOnSale = event.status === "ON_SALE";
 
           // 2. Lọc unique concert_id (để không bị trùng card khi có nhiều zone)
           const isUnique =

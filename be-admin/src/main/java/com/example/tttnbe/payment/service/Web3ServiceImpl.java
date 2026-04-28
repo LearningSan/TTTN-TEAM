@@ -13,7 +13,7 @@ import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.Transaction;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.protocol.http.HttpService;
-import org.web3j.tx.FastRawTransactionManager;
+import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Convert;
@@ -108,8 +108,11 @@ public class Web3ServiceImpl {
             // 3. Mã hóa hàm thành chuỗi Hexa
             String encodedFunction = FunctionEncoder.encode(function);
 
-            // 4. Khởi tạo Trình quản lý Giao dịch
-            TransactionManager txManager = new FastRawTransactionManager(web3j, credentials);
+            // 1. Khai báo Chain ID của Sepolia
+            long chainId = 11155111L;
+
+            // 2. Thay vì dùng mặc định, hãy nhét chainId vào đây:
+            TransactionManager txManager = new RawTransactionManager(web3j, credentials, chainId);
 
             // 5. Gửi lệnh thực thi đến Smart Contract
             EthSendTransaction response = txManager.sendTransaction(
