@@ -62,8 +62,22 @@ const Payment = () => {
     ? state.isBuyer 
     : (currentAccount && nftData?.to_wallet?.toLowerCase() === currentAccount);
 
+  const handleEthError = (error) => {
+    console.error("Eth Error Detail:", error);
+    if (error.code === 4001 || error.message?.toLowerCase().includes("user rejected")) {
+      alert("Giao dịch đã bị hủy bởi người dùng trên MetaMask.");
+    } else {
+      const msg = error.response?.data?.message || error.reason || error.message || "Đã có lỗi xảy ra trong quá trình giao dịch.";
+      alert("Lỗi giao dịch: " + msg);
+    }
+  };
+
   const handleResaleFlow = async () => {
     if (!nftData) return;
+    if (!window.ethereum) {
+      alert("Vui lòng cài đặt MetaMask!");
+      return;
+    }
     setLoading(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -119,11 +133,11 @@ const Payment = () => {
         navigate("/my-tickets");
       }
     } catch (error) {
-      alert("Lỗi: " + (error.reason || error.message));
+      handleEthError(error);
     } finally {
       setLoading(false);
     }
-  }; // <--- ĐÃ THÊM DẤU ĐÓNG HÀM handleResaleFlow
+  };
 
   const handlePrimaryPayment = async () => {
     if (!window.ethereum) {
@@ -184,8 +198,7 @@ const Payment = () => {
         }
       }
     } catch (error) {
-      console.error("Lỗi quy trình thanh toán:", error);
-      alert("Lỗi: " + (error.response?.data?.message || error.message));
+      handleEthError(error);
     } finally {
       setLoading(false);
     }
