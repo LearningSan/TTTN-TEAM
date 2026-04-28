@@ -50,4 +50,10 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "WHERE o.orderStatus = 'PAID' " +
             "AND MONTH(o.paidAt) = :month AND YEAR(o.paidAt) = :year")
     Double sumRevenueByMonth(@Param("month") int month, @Param("year") int year);
+
+    // Đếm số đơn hàng thành công theo một ngày cụ thể
+    @Query("SELECT COUNT(o) FROM Order o " +
+            "WHERE o.orderStatus = 'PAID' " +
+            "AND CAST(o.paidAt AS date) = CAST(:date AS date)")
+    long countPaidOrdersByDate(@Param("date") LocalDateTime date);
 }
