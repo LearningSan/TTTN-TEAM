@@ -25,8 +25,9 @@ const MainLayout = () => {
     location.pathname.includes("/resale-market") ||
     location.pathname.includes("/profile") ||
     location.pathname.includes("/order-success") ||
+    location.pathname.includes("/my-purchases") ||
     // location.pathname.includes("/selection") ||
-    // location.pathname.includes("/payment") ||
+    location.pathname.includes("/payment") ||
     // location.pathname.includes("/nhap") ||
     location.pathname.includes("/checkout");
   const headerStyles = isDetailPage
