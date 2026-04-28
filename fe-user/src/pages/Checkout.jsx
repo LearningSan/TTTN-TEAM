@@ -13,6 +13,7 @@ const Checkout = () => {
   // Lấy dữ liệu từ state được truyền sang từ trang chọn vé
   const selectedSeats = state?.selectedSeats || [];
   const standingTickets = state?.standingTickets || {};
+  const zones = state?.zones || [];
   const concert = state?.concert || null;
   const totalAmount = state?.total || 0;
 
@@ -117,6 +118,9 @@ const Checkout = () => {
               amount: orderData.total_amount,
               walletAddress: walletAddress,
               concert: concert,
+              selectedSeats: selectedSeats,
+              standingTickets: standingTickets,
+              zones: zones
             },
           });
         }
@@ -130,12 +134,12 @@ const Checkout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#111827] text-white p-6 md:p-12 font-sans">
+    <div className="min-h-screen bg-[#111827] text-white p-6 md:p-12 font-anton tracking-wide">
       <main className="max-w-5xl mx-auto space-y-8">
         {/* Banner thông tin sự kiện */}
 
         <div className="border-2 border-[#EB2E91] rounded-2xl p-6 bg-black">
-          <h2 className="text-[#EB2E91] text-xl font-bold uppercase tracking-wide">
+          <h2 className="text-[#EB2E91] text-xl font-anton uppercase tracking-wide">
             {concert?.title || "Tên sự kiện chưa cập nhật"}
           </h2>
           <div className="mt-4 space-y-2 text-gray-300 text-sm">
@@ -153,141 +157,149 @@ const Checkout = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr,380px] gap-8 items-start">
-          {/* Cột trái: Form thông tin */}
-          <div className="border-2 border-[#00A991] rounded-2xl p-6 bg-black h-full">
-            <h3 className="text-[#00A991] text-lg font-bold mb-6">
-              Information Form
-            </h3>
-            <div className="bg-white text-black p-6 rounded-xl space-y-5">
-              <div className="bg-gray-200 px-4 py-2 rounded text-sm font-bold text-gray-700">
-                Ticket Holder Information
+        {/* Bảng Form & Ticket Info chung trong 1 khung */}
+        <div className="relative group mt-12">
+          {/* Viền sáng tổng thể bên ngoài */}
+          <div className="absolute inset-0 bg-[#00E5FF]/30 blur-[20px] pointer-events-none rounded-[30px]" />
+          
+          <div className="relative border-2 border-[#00E5FF] rounded-[30px] p-6 md:p-8 lg:p-12 bg-black shadow-[0_0_40px_rgba(0,229,255,0.15)] z-10">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] lg:grid-cols-[1fr_380px] gap-8 lg:gap-12 items-start">
+              {/* Cột trái: Form thông tin */}
+              <div className="h-full">
+                <h3 className="text-[#00E5FF] text-xl font-anton tracking-wide mb-6">
+                  Information Form
+                </h3>
+
+                <div className="bg-white text-black rounded-[24px] overflow-hidden shadow-inner border border-gray-200 font-sans">
+                  {/* Tiêu đề xám */}
+                  <div className="bg-[#A0A0A0] px-8 py-4 text-center">
+                    <span className="text-black font-black text-lg tracking-wide">Ticket Type</span>
+                  </div>
+
+                  <div className="p-8 space-y-6">
+                    <div>
+                      <label className="block text-sm font-bold text-black mb-2 tracking-wide">
+                        Full name
+                      </label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={customerInfo.fullName}
+                        placeholder="deniel123@gmail.com"
+                        className="w-full bg-white border border-gray-400 rounded-lg p-3 text-sm outline-none text-[#A0C4FF] font-medium placeholder-[#A0C4FF]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-black mb-2 tracking-wide">
+                        Email
+                      </label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={customerInfo.email}
+                        placeholder="deniel123@gmail.com"
+                        className="w-full bg-white border border-gray-400 rounded-lg p-3 text-sm outline-none text-[#A0C4FF] font-medium placeholder-[#A0C4FF]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-black mb-2 tracking-wide">
+                        Phone Number
+                      </label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={customerInfo.phone}
+                        placeholder="deniel123@gmail.com"
+                        className="w-full bg-white border border-gray-400 rounded-lg p-3 text-sm outline-none text-[#A0C4FF] font-medium placeholder-[#A0C4FF]"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">
-                    Full name
-                  </label>
-                  <div className="relative">
-                    <FaUserAlt className="absolute left-3 top-3 text-gray-400 size-3" />
-                    <input
-                      type="text"
-                      readOnly
-                      value={customerInfo.fullName}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-md p-2.5 pl-10 text-sm outline-none text-gray-600"
-                    />
-                  </div>
-                </div>
+              {/* Cột phải: Thông tin vé & Tổng tiền */}
+              <div className="h-full flex flex-col font-sans">
+                <div className="bg-white text-black p-8 rounded-[30px] flex-1 flex flex-col shadow-lg border border-gray-100">
+                  <h3 className="font-anton text-2xl text-center text-black mb-6 tracking-widest">
+                    Ticket Information
+                  </h3>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <FaEnvelope className="absolute left-3 top-3 text-gray-400 size-3" />
-                    <input
-                      type="text"
-                      readOnly
-                      value={customerInfo.email}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-md p-2.5 pl-10 text-sm outline-none text-gray-600"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <FaPhoneAlt className="absolute left-3 top-3 text-gray-400 size-3" />
-                    <input
-                      type="text"
-                      readOnly
-                      value={customerInfo.phone}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-md p-2.5 pl-10 text-sm outline-none text-gray-600"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Cột phải: Thông tin vé & Tổng tiền */}
-          <div className="bg-white text-black p-6 rounded-2xl shadow-xl">
-            <h3 className="font-bold text-center text-gray-800 mb-6 border-b pb-4">
-              Ticket Information
-            </h3>
-
-            <div className="max-h-60 overflow-y-auto mb-4">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="text-gray-400 border-b">
-                    <th className="text-left font-bold py-2">Ticket type</th>
-                    <th className="text-right font-bold py-2">Quantity</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {selectedSeats.map((seat) => (
-                    <tr key={seat.seat_id}>
-                      <td className="py-3 pr-2">
-                        <div className="font-bold text-gray-700">
-                          Khu {seat.zone_name}
-                        </div>
-                        <div className="text-gray-500">
-                          - Ghế {seat.seat_label}
-                        </div>
-                        <div className="text-gray-400 text-xs italic">
-                          ({seat.tier_name})
-                        </div>
-                        <div className="text-[#EB2E91] font-semibold">
-                          {seat.price} ETH
-                        </div>
-                      </td>
-                      <td className="text-right font-bold py-3">1</td>
-                    </tr>
-                  ))}
-                  {Object.entries(standingTickets).map(
-                    ([zoneId, qty]) =>
-                      qty > 0 && (
-                        <tr key={zoneId}>
-                          <td className="py-3 pr-2">
-                            <div className="font-bold text-gray-700">
-                              Vé đứng (Khu {zoneId})
-                            </div>
-                            <div className="text-[#EB2E91] font-semibold">
-                              {(0.0001).toFixed(4)} ETH
-                            </div>
-                          </td>
-                          <td className="text-right font-bold py-3">{qty}</td>
+                  <div className="flex-1 overflow-y-auto mb-4">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b-2 border-gray-100">
+                          <th className="text-left font-anton text-lg tracking-wider py-3">Ticket type</th>
+                          <th className="text-right font-anton text-lg tracking-wider py-3">Quantity</th>
                         </tr>
-                      ),
-                  )}
-                </tbody>
-              </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {selectedSeats.map((seat) => (
+                          <tr key={seat.seat_id}>
+                            <td className="py-4 pr-2">
+                              <div className="font-medium text-sm text-gray-600 mb-1">
+                                {seat.tier_name || "VIP"}
+                              </div>
+                              <div className="text-black font-medium mb-1">
+                                {seat.price.toLocaleString()} đ
+                              </div>
+                              <div className="text-black font-medium text-sm">
+                                Khu {seat.zone_name} - Ghế {seat.seat_label}
+                              </div>
+                            </td>
+                            <td className="text-right font-medium py-4 align-top">01</td>
+                          </tr>
+                        ))}
+                        {Object.entries(standingTickets).map(
+                          ([zoneId, qty]) =>
+                            qty > 0 && (
+                              <tr key={zoneId}>
+                                <td className="py-4 pr-2">
+                                  <div className="font-medium text-sm text-gray-600 mb-1">
+                                    STANDING
+                                  </div>
+                                  <div className="text-black font-medium mb-1">
+                                    {(zones.find(z => String(z.zone_id) === String(zoneId))?.price || 0).toLocaleString()} đ
+                                  </div>
+                                  <div className="text-black font-medium text-sm">
+                                    Khu {zones.find(z => String(z.zone_id) === String(zoneId))?.name || zoneId}
+                                  </div>
+                                </td>
+                                <td className="text-right font-medium py-4 align-top">
+                                  {qty < 10 ? `0${qty}` : qty}
+                                </td>
+                              </tr>
+                            ),
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex justify-between items-center font-anton text-xl border-t border-dashed border-gray-400 pt-6 mb-6">
+                    <span className="text-black tracking-wider">Subtotal</span>
+                    <span className="text-[#FF2D95] tracking-wider font-sans font-black">
+                      {totalAmount.toLocaleString()} đ
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={handleContinue}
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-[#FFA0CB] to-[#FF69B4] text-black py-4 font-black text-sm uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 border border-[#FF2D95]"
+                  >
+                    {loading ? "Processing..." : "CONTINUE"}
+                  </button>
+
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="w-full mt-4 text-xs text-gray-500 font-medium text-center hover:text-gray-800"
+                  >
+                    Re-select ticket
+                  </button>
+                </div>
+              </div>
             </div>
-
-            <div className="flex justify-between items-center font-bold text-sm border-t-2 border-dashed border-gray-200 pt-5 mb-6">
-              <span className="text-gray-600 uppercase">Subtotal</span>
-              <span className="text-2xl text-[#F24E61] tracking-tighter">
-                {totalAmount} <span className="text-sm">ETH</span>
-              </span>
-            </div>
-
-            <button
-              onClick={handleContinue}
-              disabled={loading}
-              className="w-full bg-[#EB2E91] text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all hover:bg-[#c9267c] active:scale-95 disabled:opacity-50"
-            >
-              {loading ? "Processing..." : "CONTINUE"}
-            </button>
-
-            <button
-              onClick={() => navigate(-1)}
-              className="w-full mt-4 text-[11px] text-gray-400 font-bold text-center underline hover:text-gray-600"
-            >
-              Re-select ticket
-            </button>
           </div>
         </div>
       </main>
