@@ -56,4 +56,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "WHERE o.orderStatus = 'PAID' " +
             "AND CAST(o.paidAt AS date) = CAST(:date AS date)")
     long countPaidOrdersByDate(@Param("date") LocalDateTime date);
+
+    // Lọc các đơn PAID của những Concert đã CANCELLED
+    @Query("SELECT o FROM Order o WHERE o.orderStatus = 'PAID' AND o.concert.status = 'CANCELLED'")
+    Page<Order> findOrdersNeedingRefund(Pageable pageable);
 }

@@ -40,7 +40,7 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private Web3ServiceImpl web3Service; // Gọi "cô thu ngân" Blockchain vào đây
 
-    // API 1: Lấy danh sách đơn hàng cho Admin
+    // API 1: Lấy danh sách đơn hàng cho Admin (Tích hợp luôn bộ lọc hoàn tiền)
     public PageResponse<OrderResponse> getAllOrders(int page, int size, String status) {
 
         // Fix lỗi trang số 0 của Spring Boot
@@ -51,24 +51,22 @@ public class OrderServiceImpl implements OrderService {
 
         Page<Order> orderPage;
 
-        // Nếu FE truyền status (ví dụ: PAID), thì lọc theo status. Nếu không thì lấy tất cả.
         if (status != null && !status.isEmpty()) {
-            orderPage = orderRepository.findByOrderStatus(status.toUpperCase(), pageable);
+            if (status.equalsIgnoreCase("NEED_REFUND")) {
+                // 🌟 TRƯỜNG HỢP ĐẶC BIỆT: FE muốn lấy danh sách cần hoàn tiền
+                orderPage = orderRepository.findOrdersNeedingRefund(pageable);
+            } else {
+                // 🌟 TRƯỜNG HỢP BÌNH THƯỜNG: FE lọc theo PAID, PENDING, CANCELLED...
+                orderPage = orderRepository.findByOrderStatus(status.toUpperCase(), pageable);
+            }
         } else {
+            // FE không truyền status -> Lấy tất cả
             orderPage = orderRepository.findAll(pageable);
         }
 
-        // Map Entity sang DTO
-        Page<OrderResponse> dtoPage = orderPage.map(order -> OrderResponse.builder()
-                .orderId(order.getOrderId())
-                .userName(order.getUser().getName()) // 👈 Lấy tên từ bảng User
-                .userEmail(order.getUser().getEmail()) // 👈 Lấy email từ bảng User
-                .concertTitle(order.getConcert().getTitle()) // 👈 Lấy tên show từ bảng Concert
-                .totalAmount(order.getTotalAmount())
-                .currency(order.getCurrency())
-                .orderStatus(order.getOrderStatus())
-                .createdAt(order.getCreatedAt())
-                .build());
+        // 🌟 TỐI ƯU CODE: Thay vì viết lại cục Builder dài ngoằng,
+        // ta gọi luôn hàm mapToResponse đã viết chuẩn chỉnh ở dưới!
+        Page<OrderResponse> dtoPage = orderPage.map(this::mapToResponse);
 
         return PageResponse.from(dtoPage);
     }
