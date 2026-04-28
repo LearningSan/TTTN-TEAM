@@ -1,6 +1,6 @@
 import { getZoneById } from "../lib/zone";
-import { validateSeats,lockSeats, getSeatById } from "../lib/seat";
-import { insertOrder, insertOrderItem,getOrderById } from "../lib/order";
+import { validateSeats, lockSeats, getSeatById } from "../lib/seat";
+import { insertOrder, insertOrderItem, getOrderById } from "../lib/order";
 import { connectDB } from "../lib/data";
 import sql from "mssql";
 
@@ -26,10 +26,14 @@ export async function createOrder(data: CreateOrderInput) {
   const transaction = new sql.Transaction(pool);
 
   try {
-
+    for (const item of items) {
+      if (!item.quantity || item.quantity <= 0) {
+        throw new Error("Quantity must be greater than 0");
+      }
+    }
     const { total } = await validateSeats(items);
 
- 
+
     await transaction.begin();
 
 
@@ -43,19 +47,19 @@ export async function createOrder(data: CreateOrderInput) {
       note,
       wallet_address
     });
-for (const item of items) {
-  const req = transaction.request();
+    for (const item of items) {
+      const req = transaction.request();
 
-  const tier_id = await resolveTier(item, transaction);
+      const tier_id = await resolveTier(item, transaction);
 
-  req.input("order_id", order_id);
-  req.input("zone_id", item.zone_id);
-  req.input("seat_id", item.seat_id || null);
-  req.input("quantity", item.quantity);
-  req.input("unit_price", item.unit_price || 0);
-  req.input("tier_id", tier_id);
+      req.input("order_id", order_id);
+      req.input("zone_id", item.zone_id);
+      req.input("seat_id", item.seat_id || null);
+      req.input("quantity", item.quantity);
+      req.input("unit_price", item.unit_price || 0);
+      req.input("tier_id", tier_id);
 
-  await req.query(`
+      await req.query(`
     INSERT INTO order_items (
       order_id,
       zone_id,
@@ -73,8 +77,8 @@ for (const item of items) {
       @tier_id
     )
   `);
-}
-    
+    }
+
     await transaction.commit();
 
     return {
@@ -90,17 +94,23 @@ for (const item of items) {
   }
 
 }
-export async function getSpecificOrder(order_id: string) {
-try {
-  const order = await getOrderById(order_id);
-  if (!order) {
-    throw new Error("Order not found");
-  }
-  return order;
-} catch (error: any) {
-  throw new Error(error.message);
-}
+export async function getSpecificOrder(order_id: string, user_id: string) {
+  try {
+    const order = await getOrderById(order_id);
 
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    if (order.user_id !== user_id) {
+      throw new Error("Forbidden - This order does not belong to you");
+    }
+
+    return order;
+
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
 }
 
 

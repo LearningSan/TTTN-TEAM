@@ -157,16 +157,11 @@ export async function updateTicketOwner(
   }
 }
 
-export async function checkPendingTransferByTicket(
-  ticket_id: string,
-  transaction?: any
-) {
+export async function checkPendingTransferByTicket(ticket_id: string) {
   try {
-    const request = transaction
-      ? transaction.request()
-      : (await connectDB()).request();
+    const pool = await connectDB();
 
-    const result = await request
+    const result = await pool.request()
       .input("ticket_id", ticket_id)
       .query(`
         SELECT TOP 1 *
@@ -176,11 +171,26 @@ export async function checkPendingTransferByTicket(
         ORDER BY transfer_date DESC
       `);
 
-    return result.recordset[0] || null;
+    const transfer = result.recordset[0];
 
-  } catch (error) {
-    console.error("Error checkPendingTransferByTicket:", error);
-    throw new Error("DB check pending transfer failed");
+    if (!transfer) {
+      return {
+        ok: false,
+        reason: "NO_PENDING_TRANSFER"
+      };
+    }
+
+    return {
+      ok: true,
+      transfer
+    };
+
+  } catch (err) {
+    console.error(err);
+    return {
+      ok: false,
+      reason: "SERVER_ERROR"
+    };
   }
 }
 export async function getPendingTransfersByWallet(
