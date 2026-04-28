@@ -66,8 +66,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "(:status IS NULL OR o.orderStatus = :status) AND " +
             "(:keyword IS NULL OR LOWER(o.user.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(o.user.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(o.concert.title) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<Order> searchOrders(@Param("status") String status, @Param("keyword") String keyword, Pageable pageable);
+            "LOWER(o.concert.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "o.orderId = :orderid)")
+    Page<Order> searchOrders(@Param("status") String status, @Param("keyword") String keyword, @Param("orderid") UUID orderid, Pageable pageable);
 
     // 2. Lọc riêng cho tab CẦN HOÀN TIỀN (NEED_REFUND) + Tìm kiếm Keyword
     @Query("SELECT o FROM Order o WHERE o.orderStatus = 'PAID' AND o.concert.status = 'CANCELLED' AND " +
