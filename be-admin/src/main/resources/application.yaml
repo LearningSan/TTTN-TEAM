@@ -25,7 +25,7 @@ spring:
 web3:
   rpc:
     # Đây là đường dẫn kết nối vào mạng thử nghiệm của Binance (BSC Testnet)
-    url: https://data-seed-prebsc-1-s1.binance.org:8545/
+    url: https://ethereum-sepolia-rpc.publicnode.com
   admin:
     # Lát nữa bạn tạo ví xong thì copy cái địa chỉ 0x... dán vào đây
     wallet: "0xfF7154E5D44951a824E4Be4909f588d553f98383"
