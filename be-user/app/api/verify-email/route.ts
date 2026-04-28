@@ -7,20 +7,28 @@ export async function GET(req: NextRequest) {
     const token = searchParams.get("token");
 
     if (!token) {
-      return NextResponse.json(
-        { message: "Token is required" },
-        { status: 400 }
+      return NextResponse.redirect(
+        "http://localhost:5173/login?error=missing_token"
       );
     }
 
     const result = await verifyEmailToken(token);
 
-    return NextResponse.json(result);
+    if (!result.success) {
+      return NextResponse.redirect(
+        `http://localhost:5173/login?error=${encodeURIComponent(result.message)}`
+      );
+    }
+
+    return NextResponse.redirect(
+      "http://localhost:5173/login?verified=true"
+    );
+
   } catch (error) {
     console.error("Verify email failed:", error);
-    return NextResponse.json(
-      { message: "Verify email failed" },
-      { status: 500 }
+
+    return NextResponse.redirect(
+      "http://localhost:5173/login?error=server_error"
     );
   }
 }

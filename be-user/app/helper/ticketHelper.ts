@@ -3,24 +3,10 @@
 import { getTickets, getTicketById,getTicketsByUserId } from "@/app/lib/ticket";
 import { getOrderItems } from "../lib/order";
 import { createTicket } from "@/app/lib/ticket";
-import { ethers } from "ethers";
-import { abi } from "../lib/abi";
+
+import { getContract } from "../lib/contract";
 
 
-function getContract() {
-  const rpc = process.env.RPC_URL;
-  const key = process.env.PRIVATE_KEY;
-  const address = process.env.CONTRACT_ADDRESS;
-
-  if (!rpc || !key || !address) {
-    throw new Error("Missing env RPC_URL / PRIVATE_KEY / CONTRACT_ADDRESS");
-  }
-
-  const provider = new ethers.JsonRpcProvider(rpc);
-  const wallet = new ethers.Wallet(key, provider);
-
-  return new ethers.Contract(address, abi, wallet);
-}
 
 export async function getTicketsService(params: {
   status?: string;

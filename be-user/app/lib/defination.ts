@@ -94,7 +94,8 @@ export type concerts = {
   sale_end_at: string | null,  
   status: string,          
   created_at: string,       
-  updated_at: string       
+  updated_at: string,       
+  layout_config:string
 };
 export type seats = {
   seat_id: string,               

@@ -50,7 +50,7 @@
  *         schema:
  *           type: string
  *         description: Trạng thái
- *         example: "ACTIVE"
+ *         example: "ONSALE"
  *
  *       - in: query
  *         name: page

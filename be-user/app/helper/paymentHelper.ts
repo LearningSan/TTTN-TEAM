@@ -1,10 +1,11 @@
 import { connectDB } from "../lib/data";
 import { getPaymentById, insertPayment, updateOrderPayment, markPaymentSuccess, markPaymentFailed } from "../lib/payment_transaction";
-import { getOrderById, markOrderPaid } from "../lib/order";
-import { createTicketsFromOrder } from "./ticketHelper";
+import { markOrderPaid } from "../lib/order";
 import { markSeatsBookedByOrder } from "../lib/seat";
-import { updateTicketQR } from "../lib/ticket";
+import { updateTicketQR, createTicketRecords, updateTicketToken } from "../lib/ticket";
 import { updateZoneAfterPayment } from "../lib/zone";
+import { getContract } from "../lib/contract";
+
 import QRCode from "qrcode";
 
 import { ethers } from "ethers";
@@ -16,49 +17,75 @@ export async function createPayment({
   from_wallet = null,
   to_wallet = null
 }: any) {
-  const order = await getOrderById(order_id);
+  const pool = await connectDB();
+  const transaction = pool.transaction();
 
-  if (!order) throw new Error("Order not found");
+  try {
+    await transaction.begin();
 
-  if (order.order_status !== "PENDING") {
-    throw new Error("Order is not payable");
+    const request = transaction.request();
+
+    const orderResult = await request
+      .input("order_id", order_id)
+      .query(`
+        SELECT *
+        FROM orders WITH (UPDLOCK, ROWLOCK)
+        WHERE order_id = @order_id
+      `);
+
+    const order = orderResult.recordset[0];
+
+    if (!order) throw new Error("Order not found");
+
+    if (order.order_status !== "PENDING") {
+      throw new Error("Order is not payable");
+    }
+
+    if (order.payment_id) {
+      throw new Error("Order already has payment");
+    }
+    const timeResult = await request.query(`
+  SELECT GETDATE() AS now
+`);
+
+    const now = new Date(timeResult.recordset[0].now);
+    const expiresAt = new Date(order.expires_at);
+
+    if (expiresAt.getTime() <= now.getTime()) {
+      throw new Error("Order expired");
+    }
+
+    if (expiresAt.getTime() < now.getTime()) {
+      throw new Error("Order expired");
+    }
+    const payment_id = await insertPayment({
+      order_id,
+      user_id,
+      concert_id: order.concert_id,
+      amount: order.total_amount,
+      currency: order.currency,
+      from_wallet,
+      to_wallet
+    }, transaction);
+
+    await updateOrderPayment(order_id, payment_id, transaction);
+
+    await transaction.commit();
+
+    return {
+      payment_id,
+      order_id,
+      status: "PENDING"
+    };
+
+  } catch (err) {
+    await transaction.rollback();
+    throw err;
   }
-
-  const now = new Date();
-
-  // convert DB → UTC
-  const expiresAt = normalizeDbDate(order.expires_at);
-
-  if (expiresAt < now) {
-    throw new Error("Order expired");
-  }
-  const payment_id = await insertPayment({
-    order_id,
-    user_id,
-    concert_id: order.concert_id,
-    amount: order.total_amount,
-    currency: order.currency,
-    from_wallet,
-    to_wallet,
-    payment_status: "PENDING"
-  });
-
-  await updateOrderPayment(order_id, payment_id);
-
-  return {
-    payment_id,
-    order_id,
-    status: "PENDING"
-  };
 }
-
 export async function confirmPaymentService(payment_id: string, tx_hash: string) {
   const payment = await getPaymentById(payment_id);
   if (!payment) throw new Error("Payment not found");
-
-  if (payment.payment_status !== "PENDING") {
-    throw new Error("Payment already processed");
-  }
 
   const receipt = await provider.getTransactionReceipt(tx_hash);
 
@@ -68,15 +95,21 @@ export async function confirmPaymentService(payment_id: string, tx_hash: string)
   }
 
   if (receipt.status !== 1) {
-    await markPaymentFailed(payment_id, "Transaction failed on blockchain");
+    await markPaymentFailed(payment_id, "Transaction failed");
     throw new Error("Transaction failed");
   }
 
   const pool = await connectDB();
   const transaction = pool.transaction();
 
+  let tickets: any[] = [];
+
   try {
     await transaction.begin();
+
+    // =========================
+    // 🔒 PHASE 1 - DB ONLY
+    // =========================
 
     await markPaymentSuccess(
       payment_id,
@@ -86,7 +119,13 @@ export async function confirmPaymentService(payment_id: string, tx_hash: string)
     );
 
     await markOrderPaid(payment.order_id, transaction);
+
     await updateZoneAfterPayment(payment.order_id, transaction);
+
+    await markSeatsBookedByOrder(payment.order_id, transaction);
+
+    tickets = await createTicketRecords(payment, transaction);
+
     await transaction.commit();
 
   } catch (err) {
@@ -94,26 +133,38 @@ export async function confirmPaymentService(payment_id: string, tx_hash: string)
     throw err;
   }
 
-  const createdTickets = await createTicketsFromOrder(payment);
 
-  await markSeatsBookedByOrder(payment.order_id);
+  const contract = getContract();
 
-  for (const t of createdTickets) {
-    const qrData = `ticket_id=${t.ticketId}&token_id=${t.tokenId}`;
+  for (const t of tickets) {
+    try {
+      if (!payment.from_wallet) {
+        throw new Error("Missing from_wallet");
+      }
+      const tx = await contract.mint(payment.from_wallet);
+      const rec = await tx.wait();
 
-    const qrUrl = await generateQRCode(qrData);
-    if (!qrUrl)
-      throw new Error("Failed to generate QR code");
-    const ok = await updateTicketQR(t.ticketId, qrData, qrUrl);
-    if (!ok)
-      throw new Error(`Failed to update QR code for ticket ${t.ticketId}`);
+      const tokenId = extractTokenId(rec, contract);
+      await updateTicketToken(t.ticketId, tokenId, tx.hash);
+
+      const qrData = `ticket_id=${t.ticketId}&token_id=${tokenId}`;
+      const qrUrl = await generateQRCode(qrData);
+      if (!qrUrl) {
+        throw new Error(`Failed to generate QR for ticket ${t.ticketId}`);
+      }
+      await updateTicketQR(t.ticketId, qrData, qrUrl);
+
+    } catch (err) {
+      console.error("Mint failed ticket:", t.ticketId, err);
+      // retry sau (optional queue)
+    }
   }
 
   return {
     success: true,
     tx_hash,
     block_number: receipt.blockNumber,
-    tickets: createdTickets
+    tickets
   };
 }
 
@@ -132,11 +183,21 @@ export async function generateQRCode(data: string) {
     return null;
   }
 }
-const DB_TIME_OFFSET_HOURS = 5; // bạn đã confirm
 
-export function normalizeDbDate(dateStr: string) {
-  const d = new Date(dateStr);
+export function extractTokenId(receipt: any, contract: any): string {
+  const transferEvent = receipt.logs
+    .map((log: any) => {
+      try {
+        return contract.interface.parseLog(log);
+      } catch {
+        return null;
+      }
+    })
+    .find((e: any) => e && e.name === "Transfer");
 
-  // convert DB local time → UTC chuẩn Node
-  return new Date(d.getTime() + DB_TIME_OFFSET_HOURS * 60 * 60 * 1000);
+  if (!transferEvent) {
+    throw new Error("Transfer event not found");
+  }
+
+  return transferEvent.args.tokenId.toString();
 }
