@@ -33,9 +33,10 @@ const ProfilePage = () => {
         if (response.data && response.data.data) {
           const userData = response.data.data;
           setUser({
-            full_name: userData.name || "Chưa cập nhật", // Lấy từ userData.name
+            full_name: userData.name || "Chưa cập nhật",
             email: userData.email || "",
             phone: userData.phone || "",
+            avatar_url: userData.avatar_url || "", // <--- BỔ SUNG ĐỂ HIỂN THỊ ẢNH
           });
         }
       } catch (error) {
@@ -76,7 +77,17 @@ const ProfilePage = () => {
       if (response.data) {
         alert("Cập nhật thông tin thành công!");
         setIsEditing(false);
-        setSelectedFile(null); // Reset file sau khi lưu
+        setSelectedFile(null);
+
+        // 🔄 Cập nhật lại localStorage để các trang khác (Header) nhận diện ảnh mới
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const updatedUser = {
+          ...currentUser,
+          full_name: user.full_name,
+          avatar_url: user.avatar_url,
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        window.dispatchEvent(new Event("storage"));
       }
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
@@ -160,14 +171,16 @@ const ProfilePage = () => {
                   )}
                 </div>
 
-                {/* Nút bấm chỉnh sửa Avatar - Luôn hiện hoặc chỉ hiện khi isEditing */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current.click()}
-                  className="absolute bottom-1 right-1 bg-[#7DE7EB] text-[#0B1426] p-2 rounded-full shadow-lg hover:scale-110 transition-transform z-10"
-                >
-                  <HiOutlineCamera size={20} />
-                </button>
+                {/* Nút bấm chỉnh sửa Avatar - Chỉ hiện khi đang ở chế độ Edit */}
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current.click()}
+                    className="absolute bottom-1 right-1 bg-[#7DE7EB] text-[#0B1426] p-2 rounded-full shadow-lg hover:scale-110 transition-transform z-10"
+                  >
+                    <HiOutlineCamera size={20} />
+                  </button>
+                )}
 
                 <input
                   type="file"
