@@ -678,15 +678,14 @@ export async function updateTicketToken(
     `);
 }
 export async function createTicketRecords(payment: any, transaction?: any) {
-  const items = await getOrderItems(payment.order_id, transaction);
+  try {
+    const items = await getOrderItems(payment.order_id, transaction);
 
-  const tickets: any[] = [];
+    const tickets: any[] = [];
 
-  for (const item of items) {
-    for (let i = 0; i < item.quantity; i++) {
-
-      const ticketId = await createTicket(
-        {
+    for (const item of items) {
+      for (let i = 0; i < item.quantity; i++) {
+        tickets.push({
           order_id: payment.order_id,
           order_item_id: item.order_item_id,
           user_id: payment.user_id,
@@ -695,21 +694,20 @@ export async function createTicketRecords(payment: any, transaction?: any) {
           seat_id: item.seat_id ?? null,
           payment_id: payment.payment_id,
           wallet_address: payment.from_wallet ?? "",
-          tier_id: item.tier_id ?? null,
-          token_id: null,
-          mint_tx_hash: null,
-          contract_address: process.env.CONTRACT_ADDRESS!
-        },
-        transaction
-      );
-
-      tickets.push({
-        ticketId,
-        seat_id: item.seat_id ?? null,
-        zone_id: item.zone_id
-      });
+          tier_id: item.tier_id ?? null
+        });
+      }
     }
-  }
 
-  return tickets;
+    return tickets;
+
+  } catch (error: any) {
+    console.error("createTicketRecords error:", {
+      message: error.message,
+      order_id: payment?.order_id,
+      payment_id: payment?.payment_id
+    });
+
+    throw new Error("Failed to create ticket records");
+  }
 }
