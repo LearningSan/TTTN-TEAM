@@ -85,9 +85,27 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { confirmTransferService } from "@/app/helper/transferHelper";
-
+import { verifyToken } from "@/app/helper/authenHelper";
 export async function POST(req: NextRequest) {
   try {
+
+     const token = req.cookies.get("access_token")?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { message: "Unauthorized - No token" },
+        { status: 401 }
+      );
+    }
+
+    const decoded = await verifyToken(token);
+
+    if (!decoded) {
+      return NextResponse.json(
+        { message: "Invalid token" },
+        { status: 401 }
+      );
+    }
     const { transfer_id, tx_hash } = await req.json();
 
     if (!transfer_id || !tx_hash) {

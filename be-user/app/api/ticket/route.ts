@@ -185,9 +185,27 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getTicketsService } from "@/app/helper/ticketHelper";
-
+import { verifyToken } from "@/app/helper/authenHelper";
 export async function GET(req: NextRequest) {
   try {
+
+      const token = req.cookies.get("access_token")?.value;
+    
+        if (!token) {
+          return NextResponse.json(
+            { message: "Unauthorized" },
+            { status: 401 }
+          );
+        }
+    
+        const decoded = await verifyToken(token);
+    
+        if (!decoded) {
+          return NextResponse.json(
+            { message: "Invalid token" },
+            { status: 401 }
+          );
+        }
     const { searchParams } = new URL(req.url);
 
     const status = searchParams.get("status") || undefined;

@@ -1,22 +1,22 @@
 import bcrypt from "bcrypt";
-import { getUser,createUser } from "@/app/lib/user";
-import jwt,{ JwtPayload } from "jsonwebtoken";
-import { createVerifytoken,getTokenByUserId,updateVerifyTokenByTokenId,revokeUserTokens} from "../lib/refresh_token";
-import { findSocial,createSocial } from "../lib/social_account";
+import { getUser, createUser } from "@/app/lib/user";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import { createVerifytoken, getTokenByUserId, updateVerifyTokenByTokenId, revokeUserTokens } from "../lib/refresh_token";
+import { findSocial, createSocial } from "../lib/social_account";
 import { error } from "node:console";
 import { users } from "../lib/defination";
 import { NextResponse } from "next/server";
 import { activateUser } from "@/app/lib/user";
-const JWT_SECRET = process.env.JWT_SECRET || "supersecret"; 
+const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "supersecret";
 
 
 export async function authenticateUser(email: string, password: string) {
   const user = await getUser(email);
-console.log("EMAIL:", email);
-console.log("PASSWORD INPUT:", password);
-console.log("USER:", user);
-console.log("HASH:", user?.password_hash);
+  console.log("EMAIL:", email);
+  console.log("PASSWORD INPUT:", password);
+  console.log("USER:", user);
+  console.log("HASH:", user?.password_hash);
   if (!user) return null;
 
   if (!user.password_hash) {
@@ -38,32 +38,32 @@ export async function createToken(
   deviceInfo: string = "unknown",
   ipAddress: string = "0.0.0.0"
 ) {
-try {
-   if (!user.user_id) throw new Error("User ID is required");
-  //tao access token
-  const accessToken = jwt.sign({ user_id: user.user_id, email: user.email }, JWT_SECRET, { expiresIn: "1h" });
-  //Ngày hết hạn
-  const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + 1);
-  const expiresAtStr = expiresAt.toISOString().slice(0, 19).replace("T", " ");
-  //tao refresh Token
-  const refreshToken = jwt.sign({ user_id: user.user_id, email: user.email }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
-  const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-  //Tạo trong refresh Token DB
-  const result = await createVerifytoken(user.user_id, refreshTokenHash, deviceInfo, ipAddress, expiresAtStr);
+  try {
+    if (!user.user_id) throw new Error("User ID is required");
+    //tao access token
+    const accessToken = jwt.sign({ user_id: user.user_id, email: user.email }, JWT_SECRET, { expiresIn: "1h" });
+    //Ngày hết hạn
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+    const expiresAtStr = expiresAt.toISOString().slice(0, 19).replace("T", " ");
+    //tao refresh Token
+    const refreshToken = jwt.sign({ user_id: user.user_id, email: user.email }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    //Tạo trong refresh Token DB
+    const result = await createVerifytoken(user.user_id, refreshTokenHash, deviceInfo, ipAddress, expiresAtStr);
 
-  if (!result) return null;
+    if (!result) return null;
 
-  return {
-accessToken,refreshToken
-  };
-} catch (error) {
+    return {
+      accessToken, refreshToken
+    };
+  } catch (error) {
     console.error("Token creation failed:", error);
     throw new Error("Token creation failed");
+  }
+
 }
- 
-}
-  
+
 export async function verifyToken(token: string) {
   try {
     let decode = jwt.verify(token, JWT_SECRET) as JwtPayload
@@ -75,48 +75,68 @@ export async function verifyToken(token: string) {
 export async function GoogleLogin(code: string) {
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
       code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      client_id: process.env.GOOGLE_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
       grant_type: "authorization_code",
     }),
   });
 
   const tokenData = await tokenRes.json();
+  const access_token = tokenData.access_token;
 
-  const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-    headers: {
-      Authorization: `Bearer ${tokenData.access_token}`,
-    },
-  });
+  const userRes = await fetch(
+    "https://www.googleapis.com/oauth2/v2/userinfo",
+    {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    }
+  );
 
   const user = await userRes.json();
-  const { email, name, id,picture} = user;
-  let social = await findSocial("google", id);
-  let userId;
+  const { email, name, id, picture } = user;
+
+  if (!email) {
+    throw new Error("Google account has no email");
+  }
+
+  const googleId = id;
+
+  let social = await findSocial("google", googleId);
+  let userId: string;
 
   if (social) {
     userId = social.user_id;
-    
   } else {
     let existingUser = await getUser(email);
+
     if (!existingUser) {
-      const newUser = await createUser(email,null, name,picture);
-        if (!newUser) {
-    throw new Error("Create user failed");
-  }
+      const newUser = await createUser(
+        email,
+        null,
+        name,
+        null,
+        picture
+      );
+
+      if (!newUser) throw new Error("Create user failed");
+
       userId = newUser.user_id;
     } else {
       userId = existingUser.user_id;
     }
-      await activateUser(userId);
 
-    await createSocial(userId, "google", id,email);
+    await activateUser(userId);
+    await createSocial(userId, "google", googleId, email);
   }
- const tokenDataGG = await createToken({
+
+  const tokenDataGG = await createToken({
     user_id: userId,
     email,
     name,
@@ -125,75 +145,91 @@ export async function GoogleLogin(code: string) {
   if (!tokenDataGG) {
     throw new Error("Create token failed");
   }
-  const {accessToken,refreshToken}= tokenDataGG
-  return {accessToken,refreshToken,user}; 
-}
 
+  return {
+    accessToken: tokenDataGG.accessToken,
+    refreshToken: tokenDataGG.refreshToken,
+    user,
+  };
+}
 
 export async function FacebookLogin(code: string) {
   const tokenRes = await fetch(
     `https://graph.facebook.com/v18.0/oauth/access_token?` +
-      new URLSearchParams({
-        client_id: process.env.FACEBOOK_APP_ID!,
-        redirect_uri: process.env.FACEBOOK_REDIRECT_URI!,
-        client_secret: process.env.FACEBOOK_APP_SECRET!,
-        code,
-      })
+    new URLSearchParams({
+      client_id: process.env.FACEBOOK_APP_ID!,
+      redirect_uri: process.env.FACEBOOK_REDIRECT_URI!,
+      client_secret: process.env.FACEBOOK_APP_SECRET!,
+      code,
+    })
   );
 
   const tokenData = await tokenRes.json();
   const access_token = tokenData.access_token;
+
   const userRes = await fetch(
     `https://graph.facebook.com/me?` +
-      new URLSearchParams({
-        fields: "id,name,email,picture",
-        access_token,
-      })
+    new URLSearchParams({
+      fields: "id,name,email,picture",
+      access_token,
+    })
   );
 
   const user = await userRes.json();
-  const { id, name, email,picture } = user;
+  const { id, name, email, picture } = user;
 
   let social = await findSocial("facebook", id);
-  let userId;
+  let userId: string;
 
   if (social) {
     userId = social.user_id;
   } else {
     let existingUser = await getUser(email);
+
     if (!existingUser) {
-      const newUser = await createUser(email, null, name,picture?.data?.url);
+      const newUser = await createUser(
+        email,
+        null,
+        name,
+        null,
+        picture?.data?.url
+      );
+
       if (!newUser) throw new Error("Create user failed");
       userId = newUser.user_id;
     } else {
       userId = existingUser.user_id;
     }
-      await activateUser(userId);
 
-    await createSocial(userId, "facebook", id,email);
+    await activateUser(userId);
+    await createSocial(userId, "facebook", id, email);
   }
 
-  const tokenDataFB = await createToken({ user_id: userId, email, name });
+  const tokenDataFB = await createToken({
+    user_id: userId,
+    email,
+    name,
+  });
+
   if (!tokenDataFB) throw new Error("Create token failed");
 
-  const { accessToken, refreshToken } = tokenDataFB;
-  return { accessToken, refreshToken, user };
+  return tokenDataFB;
 }
-export async function deleteToken(refreshToken:string) {
-  if(!refreshToken)
+export async function deleteToken(refreshToken: string) {
+  if (!refreshToken)
     throw error("Failed to delete token")
   let payload: any;
   try {
-    payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET); 
+    payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
   } catch (err) {
     throw new Error("Refresh token expired or invalid");
   }
-  
+
   return await revokeUserTokens(payload.user_id)
 }
 
 export function refreshAccessToken(oldAccessToken: string) {
-  let   payload = jwt.verify(oldAccessToken, JWT_SECRET) as JwtPayload;
+  let payload = jwt.verify(oldAccessToken, JWT_SECRET) as JwtPayload;
 
   const accessToken = jwt.sign(
     { user_id: payload.user_id, email: payload.email },
@@ -205,7 +241,7 @@ export function refreshAccessToken(oldAccessToken: string) {
 export async function refreshRefreshToken(oldRefreshToken: string) {
   let payload: any;
   try {
-    payload = jwt.verify(oldRefreshToken, JWT_REFRESH_SECRET); 
+    payload = jwt.verify(oldRefreshToken, JWT_REFRESH_SECRET);
   } catch (err) {
     throw new Error("Refresh token expired or invalid");
   }
@@ -214,8 +250,8 @@ export async function refreshRefreshToken(oldRefreshToken: string) {
 
   let session;
   try {
-    const result = await getTokenByUserId(userId); 
-    session = result; 
+    const result = await getTokenByUserId(userId);
+    session = result;
     if (!session) throw new Error("No refresh token found");
   } catch (err) {
     console.error(err);
@@ -242,7 +278,7 @@ export async function refreshRefreshToken(oldRefreshToken: string) {
     tokenHash,
     session.device_info,
     session.ip_address,
-    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       .toISOString()
       .slice(0, 19)
       .replace("T", " ")
@@ -263,19 +299,19 @@ export async function sanitizeUser(user: users) {
   const { password_hash, wallet_address, ...safeUser } = user;
   return safeUser;
 }
-export async function setCookies(response:NextResponse,accessToken:string,refreshToken:string) {
-  
-    response.cookies.set("access_token", accessToken, {
+export async function setCookies(response: NextResponse, accessToken: string, refreshToken: string) {
+
+  response.cookies.set("access_token", accessToken, {
     httpOnly: true,
     sameSite: "lax",
-secure: false,
+    secure: false,
     maxAge: 60 * 60 // 1 giờ
   });
   response.cookies.set("refresh_token", refreshToken, {
     httpOnly: true,
     sameSite: "lax",
-secure: false,
-    maxAge: 7 * 24 * 60 * 60 
+    secure: false,
+    maxAge: 7 * 24 * 60 * 60
   });
 }
 
