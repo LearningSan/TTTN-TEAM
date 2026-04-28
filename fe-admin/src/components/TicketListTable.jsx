@@ -39,7 +39,7 @@ const TicketListTable = ({ tickets, loading, pagination, onChangePage, concertId
           'USED': { color: 'default', text: 'Đã check-in' },
           'CANCELLED': { color: 'error', text: 'Đã hủy' },
           'MINTING': { color: 'processing', text: 'Đang tạo NFT...' },
-          'TRANSFERRED': { color: 'warning', text: 'Đã chuyển nhượng' }
+          'TRANSFERRED': { color: 'warning', text: 'Đang chuyển nhượng' }
         };
         const st = statusMap[s] || { color: 'default', text: s };
         return <Badge status={st.color} text={st.text} />;

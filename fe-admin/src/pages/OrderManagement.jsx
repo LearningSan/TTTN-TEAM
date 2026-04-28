@@ -53,6 +53,7 @@ const OrderManagement = () => {
           orders={orders}
           loading={loading}
           pagination={pagination}
+          filterStatus={filterStatus}
           onChangePage={(p, s) => fetchOrders(p, s)}
           onViewDetail={(id) => setDetailModal({ open: true, orderId: id })}
         />

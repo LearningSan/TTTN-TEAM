@@ -22,6 +22,8 @@ const OrderFilterBar = ({ filterStatus, setFilterStatus, onFilterTrigger }) => {
             { value: 'PAID', label: '✅ Đã thanh toán (PAID)' },
             { value: 'CANCELLED', label: '❌ Đã hủy (CANCELLED)' },
             { value: 'EXPIRED', label: '🕒 Hết hạn (EXPIRED)' },
+            { value: 'NEED_REFUND', label: '💸 Chờ hoàn tiền (NEED_REFUND)' },
+            { value: 'REFUNDED', label: '💰 Đã hoàn tiền (REFUNDED)' },
           ]}
         />
       </Space>
