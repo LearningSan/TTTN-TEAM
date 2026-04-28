@@ -110,13 +110,63 @@ const ConcertDetail = () => {
     );
   }
   return (
-    <div className="min-h-screen bg-white font-sans">
-      <nav className="bg-[#8D1B1B] py-3 text-white">
-        <div className="max-w-7xl mx-auto flex justify-center gap-10 text-[13px] font-black uppercase tracking-tight">
-          <a href="#">Theatre & Arts</a>
-          <a href="#">Sports</a>
-          <a href="#">Seminars & Workshops</a>
-          <a href="#">Resale Ticket</a>
+    <div className="min-h-screen bg-[#111827] font-sans">
+      <nav className="bg-[#0A0A0A] py-6 border-b border-gray-900 relative z-10">
+        <div className="max-w-7xl mx-auto flex justify-start gap-12 text-[18px] font-[900] uppercase tracking-tighter px-12 items-end">
+          {[
+            {
+              name: "Theatre & Arts",
+              color: "bg-[#FF2D95]",
+              shadow: "shadow-[0_0_10px_#FF2D95]",
+              path: "#",
+            },
+            {
+              name: "Sports",
+              color: "bg-[#00E5FF]",
+              shadow: "shadow-[0_0_10px_#00E5FF]",
+              path: "#",
+            },
+            {
+              name: "Seminars & Workshops",
+              color: "bg-[#FF2D95]",
+              shadow: "shadow-[0_0_10px_#FF2D95]",
+              path: "#",
+            },
+            // Mục Resale Ticket sẽ dùng Link đặc biệt
+            {
+              name: "Resale Ticket",
+              color: "bg-[#00E5FF]",
+              shadow: "shadow-[0_0_10px_#00E5FF]",
+              path: "/resale-market",
+              isLink: true,
+            },
+          ].map((item) => (
+            <div
+              key={item.name}
+              className="flex flex-col items-center group cursor-pointer"
+            >
+              {item.isLink ? (
+                <Link
+                  to={item.path}
+                  className="text-white hover:text-[#00E5FF] transition-colors duration-200"
+                >
+                  {item.name}
+                </Link>
+              ) : (
+                <a
+                  href={item.path}
+                  className="text-white hover:text-gray-300 transition-colors duration-200"
+                >
+                  {item.name}
+                </a>
+              )}
+
+              {/* Thanh line neon phía dưới giữ nguyên để đồng bộ giao diện */}
+              <div
+                className={`h-[3px] w-full mt-2 ${item.color} ${item.shadow} transition-transform duration-300 group-hover:scale-x-110`}
+              ></div>
+            </div>
+          ))}
         </div>
       </nav>
 
@@ -263,11 +313,13 @@ const ConcertDetail = () => {
                     <span className="text-black font-black underline decoration-[#8D1B1B] decoration-2 underline-offset-4">
                       {zone.price.toLocaleString()} đ
                     </span>
+
                     <button
-                      onClick={() =>
-                        navigate(`/concert/${id}/zone/${zone.zone_id}`)
-                      }
-                      className="bg-[#8D1B1B] text-white px-6 py-2 rounded-lg font-black text-xs hover:bg-black transition-all"
+                      onClick={() => {
+                        // Không phân biệt zoneId ở URL nữa, cứ vào trang tổng
+                        navigate(`/concert/${id}/selection`);
+                      }}
+                      className="..."
                     >
                       Chọn
                     </button>

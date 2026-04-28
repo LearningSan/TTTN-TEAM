@@ -54,87 +54,113 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-md space-y-8 bg-[#0A0A0A] p-10 rounded-3xl border border-gray-900 shadow-2xl">
-        <div className="text-center">
-          <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">
-            Join The <span className="text-[#8D1B1B]">Arena</span>
-          </h2>
-          <p className="text-gray-500 mt-2 font-medium">
-            Create your warrior profile
-          </p>
-        </div>
+    <div className="min-h-screen flex flex-col bg-white font-sans relative overflow-hidden">
+      <div
+        className="absolute bottom-0 left-0 w-[500px] h-[500px] 
+          translate-x-[-75%] translate-y-[50%]
+          bg-[#FF2D95] opacity-[0.5] blur-[120px] rounded-full pointer-events-none"
+      />
 
-        {error && (
-          <div className="bg-red-900/20 border border-red-900/50 text-red-500 px-4 py-3 rounded-xl text-sm font-bold text-center">
-            {error}
+      <div
+        className="absolute bottom-0 right-0 w-[500px] h-[500px] 
+          translate-x-[75%] translate-y-[25%]
+          bg-[#00E5FF] opacity-[0.5] blur-[120px] rounded-full pointer-events-none"
+      />
+      <div className="flex-1 flex items-center justify-center p-4 z-10">
+        <div className="relative p-[3px] rounded-[40px] bg-gradient-to-r from-[#FF2D95] to-[#00E5FF] overflow-hidden">
+          <div className="bg-white w-[400px] rounded-[39px] p-10 flex flex-col items-start">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2 tracking-wider">
+              Sign Up
+            </h1>
+            <p className="text-xm text-gray-400 mb-8 font-medium">
+              You have a account,{" "}
+              <Link to="/login" className="text-blue-400 hover:underline">
+                Sign in
+              </Link>
+            </p>
+
+            <form onSubmit={handleSubmit} className="w-full space-y-5">
+              {/* Name */}
+              <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Full Name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
+                  required
+                />
+              </div>
+              {/* Email */}
+              <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email Address"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
+                  required
+                />
+              </div>
+              {/* Phone */}
+              <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Phone Number"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
+                  required
+                />
+              </div>
+              {/* Password */}
+              <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Password (min 8 chars, A-z, 0-9)"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
+                  required
+                />
+              </div>
+              {/* Confirm Password */}
+              <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="Confirm Password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
+                  required
+                />
+              </div>
+              {error && (
+                <div className="bg-red-900/20 border border-red-900/50 text-red-500 px-4 py-3 rounded-xl text-sm font-bold text-center">
+                  {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full py-4 
+                  bg-gradient-to-r from-[#FF2D95] via-[#9181C4] to-[#2BF3E0] 
+                  text-lg  text-white font-extrabold font-['Nunito'] tracking-wider 
+                  rounded-full 
+                  shadow-[0_10px_20px_-5px_rgba(255,45,149,0.4)] 
+                  ring-1 ring-inset ring-white/20 /* Tạo viền sáng xung quanh button */
+                  hover:brightness-120 hover:shadow-[0_15px_25px_-5px_rgba(255,45,149,0.5)] 
+                  transition-all duration-300 active:scale-[0.97]"
+              >
+                Create Account
+              </button>
+            </form>
           </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Full Name"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full px-6 py-4 bg-[#1A1A1A] border border-gray-800 rounded-2xl text-white focus:border-[#8D1B1B] outline-none transition-all font-medium"
-            required
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email Address"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full px-6 py-4 bg-[#1A1A1A] border border-gray-800 rounded-2xl text-white focus:border-[#8D1B1B] outline-none transition-all font-medium"
-            required
-          />
-
-          {/* 3. Thêm Input cho Phone */}
-          <input
-            type="tel"
-            name="phone"
-            placeholder="Phone Number"
-            value={formData.phone}
-            onChange={handleChange}
-            className="w-full px-6 py-4 bg-[#1A1A1A] border border-gray-800 rounded-2xl text-white focus:border-[#8D1B1B] outline-none transition-all font-medium"
-            required
-          />
-
-          <input
-            type="password"
-            name="password"
-            placeholder="Password (min 8 chars, A-z, 0-9)"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-6 py-4 bg-[#1A1A1A] border border-gray-800 rounded-2xl text-white focus:border-[#8D1B1B] outline-none transition-all font-medium"
-            required
-          />
-          <input
-            type="password"
-            name="confirmPassword"
-            placeholder="Confirm Password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className="w-full px-6 py-4 bg-[#1A1A1A] border border-gray-800 rounded-2xl text-white focus:border-[#8D1B1B] outline-none transition-all font-medium"
-            required
-          />
-
-          <button
-            type="submit"
-            className="w-full bg-[#8D1B1B] text-white font-black py-5 rounded-2xl uppercase tracking-widest hover:bg-[#6D1515] transition-all shadow-lg shadow-[#8D1B1B]/20 mt-4 active:scale-95"
-          >
-            Create Account
-          </button>
-        </form>
-
-        <p className="text-center text-gray-500 text-xs mt-8 font-bold uppercase">
-          Already have an account?{" "}
-          <Link to="/login" className="text-[#8D1B1B] hover:underline ml-1">
-            Sign In
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

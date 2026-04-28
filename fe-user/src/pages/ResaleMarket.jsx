@@ -12,6 +12,7 @@ import { ethers } from "ethers";
 const ResaleMarket = () => {
   const [resaleTickets, setResaleTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false); // State riêng cho việc bấm nút mua
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,18 +28,16 @@ const ResaleMarket = () => {
               pageSize: 10,
             },
             withCredentials: true,
+            timeout: 60000,
           },
         );
 
-        // Theo JSON: mảng đơn hàng nằm ở response.data.data.data
         const orders = response.data?.data?.data || [];
 
         if (Array.isArray(orders)) {
-          // Trải phẳng: Chuyển từ "Danh sách Đơn hàng" thành "Danh sách Vé"
           const flattenedTickets = orders.flatMap((orderItem) =>
             (orderItem.tickets || []).map((t) => ({
               ...t,
-              // Gộp thông tin chung từ đơn hàng vào vé để hiển thị
               concert: orderItem.concert,
               venue: orderItem.venue,
               order_id: orderItem.order_id,
@@ -55,48 +54,25 @@ const ResaleMarket = () => {
     fetchResaleTickets();
   }, []);
 
-  const handleBuy = async (resaleId, price) => {
-    if (!window.confirm(`Xác nhận mua vé với giá ${price.toLocaleString()} đ?`))
-      return;
-
+  // Trong ResaleMarket.jsx, hàm handleBuy
+  const handleBuy = async (ticketId, price) => {
     try {
-      setLoading(true); // Bật trạng thái loading để nút bấm không bị click nhiều lần
-
-      // BƯỚC 1: Kiểm tra MetaMask (Người mua phải có ví để thực hiện transfer NFT sau này)
-      if (!window.ethereum) {
-        alert("Vui lòng cài đặt MetaMask để thực hiện giao dịch!");
-        setLoading(false);
-        return;
-      }
-
-      // BƯỚC 2: Gọi API khởi tạo mua vé sang nhượng
-      // API này sẽ tạo bản ghi PENDING trong DB và trả về transfer_id
-      const response = await axios.post(
+      const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/resale/buy`,
         { ticket_id: ticketId },
         { withCredentials: true },
       );
 
-      if (response.data?.success) {
-        // BƯỚC 3: Chuyển hướng sang trang Payment đã có
-        // Truyền toàn bộ dữ liệu cần thiết qua state
-        navigate("/payment", {
-          state: {
-            orderId: response.data.data.transfer_id,
-            amount: price,
-            isResale: true,
-            transferId: response.data.data.transfer_id,
-            nftData: response.data.data.nft_data, // Backend cần trả về: contract_address, seller_address, token_id
-          },
-        });
-      }
-    } catch (error) {
-      console.error("Lỗi mua vé:", error);
-      const msg =
-        error.response?.data?.message || "Không thể khởi tạo giao dịch";
-      alert(msg);
-    } finally {
-      setLoading(false);
+      // Chuyển hướng người mua sang Payment
+      navigate("/payment", {
+        state: {
+          isResale: true,
+          nftData: res.data, // Chứa transfer_id, from_wallet, to_wallet, token_id...
+          amount: price,
+        },
+      });
+    } catch (err) {
+      alert("Lỗi mua vé: " + err.message);
     }
   };
 
@@ -140,18 +116,15 @@ const ResaleMarket = () => {
                 </div>
 
                 <div className="p-6">
-                  {/* Hiển thị tiêu đề từ object concert */}
                   <h3 className="text-lg font-black uppercase mb-3 line-clamp-1">
                     {ticket.concert?.title || "Vé Concert"}
                   </h3>
 
                   <div className="space-y-2 mb-6 text-gray-500 font-bold text-xs">
-                    {/* Hiển thị địa điểm từ object venue */}
                     <p className="flex items-center gap-2">
                       <HiOutlineLocationMarker className="text-[#8D1B1B]" />{" "}
                       {ticket.venue?.name || "Địa điểm"}
                     </p>
-                    {/* Hiển thị ghế từ object seat */}
                     <p className="flex items-center gap-2">
                       <HiOutlineTicket className="text-[#8D1B1B]" /> Ghế:{" "}
                       {ticket.seat?.label || "N/A"}
@@ -164,7 +137,6 @@ const ResaleMarket = () => {
                         Giá sang nhượng
                       </p>
                       <p className="text-xl font-black text-[#8D1B1B]">
-                        {/* Truy cập đúng giá tiền từ JSON: ticket.price.unit_price */}
                         {(ticket.price?.unit_price || 0).toLocaleString()} đ
                       </p>
                     </div>
@@ -175,9 +147,10 @@ const ResaleMarket = () => {
                           ticket.price?.unit_price || 0,
                         )
                       }
-                      className="bg-black text-white px-6 py-3 rounded-2xl font-black text-xs uppercase hover:bg-[#8D1B1B] transition-all shadow-lg active:scale-95"
+                      disabled={processing}
+                      className="bg-black text-white px-6 py-3 rounded-2xl font-black text-xs uppercase hover:bg-[#8D1B1B] transition-all shadow-lg active:scale-95 disabled:opacity-50"
                     >
-                      {loading ? "Đang xử lý..." : "Mua ngay"}
+                      {processing ? "Đang xử lý..." : "Mua ngay"}
                     </button>
                   </div>
                 </div>

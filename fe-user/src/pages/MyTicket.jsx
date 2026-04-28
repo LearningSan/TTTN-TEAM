@@ -7,52 +7,58 @@ import {
   HiOutlineTicket,
 } from "react-icons/hi";
 import { AiFillHome } from "react-icons/ai";
+import { ethers } from "ethers";
 
 const MyTicket = () => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [resalePrice, setResalePrice] = useState("");
   const navigate = useNavigate();
-
+  const NFT_ABI = ["function approve(address to, uint256 tokenId) public"];
   useEffect(() => {
     const fetchMyTickets = async () => {
-      // 1. Kiểm tra đăng nhập trước khi gọi API
-      const savedUser = JSON.parse(localStorage.getItem("user"));
-      if (!savedUser) {
-        navigate("/login");
-        return;
-      }
-
       try {
         setLoading(true);
-        const response = await axios.get(
+        // 1. Lấy danh sách vé sở hữu như cũ
+        const resUser = await axios.get(
           `${import.meta.env.VITE_API_URL}/ticket/user`,
           {
-            params: { page: 1, pageSize: 10 },
+            params: { page: 1, pageSize: 50 },
             withCredentials: true,
-            timeout: 30000,
           },
         );
 
-        // 2. Xử lý dữ liệu dựa trên JSON thực tế
-        const orders = response.data?.data?.data || [];
+        // 2. SỬA TẠI ĐÂY: Gọi API mới để lấy danh sách người đang mua (Transfer PENDING)
+        const resTransfers = await axios.get(
+          `${import.meta.env.VITE_API_URL}/resale/my-transfers`,
+          {
+            withCredentials: true,
+          },
+        );
 
-        if (Array.isArray(orders)) {
-          const allTickets = orders.flatMap((orderItem) =>
-            (orderItem.tickets || []).map((t) => ({
+        const myOrders = resUser.data?.data?.data || [];
+        const pendingTransfers = resTransfers.data || []; // Danh sách từ API mới
+
+        // 3. Hợp nhất dữ liệu
+        const combinedTickets = myOrders.flatMap((order) =>
+          (order.tickets || []).map((t) => {
+            // Tìm transfer tương ứng với ticket_id này
+            const transferData = pendingTransfers.find(
+              (tr) => tr.ticket_id === t.ticket_id,
+            );
+            return {
               ...t,
-              concert_info: orderItem.concert,
-              venue_info: orderItem.venue,
-              order_id: orderItem.order_id,
-            })),
-          );
-          setTickets(allTickets);
-        }
+              concert_info: order.concert,
+              venue_info: order.venue,
+              // Gán dữ liệu transfer trực tiếp vào đây
+              resale_transfer: transferData,
+            };
+          }),
+        );
+
+        setTickets(combinedTickets);
       } catch (error) {
-        console.error("Lỗi lấy danh sách vé:", error);
-        if (error.response?.status === 401) {
-          navigate("/login"); // Nếu hết hạn phiên, bắt login lại
-        }
+        console.error("Lỗi fetch:", error);
       } finally {
         setLoading(false);
       }
@@ -60,43 +66,57 @@ const MyTicket = () => {
     fetchMyTickets();
   }, [navigate]);
 
-  const handleListResale = async (ticketId, price) => {
-    if (!price || price <= 0) {
-      alert("Vui lòng nhập giá bán hợp lệ!");
-      return;
-    }
+  const handleListResale = async (ticket_id) => {
     try {
+      setLoading(true);
+      // Chỉ gửi ticket_id theo đúng tài liệu API bạn cung cấp
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/resale/list`,
-        { ticket_id: ticketId, price: Number(price) },
+        { ticket_id: ticket_id },
         { withCredentials: true },
       );
 
-      if (response.data.success) {
-        alert("Đã đăng bán vé thành công!");
-        window.location.reload(); // Reload để cập nhật trạng thái
+      if (response.data) {
+        alert("Đã niêm yết vé lên sàn thành công!");
+        window.location.reload(); // Reload để trạng thái vé chuyển sang TRANSFERRED
       }
     } catch (error) {
+      console.error("Lỗi niêm yết:", error);
+      // Hiển thị thông báo lỗi chi tiết từ Backend (ví dụ: vé không ở trạng thái ACTIVE)
       alert(
-        "Lỗi khi đăng bán: " + (error.response?.data?.message || "Thử lại sau"),
+        "Lỗi: " + (error.response?.data?.message || "Không thể niêm yết vé"),
       );
+    } finally {
+      setLoading(false);
     }
   };
   const handleCancelResale = async (ticketId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy đăng bán vé này?")) return;
+    if (
+      !window.confirm(
+        "Bạn có chắc chắn muốn hủy yêu cầu chuyển nhượng và thu hồi vé này không?",
+      )
+    )
+      return;
+
     try {
-      // Giả sử API hủy là /resale/cancel hoặc tương tự
-      await axios.post(
+      // SỬA TẠI ĐÂY: Đổi '/ticket/cancel-resale' thành '/resale/cancel' theo tài liệu
+      const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/resale/cancel`,
         { ticket_id: ticketId },
         { withCredentials: true },
       );
-      alert("Đã hủy đăng bán!");
-      // Load lại danh sách vé
-      window.location.reload();
-    } catch (err) {
+
+      // Kiểm tra phản hồi thực tế từ server
+      if (response.data) {
+        alert("Đã hủy và thu hồi vé về ví của bạn thành công!");
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Lỗi khi hủy pass vé:", error);
+      // Hiển thị lỗi chi tiết từ Backend nếu có
       alert(
-        "Lỗi: " + (err.response?.data?.message || "Không thể hủy đăng bán"),
+        error.response?.data?.message ||
+          "Không thể hủy yêu cầu lúc này. Vui lòng thử lại sau.",
       );
     }
   };
@@ -175,40 +195,54 @@ const MyTicket = () => {
                 </div>
 
                 {/* Phần Đăng bán vé - Đưa xuống dưới cùng để giao diện gọn hơn */}
-                <div className="bg-[#0a0a0a] p-4 flex justify-end items-center gap-3 border-t border-gray-900">
-                  {ticket.status === "TRANSFERRED" ? (
-                    <div className="flex items-center gap-4">
-                      <span className="text-yellow-500 text-[10px] font-black uppercase animate-pulse">
-                        • Đang treo bán trên sàn
-                      </span>
+                <div className="flex flex-col gap-2 mt-4">
+                  {/* TRƯỜNG HỢP 1: Vé đang chờ người bán xác thực ví (Approve) */}
+                  {ticket.status === "TRANSFERRED" && (
+                    <div className="flex flex-col gap-2 p-4 bg-[#1a1a1a] border-t border-dashed border-gray-700">
+                      {ticket.status === "TRANSFERRED" && (
+                        <div className="flex flex-col gap-2 p-4 bg-[#1a1a1a] border-t border-dashed border-gray-700">
+                          {/* Quan trọng: Phải kiểm tra xem vé này ĐÃ CÓ người mua tạo transfer chưa */}
+                          {ticket.resale_transfer ? (
+                            <button
+                              onClick={() =>
+                                navigate("/payment", {
+                                  state: {
+                                    isResale: true,
+                                    nftData: ticket.resale_transfer, // Dữ liệu từ API /resale/buy
+                                    amount: 0,
+                                  },
+                                })
+                              }
+                              className="w-full bg-blue-600..."
+                            >
+                              👉 Mở Ví Xác Nhận Bán (Approve)
+                            </button>
+                          ) : (
+                            <div className="text-center py-2 bg-gray-800 rounded-lg">
+                              <p className="text-[10px] text-orange-400 font-black uppercase italic">
+                                Đang chờ người mua thanh toán (tạo lệnh)...
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <button
                         onClick={() => handleCancelResale(ticket.ticket_id)}
-                        className="bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded-lg uppercase hover:bg-red-700 transition-all shadow-lg"
+                        className="w-full bg-transparent text-gray-500 text-[10px] font-bold py-2 hover:text-red-500 transition-colors"
                       >
-                        Hủy đăng bán
+                        Hủy yêu cầu & Thu hồi vé
                       </button>
                     </div>
-                  ) : (
-                    /* Nếu vé chưa đăng bán thì hiện ô nhập giá và nút Đăng bán */
-                    <>
-                      {/* <input
-                        type="number"
-                        id={`price-${ticket.ticket_id}`} // Gắn ID riêng cho mỗi input của mỗi vé
-                        placeholder="Giá bán lại..."
-                        className="bg-gray-800 text-white text-xs px-3 py-2 rounded-lg w-32 outline-none focus:ring-1 ring-[#8D1B1B]"
-                      /> */}
-                      <button
-                        onClick={() =>
-                          handleListResale(
-                            ticket.ticket_id,
-                            ticket.zone?.price || 0,
-                          )
-                        }
-                        className="bg-white text-black text-[10px] font-black px-6 py-2 rounded-lg uppercase hover:bg-[#8D1B1B] hover:text-white transition-all shadow-lg active:scale-95"
-                      >
-                        Pass lại vé (Giá gốc)
-                      </button>
-                    </>
+                  )}
+
+                  {/* TRƯỜNG HỢP 2: Vé đang ACTIVE (Chưa bán) */}
+                  {ticket.status === "ACTIVE" && (
+                    <button
+                      onClick={() => handleListResale(ticket.ticket_id)}
+                      className="bg-white text-black text-xs font-black py-3 rounded-xl uppercase border-2 border-gray-100 hover:border-[#8D1B1B] hover:bg-[#8D1B1B] hover:text-white transition-all shadow-md"
+                    >
+                      Pass lại vé
+                    </button>
                   )}
                 </div>
               </div>

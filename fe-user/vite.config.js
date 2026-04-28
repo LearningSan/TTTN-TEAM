@@ -9,6 +9,8 @@ export default defineConfig({
     proxy: {
       "/api": {
         target: "http://localhost:3000",
+        timeout: 60000,
+        proxyTimeout: 60000,
         changeOrigin: true,
         secure: false,
       },
