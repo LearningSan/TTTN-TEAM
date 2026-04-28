@@ -336,8 +336,8 @@ const ConcertFormModal = ({
                                   disabled={isZoneLocked}
                                   options={[
                                     { value: "ETH", label: "ETH" },
-                                    { value: "USDT", label: "USDT" },
-                                    { value: "BNB", label: "BNB" },
+                                    // { value: "USDT", label: "USDT" },
+                                    // { value: "BNB", label: "BNB" },
                                   ]}
                                 />
                               </Form.Item>
@@ -629,12 +629,12 @@ const ConcertFormModal = ({
                                               disabled={isZoneLocked}
                                               options={[
                                                 { value: "ETH", label: "ETH" },
-                                                {
-                                                  value: "USDT",
-                                                  label: "USDT",
-                                                },
+                                                // {
+                                                //   value: "USDT",
+                                                //   label: "USDT",
+                                                // },
 
-                                                { value: "BNB", label: "BNB" },
+                                                // { value: "BNB", label: "BNB" },
                                               ]}
                                               onChange={(val) => {
                                                 // Đồng bộ Tiền tệ lên Zone nếu là Tier đầu tiên

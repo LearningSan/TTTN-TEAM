@@ -131,7 +131,7 @@ const Dashboard = () => {
             <Card
               hoverable
               style={{ height: '100%', borderRadius: 12, borderLeft: `5px solid #ff4d4f` }}
-              onClick={() => navigate("/dashboard/orders?status=REFUND_PENDING")}
+              onClick={() => navigate("/dashboard/orders?status=NEED_REFUND")}
             >
               <Statistic
                 title={<Text strong style={{ color: '#8c8c8c' }}>CẦN HOÀN TIỀN (NỢ)</Text>}
