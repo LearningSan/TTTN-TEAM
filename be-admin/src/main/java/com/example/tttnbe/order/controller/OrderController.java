@@ -27,10 +27,11 @@ public class OrderController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String keyword) { // 👈 Thêm dòng này
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) UUID orderid) { // 👈 Thêm dòng này
 
         // Gọi sang Service truyền thêm keyword
-        PageResponse<OrderResponse> response = orderService.getAllOrders(page, size, status, keyword);
+        PageResponse<OrderResponse> response = orderService.getAllOrders(page, size, status, keyword,orderid);
 
         return ResponseEntity.ok(response);
     }

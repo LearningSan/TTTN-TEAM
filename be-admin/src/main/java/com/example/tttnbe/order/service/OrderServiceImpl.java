@@ -41,7 +41,7 @@ public class OrderServiceImpl implements OrderService {
     private Web3ServiceImpl web3Service; // Gọi "cô thu ngân" Blockchain vào đây
 
     // API 1: Lấy danh sách đơn hàng cho Admin (Tích hợp Lọc Status + Tìm kiếm Keyword)
-    public PageResponse<OrderResponse> getAllOrders(int page, int size, String status, String keyword) {
+    public PageResponse<OrderResponse> getAllOrders(int page, int size, String status, String keyword, UUID orderId) {
 
         int currentPage = (page > 0) ? page - 1 : 0;
         Pageable pageable = PageRequest.of(currentPage, size, Sort.by("createdAt").descending());
@@ -49,6 +49,7 @@ public class OrderServiceImpl implements OrderService {
         // Chuẩn hóa dữ liệu: Nếu rỗng thì đưa về null để Query SQL chạy đúng
         String validStatus = (status != null && !status.trim().isEmpty()) ? status.trim().toUpperCase() : null;
         String validKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        UUID orderid = (orderId != null) ? orderId : null;
 
         Page<Order> orderPage;
 
@@ -57,7 +58,7 @@ public class OrderServiceImpl implements OrderService {
             orderPage = orderRepository.searchOrdersNeedingRefund(validKeyword, pageable);
         } else {
             // FE chọn các tab khác hoặc lấy Tất cả
-            orderPage = orderRepository.searchOrders(validStatus, validKeyword, pageable);
+            orderPage = orderRepository.searchOrders(validStatus, validKeyword, orderid, pageable);
         }
 
         // Map sang DTO
