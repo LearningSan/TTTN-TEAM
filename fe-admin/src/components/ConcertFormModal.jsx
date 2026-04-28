@@ -81,11 +81,11 @@ const ConcertFormModal = ({
           <Form.Item
             name="title"
             label="Tên chương trình"
-            rules={[{ required: true }]}
+            rules={[{ required: true,message: 'Vui lòng nhập tên chương trình' }]}
           >
             <Input size="large" />
           </Form.Item>
-          <Form.Item name="artist" label="Nghệ sĩ" rules={[{ required: true }]}>
+          <Form.Item name="artist" label="Nghệ sĩ" rules={[{ required: true,message: 'Vui lòng nhập tên nghệ sĩ' }]}>
             <Input size="large" />
           </Form.Item>
           <Form.Item
@@ -789,23 +789,15 @@ const ConcertFormModal = ({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "1fr",
             gap: "16px",
           }}
         >
           <Form.Item name="bannerURL" label="Ảnh Banner">
             <Input />
           </Form.Item>
-          <Form.Item name="status" label="Trạng thái">
-            <Select
-              options={[
-                "DRAFT",
-                "ON_SALE",
-                "COMPLETED",
-                "CANCELLED",
-                "SOLD_OUT",
-              ].map((v) => ({ value: v, label: v }))}
-            />
+          <Form.Item name="status" hidden>
+            <Input />
           </Form.Item>
         </div>
         <Form.Item name="description" label="Mô tả">
