@@ -1,13 +1,16 @@
 package com.example.tttnbe.order.service;
 
+import com.example.tttnbe.auth.repository.UserRepository;
 import com.example.tttnbe.common.exception.CustomException;
 import com.example.tttnbe.common.response.PageResponse;
+import com.example.tttnbe.concert.repository.ConcertRepository;
 import com.example.tttnbe.order.dto.DashboardStatsResponse;
 import com.example.tttnbe.order.dto.OrderDetailResponse;
 import com.example.tttnbe.order.dto.OrderItemDetailResponse;
 import com.example.tttnbe.order.dto.OrderResponse;
 import com.example.tttnbe.order.entity.Order;
 import com.example.tttnbe.order.repository.OrderRepository;
+import com.example.tttnbe.ticket.repository.TicketRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +19,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +29,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private OrderRepository orderRepository;
+    @Autowired
+    private TicketRepository ticketRepository;
+    @Autowired
+    private ConcertRepository concertRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     // API 1: Lấy danh sách đơn hàng cho Admin
     public PageResponse<OrderResponse> getAllOrders(int page, int size, String status) {
@@ -58,22 +69,28 @@ public class OrderServiceImpl implements OrderService {
         return PageResponse.from(dtoPage);
     }
 
-    // API 2: Thống kê Doanh thu Tổng (Chuẩn DTO)
-    public DashboardStatsResponse getDashboardStats() {
-        BigDecimal totalRevenue = orderRepository.sumTotalRevenue();
-        long totalPaidOrders = orderRepository.countPaidOrders();
+    // Nằm trong OrderService.java
+    public DashboardStatsResponse getDashboardStats(LocalDate selectedDate) {
+        LocalDateTime dateToQuery = (selectedDate != null)
+                ? selectedDate.atStartOfDay()
+                : LocalDate.now().atStartOfDay();
 
-        // Xử lý an toàn nếu chưa có doanh thu
-        if (totalRevenue == null) {
-            totalRevenue = BigDecimal.ZERO;
-        }
+        BigDecimal total = orderRepository.sumTotalRevenue();
+        BigDecimal daily = orderRepository.sumRevenueByDate(dateToQuery);
 
-        // Dùng Builder pattern gọn gàng và tường minh
-        return DashboardStatsResponse.builder()
-                .totalRevenue(totalRevenue)
-                .totalPaidOrders(totalPaidOrders)
-                .currency("USDT")
-                .build();
+        // Gọi thêm hàm đếm số đơn trong ngày vừa tạo
+        long dailyCount = orderRepository.countPaidOrdersByDate(dateToQuery);
+
+        return new DashboardStatsResponse(
+                total != null ? total : BigDecimal.ZERO,
+                daily != null ? daily : BigDecimal.ZERO,
+                ticketRepository.countByStatus("ACTIVE"), // Tổng vé
+                dailyCount,                               // Số vé/đơn bán trong ngày
+                ticketRepository.countByStatus("CANCELLED"),
+                concertRepository.count(),
+                userRepository.count(),
+                orderRepository.count()
+        );
     }
 
     // API 3: Xem chi tiết một đơn hàng

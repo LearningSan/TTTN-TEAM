@@ -6,9 +6,11 @@ import com.example.tttnbe.order.dto.OrderDetailResponse;
 import com.example.tttnbe.order.dto.OrderResponse;
 import com.example.tttnbe.order.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @RestController
@@ -31,10 +33,15 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    // API 2: Thống kê tổng quan cho Dashboard
+    // Nằm trong OrderController.java
     @GetMapping("/revenue/total")
-    public ResponseEntity<DashboardStatsResponse> getDashboardStats() {
-        DashboardStatsResponse stats = orderService.getDashboardStats();
+    public ResponseEntity<DashboardStatsResponse> getDashboardStats(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+        // Gọi Service và truyền ngày (nếu có) xuống
+        DashboardStatsResponse stats = orderService.getDashboardStats(date);
+
         return ResponseEntity.ok(stats);
     }
 
