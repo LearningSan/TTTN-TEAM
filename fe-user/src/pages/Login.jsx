@@ -3,7 +3,7 @@ import { HiOutlineMail } from "react-icons/hi";
 import { RiLockPasswordLine, RiEyeOffLine, RiEyeLine } from "react-icons/ri";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { HiOutlineChevronDown } from "react-icons/hi";
@@ -15,10 +15,19 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from || "/";
   const [showPassword, setShowPassword] = useState(false);
   const [searchParams] = useSearchParams();
   const verified = searchParams.get("verified");
   const error = searchParams.get("error");
+
+  // Lưu đường dẫn quay lại vào sessionStorage để dùng cho social login popup
+  useEffect(() => {
+    if (location.state?.from) {
+      sessionStorage.setItem("redirectPath", location.state.from);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (verified === "true") {
@@ -56,7 +65,11 @@ const Login = () => {
             if (userData && userData.user_id) {
               localStorage.setItem("user", JSON.stringify(userData));
               window.dispatchEvent(new Event("storage"));
-              window.location.href = "/"; // Chuyển hướng ngay
+              
+              // Lấy đường dẫn chuyển hướng từ sessionStorage
+              const redirectPath = sessionStorage.getItem("redirectPath") || "/";
+              sessionStorage.removeItem("redirectPath");
+              window.location.href = redirectPath;
             }
           })
           .catch((err) => {
@@ -141,7 +154,7 @@ const Login = () => {
         window.dispatchEvent(new Event("storage"));
 
         alert("Đăng nhập thành công!");
-        navigate("/");
+        navigate(from);
       }
     } catch (error) {
       const serverMessage = error.response?.data?.message || "Lỗi hệ thống!";

@@ -1,13 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import {
-  HiOutlineMail,
-  HiOutlineKey,
-  HiOutlineChevronDown,
-} from "react-icons/hi";
 import { RiLockPasswordLine, RiEyeOffLine, RiEyeLine } from "react-icons/ri";
-import { AiFillHome } from "react-icons/ai";
+import { motion } from "framer-motion";
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1);
@@ -51,114 +46,145 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      {/* NỘI DUNG CHÍNH */}
-      <main className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Hiệu ứng nền đỏ mờ phía dưới */}
-        <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-[#8D1B1B] to-transparent opacity-80" />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen flex flex-col bg-white font-sans relative overflow-hidden"
+    >
+      {/* Background blurs */}
+      <div
+        className="absolute bottom-0 left-0 w-[500px] h-[500px] 
+          translate-x-[-75%] translate-y-[50%]
+          bg-[#FF2D95] opacity-[0.5] blur-[120px] rounded-full pointer-events-none"
+      />
 
-        <div className="z-10 w-[450px] bg-white border-[3px] border-[#31A1EE] rounded-[40px] p-10 shadow-xl">
-          <h2 className="text-3xl font-bold text-[#444] mb-2 uppercase tracking-tight text-center">
-            {step === 1 ? "Forgot Password" : "Reset Password"}
-          </h2>
-          <p className="text-sm text-gray-500 text-center mb-8 px-4">
-            {step === 1
-              ? "Enter your email to receive an OTP code"
-              : "Enter the OTP and your new password"}
-          </p>
+      <div
+        className="absolute bottom-0 right-0 w-[500px] h-[500px] 
+          translate-x-[75%] translate-y-[25%]
+          bg-[#00E5FF] opacity-[0.5] blur-[120px] rounded-full pointer-events-none"
+      />
 
-          {step === 1 ? (
-            <form className="space-y-6" onSubmit={handleSendOtp}>
-              <div className="text-left">
-                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <HiOutlineMail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="email"
-                    placeholder="admin@gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full pl-11 pr-4 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                </div>
-              </div>
-              <button
-                disabled={loading}
-                className="w-full py-3 bg-[#7A2121] text-white font-bold rounded-full text-lg shadow-lg hover:bg-[#5a1818] transition-all disabled:bg-gray-400"
-              >
-                {loading ? "Sending..." : "Send OTP"}
-              </button>
-            </form>
-          ) : (
-            <form className="space-y-6" onSubmit={handleResetPassword}>
-              <div className="text-left">
-                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
-                  OTP Code
-                </label>
-                <div className="relative">
-                  <HiOutlineKey className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="123456"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    required
-                    className="w-full pl-11 pr-4 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                </div>
-              </div>
+      <main className="flex-1 flex items-center justify-center p-4 z-10">
+        <div className="relative p-[3px] rounded-[40px] bg-gradient-to-r from-[#FF2D95] to-[#00E5FF] overflow-hidden">
+          <div className="bg-white w-[400px] rounded-[39px] p-10 flex flex-col items-start">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2 tracking-wider">
+              {step === 1 ? "FORGOT PASSWORD" : "RESET PASSWORD"}
+            </h1>
+            <p className="text-xm text-gray-400 mb-8 font-medium">
+              {step === 1
+                ? "Enter your email to receive an OTP code"
+                : "Enter the OTP and your new password"}
+            </p>
 
-              <div className="text-left">
-                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
-                  New Password
-                </label>
-                <div className="relative">
-                  <RiLockPasswordLine className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter new password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="w-full pl-11 pr-10 py-3 border border-gray-400 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                  <div
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <RiEyeLine size={20} />
-                    ) : (
-                      <RiEyeOffLine size={20} />
-                    )}
+            {step === 1 ? (
+              <form className="w-full space-y-5" onSubmit={handleSendOtp}>
+                <div className="space-y-2">
+                  <label className="text-xm font-semibold font-['Nunito'] ml-2 tracking-wider">
+                    Email
+                  </label>
+                  <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                    <input
+                      type="email"
+                      placeholder="admin@gmail.com......."
+                      className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
-              </div>
 
-              <button
-                disabled={loading}
-                className="w-full py-3 bg-[#7A2121] text-white font-bold rounded-full text-lg shadow-lg hover:bg-[#5a1818] transition-all disabled:bg-gray-400"
+                <button
+                  disabled={loading}
+                  type="submit"
+                  className="w-full py-4 mt-6
+                    bg-gradient-to-r from-[#FF2D95] via-[#9181C4] to-[#2BF3E0] 
+                    text-lg text-white font-extrabold font-['Nunito'] tracking-wider 
+                    rounded-full 
+                    shadow-[0_10px_20px_-5px_rgba(255,45,149,0.4)] 
+                    ring-1 ring-inset ring-white/20 
+                    hover:brightness-120 hover:shadow-[0_15px_25px_-5px_rgba(255,45,149,0.5)] 
+                    transition-all duration-300 active:scale-[0.97] disabled:opacity-50"
+                >
+                  {loading ? "Sending..." : "Send OTP"}
+                </button>
+              </form>
+            ) : (
+              <form className="w-full space-y-5" onSubmit={handleResetPassword}>
+                <div className="space-y-2">
+                  <label className="text-xm font-semibold font-['Nunito'] ml-2 tracking-wider">
+                    OTP Code
+                  </label>
+                  <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                    <input
+                      type="text"
+                      placeholder="123456"
+                      className="w-full px-6 py-3 rounded-full bg-white outline-none text-sm text-gray-500"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xm font-semibold font-['Nunito'] ml-2 tracking-wider">
+                    New Password
+                  </label>
+                  <div className="p-[1px] rounded-full bg-gradient-to-r from-[#FF2D95] to-[#00E5FF]">
+                    <div className="relative bg-white rounded-full">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••"
+                        className="w-full px-6 py-3 rounded-full bg-transparent outline-none text-sm"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                      <div
+                        className="absolute right-5 top-1/2 -translate-y-1/2 text-blue-300 cursor-pointer"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <RiEyeLine size={18} />
+                        ) : (
+                          <RiEyeOffLine size={18} />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  disabled={loading}
+                  type="submit"
+                  className="w-full py-4 mt-6
+                    bg-gradient-to-r from-[#FF2D95] via-[#9181C4] to-[#2BF3E0] 
+                    text-lg text-white font-extrabold font-['Nunito'] tracking-wider 
+                    rounded-full 
+                    shadow-[0_10px_20px_-5px_rgba(255,45,149,0.4)] 
+                    ring-1 ring-inset ring-white/20 
+                    hover:brightness-120 hover:shadow-[0_15px_25px_-5px_rgba(255,45,149,0.5)] 
+                    transition-all duration-300 active:scale-[0.97] disabled:opacity-50"
+                >
+                  {loading ? "Resetting..." : "Reset Password"}
+                </button>
+              </form>
+            )}
+
+            <div className="w-full mt-8 text-center">
+              <Link
+                to="/login"
+                className="text-sm font-semibold text-blue-400 hover:text-blue-600 transition-colors"
               >
-                {loading ? "Resetting..." : "Reset Password"}
-              </button>
-            </form>
-          )}
-
-          <div className="mt-8 text-center">
-            <Link
-              to="/login"
-              className="text-sm font-semibold text-blue-500 hover:underline"
-            >
-              Back to Login
-            </Link>
+                Back to Login
+              </Link>
+            </div>
           </div>
         </div>
       </main>
-    </div>
+    </motion.div>
   );
 };
 
