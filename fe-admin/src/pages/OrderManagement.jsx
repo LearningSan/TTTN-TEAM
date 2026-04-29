@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, Button, message } from 'antd';
 import { ReloadOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import API from '../api/config';
@@ -6,10 +7,11 @@ import OrderFilterBar from '../components/OrderFilterBar';
 import OrderTable from '../components/OrderTable';
 import OrderDetailModal from '../components/OrderDetailModal';
 const OrderManagement = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [keyword, setKeyword] = useState('');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState(null);
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [detailModal, setDetailModal] = useState({ open: false, orderId: null });
 
@@ -29,8 +31,18 @@ const OrderManagement = () => {
   }, [filterStatus, keyword]);
 
   const handleFilter = useCallback((st) => {
-    fetchOrders(1, pagination.pageSize, st !== undefined ? st : filterStatus, keyword);
-  }, [fetchOrders, pagination.pageSize, keyword, filterStatus]);
+    const newStatus = st !== undefined ? st : filterStatus;
+    setFilterStatus(newStatus);
+
+    // 🚀 Cập nhật lại URL để đồng bộ với bộ lọc (tùy chọn nhưng nên làm)
+    if (newStatus) {
+      setSearchParams({ status: newStatus });
+    } else {
+      setSearchParams({});
+    }
+
+    fetchOrders(1, pagination.pageSize, newStatus, keyword);
+  }, [fetchOrders, pagination.pageSize, keyword, filterStatus, setSearchParams]);
 
   useEffect(() => {
     fetchOrders();
@@ -39,6 +51,7 @@ const OrderManagement = () => {
   const handleReset = () => {
     setFilterStatus(null);
     setKeyword('');
+    setSearchParams({});
     fetchOrders(1, 10, null, '');
   };
 
