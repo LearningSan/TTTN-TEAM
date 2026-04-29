@@ -38,9 +38,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/app/helper/authenHelper";
 import { createPayment } from "@/app/helper/paymentHelper";
+import { paymentLimiter } from "@/app/lib/ratelimit";
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get("access_token")?.value;
+
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -49,24 +52,58 @@ export async function POST(req: NextRequest) {
     if (!decoded) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
     const user_id = decoded.user_id;
+
+    const key = `payment-${user_id}`;
+
+    const { success, limit, remaining, reset } =
+      await paymentLimiter.limit(key);
+
+    if (!success) {
+      return NextResponse.json(
+        { message: "Too many payment requests" },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": remaining.toString(),
+            "X-RateLimit-Reset": reset.toString(),
+          },
+        }
+      );
+    }
 
     const body = await req.json();
     const { order_id, from_wallet, to_wallet } = body;
+
+    if (!order_id) {
+      return NextResponse.json(
+        { message: "order_id is required" },
+        { status: 400 }
+      );
+    }
+
+
 
     const result = await createPayment({
       order_id,
       user_id,
       from_wallet,
-      to_wallet
+      to_wallet,
     });
 
     return NextResponse.json({
       success: true,
-      data: result
+      data: result,
     });
 
   } catch (err: any) {
-    return NextResponse.json({ message: err.message }, { status: 500 });
+    console.error("Payment error:", err);
+
+    return NextResponse.json(
+      { message: err.message || "Server error" },
+      { status: 500 }
+    );
   }
 }

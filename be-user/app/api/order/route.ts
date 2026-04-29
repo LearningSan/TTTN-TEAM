@@ -129,6 +129,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/app/helper/authenHelper";
 import { createOrder } from "@/app/helper/orderHelper";
 import { getUser } from "@/app/lib/user";
+import { orderCreateLimiter } from "@/app/lib/ratelimit";
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get("access_token")?.value;
@@ -143,14 +145,39 @@ export async function POST(req: NextRequest) {
     }
 
     const user_id = decoded.user_id;
+
+    const key = `order-${user_id}`; 
+
+    const { success, limit, remaining, reset } =
+      await orderCreateLimiter.limit(key);
+
+    if (!success) {
+      return NextResponse.json(
+        { message: "Too many order requests" },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": remaining.toString(),
+            "X-RateLimit-Reset": reset.toString(),
+          },
+        }
+      );
+    }
+
     const user = await getUser(decoded.email);
     if (!user) {
-  return NextResponse.json({ message: "User not found" }, { status: 404 });
-}
-    const wallet_address=decoded.wallet_address;
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    const wallet_address = decoded.wallet_address;
+
     const body = await req.json();
     const { concert_id, items, currency, note } = body;
-console.log("concert_id raw:", concert_id);
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { message: "Items is required" },
@@ -158,22 +185,26 @@ console.log("concert_id raw:", concert_id);
       );
     }
 
+
     const result = await createOrder({
       user_id,
       concert_id,
       items,
       currency,
       note,
-      wallet_address
+      wallet_address,
     });
 
     return NextResponse.json({
       success: true,
       data: result,
     });
+
   } catch (error: any) {
+    console.error("Create order error:", error);
+
     return NextResponse.json(
-      { message: error.message },
+      { message: error.message || "Server error" },
       { status: 500 }
     );
   }

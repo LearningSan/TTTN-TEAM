@@ -67,18 +67,18 @@
  *               message: Failed to create user
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createUser } from "@/app/lib/user";
 import { sanitizeUser } from "@/app/helper/authenHelper";
 import { createEmailVerification } from "@/app/lib/email_verification";
 import { sendVerifyEmail } from "@/app/helper/emailVerificationHelper";
+import { signupLimiter } from "@/app/lib/ratelimit";
 import crypto from "crypto";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    let { email, password,phone, name } = body;
+    let { email, password, phone, name } = body;
 
     // ===== Trim =====
     email = email?.trim();
@@ -92,6 +92,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // ===== Validate email =====
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -100,6 +101,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // ===== Validate password =====
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(password)) {
       return NextResponse.json(
@@ -111,14 +113,17 @@ export async function POST(req: Request) {
       );
     }
 
+    // ===== Validate name =====
     if (name.length < 2 || name.length > 50) {
       return NextResponse.json(
         { message: "Name must be between 2 and 50 characters" },
         { status: 400 }
       );
     }
-   if (phone) {
-const phoneRegex = /^0\d{9,10}$/;
+
+    // ===== Validate phone =====
+    if (phone) {
+      const phoneRegex = /^0\d{9,10}$/;
       if (!phoneRegex.test(phone)) {
         return NextResponse.json(
           { message: "Invalid phone number format" },
@@ -126,7 +131,33 @@ const phoneRegex = /^0\d{9,10}$/;
         );
       }
     }
-    const newUser = await createUser(email, password, name,phone);
+
+    // 🔥 Lấy IP chuẩn
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
+
+    // 🔥 Key: IP + email (quan trọng)
+    const key = `${ip}-${email}`;
+
+    const { success, limit, remaining, reset } =
+      await signupLimiter.limit(key);
+
+    if (!success) {
+      return NextResponse.json(
+        { message: "Too many signup attempts" },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": remaining.toString(),
+            "X-RateLimit-Reset": reset.toString(),
+          },
+        }
+      );
+    }
+
+    // ===== Create user =====
+    const newUser = await createUser(email, password, name, phone);
 
     if (!newUser) {
       return NextResponse.json(
@@ -135,6 +166,7 @@ const phoneRegex = /^0\d{9,10}$/;
       );
     }
 
+    // ===== Tạo OTP email =====
     const token = crypto.randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -148,6 +180,7 @@ const phoneRegex = /^0\d{9,10}$/;
 
   } catch (error) {
     console.error("Failed to create user", error);
+
     return NextResponse.json(
       { message: "Failed to create user" },
       { status: 500 }

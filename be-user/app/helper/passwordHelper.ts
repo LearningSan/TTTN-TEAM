@@ -33,7 +33,7 @@ export async function sendMail(email: string) {
 }
 
 export async function sendOTPEmail(to: string, otp: string) {
-  const transporter = await nodemailer.createTransport({
+  const transporter =  nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,

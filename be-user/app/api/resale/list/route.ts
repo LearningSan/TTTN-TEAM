@@ -51,10 +51,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/data";
 import { verifyToken } from "@/app/helper/authenHelper";
-import { getTicketForUpdate } from "@/app/lib/ticket";
-import { markTicketAsTransferred } from "@/app/lib/ticket";
+import { getTicketForUpdate, markTicketAsTransferred } from "@/app/lib/ticket";
+import {
+  getConcertById,
+  isLessThanOneHour,
+  isConcertStarted
+} from "@/app/lib/concert";
 
 export async function POST(req: NextRequest) {
+  let transaction: any;
+
   try {
     const token = req.cookies.get("access_token")?.value;
 
@@ -84,23 +90,76 @@ export async function POST(req: NextRequest) {
     }
 
     const pool = await connectDB();
-    const transaction = pool.transaction();
+    transaction = pool.transaction();
 
     await transaction.begin();
 
     try {
+      const timeResult = await transaction.request().query(`
+        SELECT GETUTCDATE() AS now
+      `);
+      const now = new Date(timeResult.recordset[0].now);
+
       const ticket = await getTicketForUpdate(ticket_id, transaction);
 
       if (!ticket) {
-        throw new Error("Ticket not found");
+        await transaction.rollback();
+        return NextResponse.json(
+          { message: "Ticket not found" },
+          { status: 404 }
+        );
+      }
+
+      if (ticket.status === "TRANSFERRED") {
+        await transaction.rollback();
+        return NextResponse.json(
+          { message: "Ticket already listed for resale" },
+          { status: 400 }
+        );
       }
 
       if (ticket.user_id !== decoded.user_id) {
-        throw new Error("You are not the owner of this ticket");
+        await transaction.rollback();
+        return NextResponse.json(
+          { message: "You are not the owner of this ticket" },
+          { status: 403 }
+        );
       }
 
       if (ticket.status !== "ACTIVE") {
-        throw new Error("Ticket cannot be listed for resale");
+        await transaction.rollback();
+        return NextResponse.json(
+          { message: "Ticket cannot be listed for resale" },
+          { status: 400 }
+        );
+      }
+
+      const getConcert = await getConcertById(ticket.concert_id);
+
+      if (!getConcert) {
+        await transaction.rollback();
+        return NextResponse.json(
+          { message: "Concert not found" },
+          { status: 404 }
+        );
+      }
+
+      const concert = getConcert.concert;
+
+      if (isConcertStarted(concert, now)) {
+        await transaction.rollback();
+        return NextResponse.json(
+          { message: "Concert already started or ended" },
+          { status: 400 }
+        );
+      }
+
+      if (isLessThanOneHour(concert, now)) {
+        await transaction.rollback();
+        return NextResponse.json(
+          { message: "Concert less than 1 hour cannot resale" },
+          { status: 400 }
+        );
       }
 
       const ok = await markTicketAsTransferred(ticket_id, transaction);
