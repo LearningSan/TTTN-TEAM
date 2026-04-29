@@ -47,7 +47,7 @@ const ConcertManagement = () => {
   const fetchData = useCallback(async (page = 1, pageSize = 10, kw = keyword, vId = filterVenueId, st = filterStatus) => {
     setLoading(true);
     try {
-      let url = `/admin/concerts?page=${page - 1}&size=${pageSize}`;
+      let url = `/admin/concerts?page=${page}&size=${pageSize}`;
       if (kw) url += `&keyword=${encodeURIComponent(kw)}`;
       if (vId) url += `&venueId=${vId}`;
       if (st) url += `&status=${st}`;
