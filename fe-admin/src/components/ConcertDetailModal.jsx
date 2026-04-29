@@ -122,63 +122,65 @@ const ConcertDetailModal = ({ open, data, loading, onCancel, venues, formatSafeD
                             {/* 🚀 RENDER LƯỚI GHẾ NẾU LÀ VÉ NGỒI */}
                             {z.hasSeatMap && z.tiers && z.tiers.length > 0 ? (
                               <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', opacity: 0.9 }}>
-                                {z.tiers.map((tier, tIdx) => {
-                                  // HÀM TÍNH KÝ TỰ HÀNG (A, B, C...)
-                                  const getLabel = (index) => {
-                                    const prefix = tier.rowPrefix || 'A';
-                                    let num = 0;
-                                    for (let i = 0; i < prefix.length; i++) num = num * 26 + (prefix.charCodeAt(i) - 64);
-                                    let currentNum = num + index;
-                                    let label = '';
-                                    while (currentNum > 0) {
-                                      let mod = (currentNum - 1) % 26;
-                                      label = String.fromCharCode(65 + mod) + label;
-                                      currentNum = Math.floor((currentNum - mod) / 26);
-                                    }
-                                    return label;
-                                  };
+                                {[...z.tiers]
+                                  .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                                  .map((tier, tIdx) => {
+                                    // HÀM TÍNH KÝ TỰ HÀNG (A, B, C...)
+                                    const getLabel = (index) => {
+                                      const prefix = tier.rowPrefix || 'A';
+                                      let num = 0;
+                                      for (let i = 0; i < prefix.length; i++) num = num * 26 + (prefix.charCodeAt(i) - 64);
+                                      let currentNum = num + index;
+                                      let label = '';
+                                      while (currentNum > 0) {
+                                        let mod = (currentNum - 1) % 26;
+                                        label = String.fromCharCode(65 + mod) + label;
+                                        currentNum = Math.floor((currentNum - mod) / 26);
+                                      }
+                                      return label;
+                                    };
 
-                                  return (
-                                    <div key={`t-${tIdx}`} style={{
-                                      flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly',
-                                      backgroundColor: tier.colorCode ? `${tier.colorCode}66` : 'rgba(255,255,255,0.1)',
-                                      padding: '2px', borderRadius: '4px', border: `1px dashed ${tier.colorCode || 'rgba(255,255,255,0.3)'}`, width: '100%', marginBottom: 2
-                                    }}>
-                                      {Array.from({ length: tier.rowCount || 0 }).map((_, rIdx) => {
-                                        const rowLetter = getLabel(rIdx);
-                                        return (
-                                          <div key={`r-${rIdx}`} style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '4px' }}>
-                                            {/* Ký tự hàng */}
-                                            <div style={{ width: '15px', color: '#fff', fontSize: '9px', fontWeight: 'bold', textAlign: 'center', opacity: 0.8 }}>
-                                              {rowLetter}
+                                    return (
+                                      <div key={`t-${tIdx}`} style={{
+                                        flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly',
+                                        backgroundColor: tier.colorCode ? `${tier.colorCode}66` : 'rgba(255,255,255,0.1)',
+                                        padding: '2px', borderRadius: '4px', border: `1px dashed ${tier.colorCode || 'rgba(255,255,255,0.3)'}`, width: '100%', marginBottom: 2
+                                      }}>
+                                        {Array.from({ length: tier.rowCount || 0 }).map((_, rIdx) => {
+                                          const rowLetter = getLabel(rIdx);
+                                          return (
+                                            <div key={`r-${rIdx}`} style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '4px' }}>
+                                              {/* Ký tự hàng */}
+                                              <div style={{ width: '15px', color: '#fff', fontSize: '9px', fontWeight: 'bold', textAlign: 'center', opacity: 0.8 }}>
+                                                {rowLetter}
+                                              </div>
+                                              {/* Lưới ghế */}
+                                              <div style={{ flex: 1, display: 'flex', justifyContent: 'space-evenly' }}>
+                                                {Array.from({ length: tier.seatsPerRow || 0 }).map((_, sIdx) => {
+
+                                                  // 🚀 BƯỚC QUAN TRỌNG: TẠO MÃ GHẾ ĐỂ SO SÁNH (Ví dụ: A1, B2)
+                                                  const seatLabel = `${rowLetter}${sIdx + 1}`;
+
+                                                  // 🚀 CHECK GHẾ ĐÃ BÁN (Dùng state bookedSeats từ API)
+                                                  const isBooked = bookedSeats.includes(seatLabel);
+
+                                                  return (
+                                                    <div key={`s-${sIdx}`} style={{
+                                                      width: 5, height: 5, borderRadius: '50%',
+                                                      // Đổi thành màu Đỏ (#ff4d4f) nếu đã bán
+                                                      backgroundColor: isBooked ? '#ff4d4f' : (tier.colorCode || z.colorCode || '#fff'),
+                                                      border: '1px solid rgba(255,255,255,0.4)',
+                                                      boxShadow: isBooked ? '0 0 4px #ff4d4f' : '0 1px 2px rgba(0,0,0,0.2)'
+                                                    }} />
+                                                  )
+                                                })}
+                                              </div>
                                             </div>
-                                            {/* Lưới ghế */}
-                                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-evenly' }}>
-                                              {Array.from({ length: tier.seatsPerRow || 0 }).map((_, sIdx) => {
-
-                                                // 🚀 BƯỚC QUAN TRỌNG: TẠO MÃ GHẾ ĐỂ SO SÁNH (Ví dụ: A1, B2)
-                                                const seatLabel = `${rowLetter}${sIdx + 1}`;
-
-                                                // 🚀 CHECK GHẾ ĐÃ BÁN (Dùng state bookedSeats từ API)
-                                                const isBooked = bookedSeats.includes(seatLabel);
-
-                                                return (
-                                                  <div key={`s-${sIdx}`} style={{
-                                                    width: 5, height: 5, borderRadius: '50%',
-                                                    // Đổi thành màu Đỏ (#ff4d4f) nếu đã bán
-                                                    backgroundColor: isBooked ? '#ff4d4f' : (tier.colorCode || z.colorCode || '#fff'),
-                                                    border: '1px solid rgba(255,255,255,0.4)',
-                                                    boxShadow: isBooked ? '0 0 4px #ff4d4f' : '0 1px 2px rgba(0,0,0,0.2)'
-                                                  }} />
-                                                )
-                                              })}
-                                            </div>
-                                          </div>
-                                        )
-                                      })}
-                                    </div>
-                                  );
-                                })}
+                                          )
+                                        })}
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             ) : (
                               <div style={{ color: '#fff', fontWeight: 'bold', fontSize: 10, opacity: 0.8 }}>

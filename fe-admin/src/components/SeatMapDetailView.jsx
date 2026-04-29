@@ -67,7 +67,9 @@ const SeatMapDetailView = ({ data, bookedSeats, loadingSeats }) => {
                   {/* 🚀 RENDER LƯỚI GHẾ THEO MÀU TIER */}
                   {z.hasSeatMap && z.tiers && z.tiers.length > 0 ? (
                     <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', opacity: 0.9 }}>
-                      {z.tiers.map((tier, tIdx) => {
+                      {[...z.tiers]
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+      .map((tier, tIdx) => {
                         
                         // 🚀 LOGIC TÍNH KÝ TỰ HÀNG THEO ROWPREFIX
                         const getLabel = (rIndex) => {
