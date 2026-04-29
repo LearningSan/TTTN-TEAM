@@ -62,8 +62,6 @@ const OrderTable = ({ orders, loading, pagination, onChangePage, onViewDetail,fi
       title: 'Trạng thái',
       key: 'status_column',
       render: (_, r) => {
-        // 🚀 LOGIC "ÉP" TRẠNG THÁI: 
-        // Nếu đang lọc NEED_REFUND mà DB trả về PAID, thì hiện là NEED_REFUND cho Admin dễ hiểu
         const displayStatus = (filterStatus === 'NEED_REFUND' && r.orderStatus === 'PAID') 
           ? 'NEED_REFUND' 
           : r.orderStatus;
