@@ -60,4 +60,20 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     // Lọc các đơn PAID của những Concert đã CANCELLED
     @Query("SELECT o FROM Order o WHERE o.orderStatus = 'PAID' AND o.concert.status = 'CANCELLED'")
     Page<Order> findOrdersNeedingRefund(Pageable pageable);
+
+    // 1. Lọc theo Status bình thường + Tìm kiếm Keyword
+    @Query("SELECT o FROM Order o WHERE " +
+            "(:status IS NULL OR o.orderStatus = :status) AND " +
+            "(:keyword IS NULL OR LOWER(o.user.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(o.user.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(o.concert.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "o.orderId = :orderid)")
+    Page<Order> searchOrders(@Param("status") String status, @Param("keyword") String keyword, @Param("orderid") UUID orderid, Pageable pageable);
+
+    // 2. Lọc riêng cho tab CẦN HOÀN TIỀN (NEED_REFUND) + Tìm kiếm Keyword
+    @Query("SELECT o FROM Order o WHERE o.orderStatus = 'PAID' AND o.concert.status = 'CANCELLED' AND " +
+            "(:keyword IS NULL OR LOWER(o.user.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(o.user.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(o.concert.title) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Order> searchOrdersNeedingRefund(@Param("keyword") String keyword, Pageable pageable);
 }

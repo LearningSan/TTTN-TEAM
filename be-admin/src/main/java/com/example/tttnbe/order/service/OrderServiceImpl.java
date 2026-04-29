@@ -40,32 +40,28 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private Web3ServiceImpl web3Service; // Gọi "cô thu ngân" Blockchain vào đây
 
-    // API 1: Lấy danh sách đơn hàng cho Admin (Tích hợp luôn bộ lọc hoàn tiền)
-    public PageResponse<OrderResponse> getAllOrders(int page, int size, String status) {
+    // API 1: Lấy danh sách đơn hàng cho Admin (Tích hợp Lọc Status + Tìm kiếm Keyword)
+    public PageResponse<OrderResponse> getAllOrders(int page, int size, String status, String keyword, UUID orderId) {
 
-        // Fix lỗi trang số 0 của Spring Boot
         int currentPage = (page > 0) ? page - 1 : 0;
-
-        // Sắp xếp đơn hàng mới nhất lên đầu
         Pageable pageable = PageRequest.of(currentPage, size, Sort.by("createdAt").descending());
+
+        // Chuẩn hóa dữ liệu: Nếu rỗng thì đưa về null để Query SQL chạy đúng
+        String validStatus = (status != null && !status.trim().isEmpty()) ? status.trim().toUpperCase() : null;
+        String validKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        UUID orderid = (orderId != null) ? orderId : null;
 
         Page<Order> orderPage;
 
-        if (status != null && !status.isEmpty()) {
-            if (status.equalsIgnoreCase("NEED_REFUND")) {
-                // 🌟 TRƯỜNG HỢP ĐẶC BIỆT: FE muốn lấy danh sách cần hoàn tiền
-                orderPage = orderRepository.findOrdersNeedingRefund(pageable);
-            } else {
-                // 🌟 TRƯỜNG HỢP BÌNH THƯỜNG: FE lọc theo PAID, PENDING, CANCELLED...
-                orderPage = orderRepository.findByOrderStatus(status.toUpperCase(), pageable);
-            }
+        if ("NEED_REFUND".equals(validStatus)) {
+            // FE chọn tab CẦN HOÀN TIỀN
+            orderPage = orderRepository.searchOrdersNeedingRefund(validKeyword, pageable);
         } else {
-            // FE không truyền status -> Lấy tất cả
-            orderPage = orderRepository.findAll(pageable);
+            // FE chọn các tab khác hoặc lấy Tất cả
+            orderPage = orderRepository.searchOrders(validStatus, validKeyword, orderid, pageable);
         }
 
-        // 🌟 TỐI ƯU CODE: Thay vì viết lại cục Builder dài ngoằng,
-        // ta gọi luôn hàm mapToResponse đã viết chuẩn chỉnh ở dưới!
+        // Map sang DTO
         Page<OrderResponse> dtoPage = orderPage.map(this::mapToResponse);
 
         return PageResponse.from(dtoPage);
@@ -114,6 +110,13 @@ public class OrderServiceImpl implements OrderService {
                         .build())
                 .toList();
 
+        // 🌟 LẤY MÃ GIAO DỊCH TỪ BẢNG PAYMENT (Nếu khách đã thanh toán)
+        String payTxHash = null;
+        if (order.getPayment() != null) {
+            // Tùy vào việc trong entity PaymentTransaction bạn đặt tên biến TxHash là gì
+            payTxHash = order.getPayment().getTransactionHash(); // Sửa getTxHash() lại cho khớp tên biến của bạn
+        }
+
         // Đóng gói toàn bộ thông tin
         return OrderDetailResponse.builder()
                 .orderId(order.getOrderId())
@@ -127,6 +130,12 @@ public class OrderServiceImpl implements OrderService {
                 .userId(order.getUser().getUserId())
                 .userName(order.getUser().getName())
                 .userEmail(order.getUser().getEmail())
+
+                // 🌟 GẮN 3 TRƯỜNG WEB3 VÀO ĐÂY
+                .userWallet(order.getWalletAddress() != null ? order.getWalletAddress() : order.getUser().getWalletAddress())
+                .paymentTxHash(payTxHash)
+                // .refundTxHash(order.getRefundTxHash()) // Nếu Entity Order có trường này thì mở ra
+
                 .concertTitle(order.getConcert().getTitle())
                 .venueName(order.getConcert().getVenue().getVenueName())
                 .items(items)

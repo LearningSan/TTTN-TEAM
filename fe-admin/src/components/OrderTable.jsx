@@ -1,12 +1,26 @@
 import React from 'react';
-import { Table, Tag, Button, Typography, Space } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { Table, Tag, Button, Typography, Space, Popconfirm, message, Tooltip } from 'antd';
+import { EyeOutlined, DollarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { Tooltip } from 'antd';
+import API from '../api/config';
 const { Text } = Typography;
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat);
-const OrderTable = ({ orders, loading, pagination, onChangePage, onViewDetail }) => {
+const OrderTable = ({ orders, loading, pagination, onChangePage, onViewDetail,filterStatus }) => {
+  const handleRefund = async (orderId) => {
+    try {
+      message.loading({ content: 'Đang xử lý hoàn tiền qua Smart Contract...', key: 'refund' });
+      // 🚀 Gọi API mới của BE 
+      await API.post(`/admin/orders/${orderId}/refund`);
+      message.success({ content: 'Hoàn tiền thành công!', key: 'refund' });
+
+      // 🚀 Gọi hàm fetchOrders() truyền từ OrderManagement xuống để load lại bảng
+      onChangePage(pagination.current, pagination.pageSize);
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Lỗi khi hoàn tiền!';
+      message.error({ content: errorMsg, key: 'refund' });
+    }
+  };
   const columns = [
     {
       title: 'Mã đơn hàng',
@@ -46,24 +60,53 @@ const OrderTable = ({ orders, loading, pagination, onChangePage, onViewDetail })
     },
     {
       title: 'Trạng thái',
-      dataIndex: 'orderStatus',
-      render: (status) => {
-        const colors = { 'PAID': 'success', 'PENDING': 'processing', 'CANCELLED': 'error', 'EXPIRED': 'warning' };
-        return <Tag color={colors[status] || 'default'}>{status}</Tag>;
+      key: 'status_column',
+      render: (_, r) => {
+        const displayStatus = (filterStatus === 'NEED_REFUND' && r.orderStatus === 'PAID') 
+          ? 'NEED_REFUND' 
+          : r.orderStatus;
+
+        const colors = { 
+          'PAID': 'success', 
+          'PENDING': 'processing', 
+          'CANCELLED': 'error', 
+          'EXPIRED': 'warning',
+          'NEED_REFUND': 'volcano', 
+          'REFUNDED': 'purple'
+        };
+
+        return <Tag color={colors[displayStatus] || 'default'}>{displayStatus}</Tag>;
       }
     },
     {
-      title: 'Chi tiết',
+      title: 'Thao tác',
       align: 'center',
-      render: (_, r) => (
-        <Button
-          type="primary"
-          ghost
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => onViewDetail(r.orderId)}
-        />
-      )
+      render: (_, r) => {
+        // 🚀 ĐIỀU KIỆN HIỆN NÚT: Hiện khi DB trả về NEED_REFUND 
+        // HOẶC khi Admin đang chủ động lọc danh sách nợ
+        const isNeedRefund = r.orderStatus === 'NEED_REFUND' || filterStatus === 'NEED_REFUND';
+
+        return (
+          <Space>
+            <Button
+              type="primary" ghost size="small"
+              icon={<EyeOutlined />}
+              onClick={() => onViewDetail(r.orderId)}
+            />
+            
+            {isNeedRefund && (
+              <Popconfirm 
+                title="Xác nhận hoàn tiền?" 
+                onConfirm={() => handleRefund(r.orderId)}
+              >
+                <Button size="small" type="primary" danger icon={<DollarOutlined />}>
+                  Hoàn tiền
+                </Button>
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      }
     }
   ];
 

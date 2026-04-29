@@ -9,6 +9,7 @@ import { FaSearch, FaFilter } from "react-icons/fa"; // Thêm FaFilter
 import { HiOutlineChevronLeft, HiOutlineChevronRight } from "react-icons/hi";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import CategoryNav from "../components/CategoryNav";
 
 const Home = () => {
   const [events, setEvents] = useState([]);
@@ -51,9 +52,8 @@ const Home = () => {
 
         // --- CẬP NHẬT LOGIC LỌC TẠI ĐÂY ---
         const activeEvents = rawData.filter((event, index, self) => {
-          // 1. Chỉ lấy những concert có is_on_sale là true
-          const isOnSale =
-            event.is_on_sale === true || event.status === "ON_SALE";
+          // 1. Chỉ lấy những concert có status là ON_SALE
+          const isOnSale = event.status === "ON_SALE";
 
           // 2. Lọc unique concert_id (để không bị trùng card khi có nhiều zone)
           const isUnique =
@@ -85,64 +85,7 @@ const Home = () => {
     // Chuyển nền trang sang màu đen (giống image_a2333d.png)
     <div className="min-h-screen bg-[#111827] font-sans text-white">
       {/* Nav Section */}
-      <nav className="bg-[#0A0A0A] py-6 border-b border-gray-900 relative z-10">
-        <div className="max-w-7xl mx-auto flex justify-start gap-12 text-[18px] font-[900] uppercase tracking-tighter px-12 items-end">
-          {[
-            {
-              name: "Theatre & Arts",
-              color: "bg-[#FF2D95]",
-              shadow: "shadow-[0_0_10px_#FF2D95]",
-              path: "#",
-            },
-            {
-              name: "Sports",
-              color: "bg-[#00E5FF]",
-              shadow: "shadow-[0_0_10px_#00E5FF]",
-              path: "#",
-            },
-            {
-              name: "Seminars & Workshops",
-              color: "bg-[#FF2D95]",
-              shadow: "shadow-[0_0_10px_#FF2D95]",
-              path: "#",
-            },
-            // Mục Resale Ticket sẽ dùng Link đặc biệt
-            {
-              name: "Resale Ticket",
-              color: "bg-[#00E5FF]",
-              shadow: "shadow-[0_0_10px_#00E5FF]",
-              path: "/resale-market",
-              isLink: true,
-            },
-          ].map((item) => (
-            <div
-              key={item.name}
-              className="flex flex-col items-center group cursor-pointer"
-            >
-              {item.isLink ? (
-                <Link
-                  to={item.path}
-                  className="text-white hover:text-[#00E5FF] transition-colors duration-200"
-                >
-                  {item.name}
-                </Link>
-              ) : (
-                <a
-                  href={item.path}
-                  className="text-white hover:text-gray-300 transition-colors duration-200"
-                >
-                  {item.name}
-                </a>
-              )}
-
-              {/* Thanh line neon phía dưới giữ nguyên để đồng bộ giao diện */}
-              <div
-                className={`h-[3px] w-full mt-2 ${item.color} ${item.shadow} transition-transform duration-300 group-hover:scale-x-110`}
-              ></div>
-            </div>
-          ))}
-        </div>
-      </nav>
+      <CategoryNav />
 
       {/* Slider Section - Cập nhật theo image_a2335d.png */}
       <section className="bg-111827 py-12 relative overflow-hidden">

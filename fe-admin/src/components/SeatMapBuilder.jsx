@@ -8,7 +8,7 @@ const { Text } = Typography;
 const STAGE_SHAPES = [
   { value: 'rectangle', label: 'Chữ nhật' },
   { value: 'circle', label: 'Tròn / Oval' },
-  { value: 't-shape', label: 'Hình chữ T' }
+  // { value: 't-shape', label: 'Hình chữ T' }
 ];
 
 const SeatMapBuilder = ({ form }) => {
