@@ -40,14 +40,16 @@ const Dashboard = () => {
     try {
       const formattedDate = dateObj.format('YYYY-MM-DD');
       // Chỉ gọi đúng endpoint stats, không gọi orders?size=... nữa
-      const res = await API.get('/admin/orders/revenue/total', {
-        params: { date: formattedDate }
-      });
+      const [resStats, resNeedRefund] = await Promise.all([
+        API.get('/admin/orders/revenue/total', { params: { date: formattedDate } }),
+        API.get('/admin/orders', { params: { status: 'NEED_REFUND', size: 1 } }) // 🚀 Lấy 1 cái thôi để lấy totalElements
+      ]);
 
-      if (res.data) {
+      if (resStats.data) {
         setSummary({
-          ...res.data,
-          currency: 'ETH' // Mặc định theo hệ thống Web3 của đệ
+          ...resStats.data,
+          pendingRefunds: resNeedRefund.data?.totalElements || 0,
+          currency: 'ETH'
         });
       }
     } catch (error) {
@@ -139,7 +141,17 @@ const Dashboard = () => {
                 prefix={<AlertOutlined />}
                 valueStyle={{ color: '#ff4d4f', fontWeight: 'bold' }}
               />
-              <Button type="link" danger size="small" style={{ marginTop: 8, padding: 0 }}>
+              <Button
+                type="link"
+                danger
+                size="small"
+                style={{ marginTop: 8, padding: 0 }}
+                // Đảm bảo nút bấm cũng thực hiện điều hướng tương tự card
+                onClick={(e) => {
+                  e.stopPropagation(); // Tránh trigger onClick của Card
+                  navigate("/dashboard/orders?status=NEED_REFUND");
+                }}
+              >
                 Xử lý danh sách nợ <RightOutlined />
               </Button>
             </Card>
