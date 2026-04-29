@@ -77,7 +77,7 @@ export async function getConcertList(
 
     let query = `
       SELECT 
-        c.concert_id, c.title, c.artist, c.banner_url,c.concert_date, c.end_date,
+        c.concert_id, c.title, c.artist, c.banner_url,c.status,c.concert_date, c.end_date,
         c.sale_start_at, c.sale_end_at,c.layout_config,
         z.zone_id, z.zone_name, z.price, z.total_seats, z.available_seats, z.sold_seats,
         v.venue_id, v.name AS venue_name, v.address, v.district, v.city, v.country,
@@ -164,7 +164,7 @@ export async function getConcertById(concert_id: string) {
         c.status,
         c.created_at,
         c.updated_at,
-
+        c.layout_config,
         v.name AS venue_name,
         v.address,
         v.district,
@@ -203,7 +203,8 @@ export async function getConcertById(concert_id: string) {
         status: r.status,
         created_at: r.created_at,
         updated_at: r.updated_at,
-        is_on_sale: r.is_on_sale === 1
+        is_on_sale: r.is_on_sale === 1,
+        layout_config:r.layout_config
       },
 
       venue: {
@@ -221,4 +222,27 @@ export async function getConcertById(concert_id: string) {
     console.error("getConcertById DB error:", error);
     throw error;
   }
+}
+
+// concert.ts
+
+export function getTimeLeftMs(
+  concert: { concert_date: Date | string },
+  now: Date 
+): number {
+  return new Date(concert.concert_date).getTime() - now.getTime();
+}
+
+export function isLessThanOneHour(
+  concert: { concert_date: Date | string },
+  now: Date
+): boolean {
+  return getTimeLeftMs(concert, now) <= 60 * 60 * 1000;
+}
+
+export function isConcertStarted(
+  concert: { concert_date: Date | string },
+  now: Date
+): boolean {
+  return new Date(concert.concert_date).getTime() <= now.getTime();
 }

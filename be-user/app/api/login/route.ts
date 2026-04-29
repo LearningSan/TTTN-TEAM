@@ -53,11 +53,13 @@
  *               message: "Token creation failed"
  */
 
-import { NextRequest,NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { setCookies } from "@/app/helper/authenHelper";
-import { authenticateUser,createToken } from "@/app/helper/authenHelper";
-
+import { authenticateUser, createToken } from "@/app/helper/authenHelper";
+import { loginLimiter } from "@/app/lib/ratelimit";
 export async function POST(req: Request) {
+
+
   const body = await req.json();
   const { email, password } = body;
 
@@ -75,7 +77,7 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  
+
   // const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
   // if (!passwordRegex.test(password)) {
   //   return NextResponse.json(
@@ -84,6 +86,26 @@ export async function POST(req: Request) {
   //   );
   // }
 
+  const forwarded = req.headers.get("x-forwarded-for");
+  const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
+
+  const key = `${ip}-${email}`;
+
+  const { success, limit, remaining, reset } = await loginLimiter.limit(key);
+
+  if (!success) {
+    return NextResponse.json(
+      { message: "Too many login attempts" },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": limit.toString(),
+          "X-RateLimit-Remaining": remaining.toString(),
+          "X-RateLimit-Reset": reset.toString(),
+        },
+      }
+    );
+  }
   const user = await authenticateUser(email, password);
 
   if (!user) {

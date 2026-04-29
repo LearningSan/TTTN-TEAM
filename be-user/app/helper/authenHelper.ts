@@ -13,14 +13,9 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "supersecret";
 
 export async function authenticateUser(email: string, password: string) {
   const user = await getUser(email);
-  console.log("EMAIL:", email);
-  console.log("PASSWORD INPUT:", password);
-  console.log("USER:", user);
-  console.log("HASH:", user?.password_hash);
   if (!user) return null;
 
   if (!user.password_hash) {
-    console.log("Missing password_hash in DB");
     return null;
   }
 
@@ -40,16 +35,17 @@ export async function createToken(
 ) {
   try {
     if (!user.user_id) throw new Error("User ID is required");
-    //tao access token
+
     const accessToken = jwt.sign({ user_id: user.user_id, email: user.email }, JWT_SECRET, { expiresIn: "1h" });
-    //Ngày hết hạn
+
+
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1);
     const expiresAtStr = expiresAt.toISOString().slice(0, 19).replace("T", " ");
-    //tao refresh Token
+
     const refreshToken = jwt.sign({ user_id: user.user_id, email: user.email }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-    //Tạo trong refresh Token DB
+
     const result = await createVerifytoken(user.user_id, refreshTokenHash, deviceInfo, ipAddress, expiresAtStr);
 
     if (!result) return null;
